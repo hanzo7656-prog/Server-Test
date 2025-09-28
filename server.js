@@ -1,6 +1,8 @@
 const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
+const WebSocket = require('ws');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -18,26 +20,108 @@ app.use((req, res, next) => {
     next();
 });
 
-// صفحه اصلی با گزینه‌های جدید
+// ✅ کش برای داده‌ها
+let cache = {
+    coinsList: { data: null, timestamp: null },
+    historicalData: {},
+    realtimePrices: {}
+};
+
+// ✅ WebSocket Manager برای Upbit
+class WebSocketManager {
+    constructor() {
+        this.ws = null;
+        this.connected = false;
+        this.realtimeData = {};
+        this.connect();
+    }
+
+    connect() {
+        try {
+            this.ws = new WebSocket('wss://api.upbit.com/websocket/v1');
+            
+            this.ws.on('open', () => {
+                console.log('✅ WebSocket به Upbit متصل شد');
+                this.connected = true;
+                
+                // Subscribe به ارزهای اصلی
+                const subscription = [{
+                    "ticket": "scanner-app",
+                    "type": "ticker",
+                    "codes": [
+                        "KRW-BTC", "KRW-ETH", "KRW-XRP", "KRW-ADA", "KRW-DOT",
+                        "KRW-DOGE", "KRW-SOL", "KRW-MATIC", "KRW-AVAX", "KRW-LINK"
+                    ]
+                }];
+                
+                this.ws.send(JSON.stringify(subscription));
+            });
+
+            this.ws.on('message', (data) => {
+                try {
+                    const message = JSON.parse(data);
+                    if (message.type === 'ticker') {
+                        this.realtimeData[message.code] = {
+                            price: message.trade_price,
+                            volume: message.acc_trade_volume,
+                            change: message.change_rate,
+                            changePrice: message.change_price,
+                            high: message.high_price,
+                            low: message.low_price,
+                            timestamp: new Date().toISOString()
+                        };
+                        
+                        // آپدیت کش global
+                        cache.realtimePrices = { ...this.realtimeData };
+                    }
+                } catch (error) {
+                    console.error('❌ خطا در پردازش WebSocket message:', error);
+                }
+            });
+
+            this.ws.on('error', (error) => {
+                console.error('❌ WebSocket error:', error);
+                this.connected = false;
+            });
+
+            this.ws.on('close', () => {
+                console.log('🔌 WebSocket disconnected');
+                this.connected = false;
+                // تلاش برای اتصال مجدد پس از 5 ثانیه
+                setTimeout(() => this.connect(), 5000);
+            });
+
+        } catch (error) {
+            console.error('❌ خطا در اتصال WebSocket:', error);
+        }
+    }
+
+    getRealtimeData() {
+        return this.realtimeData;
+    }
+}
+
+// ✅ راه‌اندازی WebSocket
+const wsManager = new WebSocketManager();
+
+// صفحه اصلی با endpointهای جدید
 app.get('/', (req, res) => {
     res.json({ 
         message: 'سرور میانی فعال - CoinState Scanner Pro',
         endpoints: {
             health: '/health',
             scan_all: '/scan-all?limit=100|500|1000&filter=volume|price_change|signals',
-            scan_custom: '/scan-custom?filters={...}' // ✅ اسکن سفارشی
+            scan_custom: '/scan-custom?filters={...}',
+            // ✅ endpointهای جدید
+            coins_list: '/api/coins/list',
+            historical_data: '/api/coins/historical?coins=bitcoin,ethereum&period=1m',
+            realtime_prices: '/api/coins/realtime',
+            market_overview: '/api/market/overview'
         },
         scan_options: {
             basic: { limit: 100, description: 'اسکن پایه - ۱۰۰ ارز برتر' },
             advanced: { limit: 500, description: 'اسکن پیشرفته - ۵۰۰ ارز برتر' },
             pro: { limit: 1000, description: 'اسکن حرفه‌ای - ۱۰۰۰ ارز برتر' }
-        },
-        filter_options: {
-            volume: 'حجم معاملات بالا',
-            liquidity: 'نقدینگی بالا', 
-            price_change_24h: 'تغییرات قیمت ۲۴h',
-            market_cap: 'مارکت کپ بالا',
-            signals: 'بر اساس سیگنال‌های تکنیکال'
         },
         timestamp: new Date().toISOString()
     });
@@ -48,19 +132,210 @@ app.get('/health', (req, res) => {
     res.json({ 
         status: 'OK', 
         message: 'سرور میانی سالم است!',
-        scan_options: [100, 500, 1000],
-        filter_options: ['volume', 'liquidity', 'price_change_24h', 'market_cap', 'signals'],
+        websocket_status: wsManager.connected ? 'connected' : 'disconnected',
+        cache_status: {
+            coins_list: cache.coinsList.data ? 'cached' : 'empty',
+            realtime_prices: Object.keys(cache.realtimePrices).length + ' coins'
+        },
         timestamp: new Date().toISOString()
     });
 });
 
-// ✅ endpoint اصلی با فیلترهای پیشرفته
+// ✅ ۱. دریافت لیست تمام ارزها از CoinStats
+app.get('/api/coins/list', async (req, res) => {
+    try {
+        const useCache = req.query.cache !== 'false';
+        
+        // بررسی کش
+        if (useCache && cache.coinsList.data && cache.coinsList.timestamp) {
+            const cacheAge = Date.now() - cache.coinsList.timestamp;
+            if (cacheAge < 300000) { // 5 دقیقه کش
+                return res.json({
+                    success: true,
+                    data: cache.coinsList.data,
+                    total: cache.coinsList.data.length,
+                    source: 'cache',
+                    cache_age: Math.round(cacheAge / 1000) + ' seconds'
+                });
+            }
+        }
+
+        console.log('📋 دریافت لیست ارزها از CoinStats...');
+        
+        const response = await axios.get(
+            'https://openapiv1.coinstats.app/coins',
+            {
+                headers: {
+                    'X-API-KEY': COINSTATS_API_KEY
+                },
+                timeout: 15000
+            }
+        );
+
+        const coinsData = response.data;
+        
+        // ذخیره در کش
+        cache.coinsList = {
+            data: coinsData,
+            timestamp: Date.now()
+        };
+
+        res.json({
+            success: true,
+            data: coinsData,
+            total: coinsData.length,
+            source: 'api',
+            timestamp: new Date().toISOString()
+        });
+
+    } catch (error) {
+        console.error('❌ خطا در دریافت لیست ارزها:', error.message);
+        
+        // fallback به کش در صورت خطا
+        if (cache.coinsList.data) {
+            res.json({
+                success: true,
+                data: cache.coinsList.data,
+                total: cache.coinsList.data.length,
+                source: 'cache_fallback',
+                error: error.message,
+                timestamp: new Date().toISOString()
+            });
+        } else {
+            res.status(500).json({
+                success: false,
+                error: error.message,
+                note: 'No cached data available'
+            });
+        }
+    }
+});
+
+// ✅ ۲. دریافت داده‌های تاریخی از CoinStats
+app.get('/api/coins/historical', async (req, res) => {
+    try {
+        const coinIds = req.query.coins || 'bitcoin,ethereum';
+        const period = req.query.period || '1m';
+        const allowedPeriods = ['24h', '1w', '1m', '3m', '6m', '1y', 'all'];
+
+        if (!allowedPeriods.includes(period)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Period not allowed. Use: 24h, 1w, 1m, 3m, 6m, 1y, all'
+            });
+        }
+
+        console.log(`📊 دریافت داده‌های تاریخی برای ${coinIds} - دوره: ${period}`);
+
+        const response = await axios.get(
+            'https://openapiv1.coinstats.app/coins/charts',
+            {
+                headers: {
+                    'X-API-KEY': COINSTATS_API_KEY
+                },
+                params: {
+                    period: period,
+                    coinIds: coinIds
+                },
+                timeout: 30000
+            }
+        );
+
+        const historicalData = response.data;
+
+        res.json({
+            success: true,
+            data: historicalData,
+            parameters: {
+                coins: coinIds,
+                period: period,
+                total_coins: historicalData.length
+            },
+            timestamp: new Date().toISOString()
+        });
+
+    } catch (error) {
+        console.error('❌ خطا در دریافت داده‌های تاریخی:', error.message);
+        res.status(500).json({
+            success: false,
+            error: error.message,
+            parameters: req.query
+        });
+    }
+});
+
+// ✅ ۳. دریافت داده‌های لحظه‌ای از Upbit WebSocket
+app.get('/api/coins/realtime', (req, res) => {
+    try {
+        const realtimeData = wsManager.getRealtimeData();
+        
+        res.json({
+            success: true,
+            data: realtimeData,
+            total_coins: Object.keys(realtimeData).length,
+            websocket_status: wsManager.connected ? 'connected' : 'disconnected',
+            timestamp: new Date().toISOString()
+        });
+
+    } catch (error) {
+        console.error('❌ خطا در دریافت داده‌های لحظه‌ای:', error.message);
+        res.status(500).json({
+            success: false,
+            error: error.message,
+            websocket_status: 'error'
+        });
+    }
+});
+
+// ✅ ۴. overview بازار (ترکیب داده‌ها)
+app.get('/api/market/overview', async (req, res) => {
+    try {
+        const [coinsList, realtimeData] = await Promise.all([
+            // دریافت لیست ارزها (با کش)
+            axios.get(`http://localhost:${PORT}/api/coins/list`).catch(() => ({ data: { data: [] } })),
+            // داده‌های لحظه‌ای
+            Promise.resolve({ data: { data: wsManager.getRealtimeData() } })
+        ]);
+
+        const overview = {
+            total_coins: coinsList.data.data.length,
+            realtime_coins: Object.keys(realtimeData.data.data).length,
+            websocket_status: wsManager.connected ? 'connected' : 'disconnected',
+            top_coins: coinsList.data.data.slice(0, 10).map(coin => ({
+                id: coin.id,
+                name: coin.name,
+                symbol: coin.symbol,
+                price: coin.price,
+                change_24h: coin.priceChange1d
+            })),
+            market_health: {
+                up_coins: coinsList.data.data.filter(c => (c.priceChange1d || 0) > 0).length,
+                down_coins: coinsList.data.data.filter(c => (c.priceChange1d || 0) < 0).length,
+                total_volume: coinsList.data.data.reduce((sum, coin) => sum + (coin.volume || 0), 0)
+            },
+            timestamp: new Date().toISOString()
+        };
+
+        res.json({
+            success: true,
+            data: overview
+        });
+
+    } catch (error) {
+        console.error('❌ خطا در دریافت overview بازار:', error.message);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// ✅ endpoint اصلی با فیلترهای پیشرفته (کد موجود)
 app.get('/scan-all', async (req, res) => {
     try {
         let limit = parseInt(req.query.limit) || 100;
-        const filterType = req.query.filter || 'volume'; // ✅ فیلتر پیش‌فرض: حجم معاملات
+        const filterType = req.query.filter || 'volume';
         
-        // ✅ محدودیت‌های مجاز
         const allowedLimits = [100, 500, 1000];
         if (!allowedLimits.includes(limit)) {
             limit = 100;
@@ -83,13 +358,10 @@ app.get('/scan-all', async (req, res) => {
         );
         
         let coins = response.data;
-        
-        // ✅ اعمال فیلترهای پیشرفته
         coins = applyAdvancedFilters(coins, filterType, limit);
         
         console.log('✅ اسکن کامل بازار تکمیل شد:', coins.length, 'ارز', 'فیلتر:', filterType);
         
-        // ساختار بهینه برای اسکنر
         const scanResults = coins.map(coin => ({
             id: coin.id,
             name: coin.name,
@@ -102,9 +374,8 @@ app.get('/scan-all', async (req, res) => {
             high24h: coin.high24h,
             low24h: coin.low24h,
             rank: coin.rank,
-            // ✅ داده‌های اضافی برای فیلترها
-            liquidity: coin.volume * coin.price, // نقدینگی تقریبی
-            absoluteChange: Math.abs(coin.priceChange1d || 0) // تغییرات مطلق
+            liquidity: coin.volume * coin.price,
+            absoluteChange: Math.abs(coin.priceChange1d || 0)
         }));
         
         res.json({
@@ -126,7 +397,6 @@ app.get('/scan-all', async (req, res) => {
     } catch (error) {
         console.error('❌ خطا در اسکن کامل بازار:', error.message);
         
-        // داده‌های نمونه با فیلتر
         const limit = parseInt(req.query.limit) || 100;
         const filterType = req.query.filter || 'volume';
         
@@ -143,7 +413,7 @@ app.get('/scan-all', async (req, res) => {
     }
 });
 
-// ✅ endpoint جدید برای اسکن کاملاً سفارشی
+// ✅ endpoint جدید برای اسکن کاملاً سفارشی (کد موجود)
 app.get('/scan-custom', async (req, res) => {
     try {
         const { 
@@ -175,8 +445,6 @@ app.get('/scan-custom', async (req, res) => {
         );
         
         let coins = response.data;
-        
-        // ✅ اعمال فیلترهای سفارشی
         coins = applyCustomFilters(coins, req.query);
         
         res.json({
@@ -208,7 +476,7 @@ app.get('/scan-custom', async (req, res) => {
     }
 });
 
-// ✅ تابع اعمال فیلترهای پیشرفته
+// ✅ توابع کمکی موجود
 function applyAdvancedFilters(coins, filterType, limit) {
     if (!coins || !coins.length) return coins;
     
@@ -216,35 +484,26 @@ function applyAdvancedFilters(coins, filterType, limit) {
     
     switch(filterType) {
         case 'volume':
-            // ✅ حجم معاملات بالا
             filteredCoins.sort((a, b) => (b.volume || 0) - (a.volume || 0));
             break;
-            
         case 'liquidity':
-            // ✅ نقدینگی بالا (حجم × قیمت)
             filteredCoins.sort((a, b) => {
                 const liquidityA = (a.volume || 0) * (a.price || 0);
                 const liquidityB = (b.volume || 0) * (b.price || 0);
                 return liquidityB - liquidityA;
             });
             break;
-            
         case 'price_change_24h':
-            // ✅ بیشترین/کمترین تغییرات قیمت
             filteredCoins.sort((a, b) => {
                 const changeA = Math.abs(a.priceChange1d || a.priceChange24h || 0);
                 const changeB = Math.abs(b.priceChange1d || b.priceChange24h || 0);
                 return changeB - changeA;
             });
             break;
-            
         case 'market_cap':
-            // ✅ مارکت کپ بالا
             filteredCoins.sort((a, b) => (b.marketCap || 0) - (a.marketCap || 0));
             break;
-            
         case 'signals':
-            // ✅ شبیه‌سازی سیگنال‌های تکنیکال (بر اساس نوسان + حجم)
             filteredCoins.forEach(coin => {
                 const volatility = Math.abs(coin.priceChange1d || 0);
                 const volumeStrength = Math.log10(coin.volume || 1);
@@ -257,11 +516,9 @@ function applyAdvancedFilters(coins, filterType, limit) {
     return filteredCoins.slice(0, limit);
 }
 
-// ✅ تابع اعمال فیلترهای سفارشی
 function applyCustomFilters(coins, filters) {
     let filteredCoins = [...coins];
     
-    // فیلتر حجم معاملات
     if (filters.min_volume) {
         filteredCoins = filteredCoins.filter(coin => coin.volume >= parseFloat(filters.min_volume));
     }
@@ -269,7 +526,6 @@ function applyCustomFilters(coins, filters) {
         filteredCoins = filteredCoins.filter(coin => coin.volume <= parseFloat(filters.max_volume));
     }
     
-    // فیلتر تغییرات قیمت
     if (filters.min_price_change) {
         filteredCoins = filteredCoins.filter(coin => 
             Math.abs(coin.priceChange1d || coin.priceChange24h || 0) >= parseFloat(filters.min_price_change)
@@ -281,7 +537,6 @@ function applyCustomFilters(coins, filters) {
         );
     }
     
-    // فیلتر مارکت کپ
     if (filters.min_market_cap) {
         filteredCoins = filteredCoins.filter(coin => coin.marketCap >= parseFloat(filters.min_market_cap));
     }
@@ -289,7 +544,6 @@ function applyCustomFilters(coins, filters) {
         filteredCoins = filteredCoins.filter(coin => coin.marketCap <= parseFloat(filters.max_market_cap));
     }
     
-    // مرتب‌سازی
     const sortBy = filters.sort_by || 'volume';
     const sortOrder = filters.sort_order === 'asc' ? 1 : -1;
     
@@ -302,7 +556,6 @@ function applyCustomFilters(coins, filters) {
     return filteredCoins;
 }
 
-// ✅ توابع کمکی
 function getScanMode(limit) {
     switch(limit) {
         case 100: return 'basic';
@@ -329,7 +582,6 @@ function generateFilteredSampleData(limit, filterType) {
         { id: "bitcoin", name: "Bitcoin", symbol: "BTC", basePrice: 45000, baseVolume: 25000000000 },
         { id: "ethereum", name: "Ethereum", symbol: "ETH", basePrice: 3000, baseVolume: 15000000000 },
         { id: "binancecoin", name: "Binance Coin", symbol: "BNB", basePrice: 600, baseVolume: 5000000000 },
-        // ... (لیست کامل‌تر)
     ];
     
     for (let i = 0; i < limit; i++) {
@@ -355,7 +607,6 @@ function generateFilteredSampleData(limit, filterType) {
         });
     }
     
-    // اعمال فیلتر روی داده‌های نمونه
     return applyAdvancedFilters(sampleCoins, filterType, limit);
 }
 
@@ -369,9 +620,9 @@ app.listen(PORT, () => {
     console.log(`🚀 سرور میانی فعال روی پورت ${PORT}`);
     console.log(`🔑 API Key: فعال`);
     console.log(`📊 گزینه‌های اسکن: 100, 500, 1000 ارز`);
-    console.log(`🎛️ فیلترهای پیشرفته: volume, liquidity, price_change, market_cap, signals`);
+    console.log(`🌐 WebSocket: فعال برای داده‌های لحظه‌ای`);
     console.log(`✅ سلامت: http://localhost:${PORT}/health`);
-    console.log(`🌐 اسکن پایه: http://localhost:${PORT}/scan-all?limit=100&filter=volume`);
-    console.log(`🌐 اسکن پیشرفته: http://localhost:${PORT}/scan-all?limit=500&filter=liquidity`);
-    console.log(`🌐 اسکن حرفه‌ای: http://localhost:${PORT}/scan-all?limit=1000&filter=signals`);
+    console.log(`📋 لیست ارزها: http://localhost:${PORT}/api/coins/list`);
+    console.log(`📊 داده تاریخی: http://localhost:${PORT}/api/coins/historical?coins=bitcoin,ethereum`);
+    console.log(`⚡ داده لحظه‌ای: http://localhost:${PORT}/api/coins/realtime`);
 });
