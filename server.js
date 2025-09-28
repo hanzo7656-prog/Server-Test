@@ -27,7 +27,7 @@ let cache = {
     realtimePrices: {}
 };
 
-// ✅ WebSocket Manager برای Upbit
+// ✅ کلاس WebSocketManager اصلاح شده
 class WebSocketManager {
     constructor() {
         this.ws = null;
@@ -44,35 +44,62 @@ class WebSocketManager {
                 console.log('✅ WebSocket به Upbit متصل شد');
                 this.connected = true;
                 
-                // Subscribe به ارزهای اصلی
-                const subscription = [{
-                    "ticket": "scanner-app",
-                    "type": "ticker",
-                    "codes": [
-                        "KRW-BTC", "KRW-ETH", "KRW-XRP", "KRW-ADA", "KRW-DOT",
-                        "KRW-DOGE", "KRW-SOL", "KRW-MATIC", "KRW-AVAX", "KRW-LINK"
-                    ]
-                }];
+                // ✅ فرمت صحیح درخواست Subscribe (آرایه از آبجکت‌ها)
+                const subscription = [
+                    {
+                        "ticket": "scanner-app-" + Date.now()
+                    },
+                    {
+                        "type": "ticker",
+                        "codes": [
+                            "KRW-BTC", "KRW-ETH", "KRW-XRP", "KRW-ADA", "KRW-DOT",
+                            "KRW-DOGE", "KRW-SOL", "KRW-MATIC", "KRW-AVAX", "KRW-LINK",
+                            "KRW-BCH", "KRW-LTC", "KRW-ETC", "KRW-TRX", "KRW-ATOM"
+                        ]
+                    },
+                    {
+                        "format": "DEFAULT"
+                    }
+                ];
                 
+                console.log('📨 ارسال درخواست Subscribe به Upbit...');
                 this.ws.send(JSON.stringify(subscription));
             });
 
             this.ws.on('message', (data) => {
                 try {
                     const message = JSON.parse(data);
+                    
+                    // ✅ پردازش داده‌های ticker با فیلدهای صحیح
                     if (message.type === 'ticker') {
-                        this.realtimeData[message.code] = {
+                        const symbol = message.code;
+                        
+                        this.realtimeData[symbol] = {
+                            // ✅ استفاده از فیلدهای کامل (نه مخفف‌ها)
                             price: message.trade_price,
-                            volume: message.acc_trade_volume,
-                            change: message.change_rate,
-                            changePrice: message.change_price,
-                            high: message.high_price,
-                            low: message.low_price,
-                            timestamp: new Date().toISOString()
+                            opening_price: message.opening_price,
+                            high_price: message.high_price,
+                            low_price: message.low_price,
+                            volume: message.acc_trade_volume_24h || message.acc_trade_volume,
+                            change: message.change,
+                            change_rate: message.change_rate,
+                            change_price: message.change_price,
+                            prev_closing_price: message.prev_closing_price,
+                            acc_trade_price: message.acc_trade_price_24h || message.acc_trade_price,
+                            trade_volume: message.trade_volume,
+                            market_state: message.market_state,
+                            timestamp: message.timestamp,
+                            stream_type: message.stream_type,
+                            last_updated: new Date().toISOString()
                         };
                         
-                        // آپدیت کش global
+                        // ✅ آپدیت کش global
                         cache.realtimePrices = { ...this.realtimeData };
+                        
+                        // لاگ برای debug (می‌تونی بعداً غیرفعال کنی)
+                        if (Object.keys(this.realtimeData).length <= 5) {
+                            console.log(`📊 داده دریافتی از ${symbol}:`, this.realtimeData[symbol].price);
+                        }
                     }
                 } catch (error) {
                     console.error('❌ خطا در پردازش WebSocket message:', error);
@@ -84,20 +111,55 @@ class WebSocketManager {
                 this.connected = false;
             });
 
-            this.ws.on('close', () => {
-                console.log('🔌 WebSocket disconnected');
+            this.ws.on('close', (code, reason) => {
+                console.log(`🔌 WebSocket disconnected - Code: ${code}, Reason: ${reason}`);
                 this.connected = false;
-                // تلاش برای اتصال مجدد پس از 5 ثانیه
-                setTimeout(() => this.connect(), 5000);
+                
+                // ✅ تلاش برای اتصال مجدد پس از 5 ثانیه
+                setTimeout(() => {
+                    console.log('🔄 تلاش برای اتصال مجدد WebSocket...');
+                    this.connect();
+                }, 5000);
             });
 
         } catch (error) {
             console.error('❌ خطا در اتصال WebSocket:', error);
+            // تلاش مجدد پس از 10 ثانیه
+            setTimeout(() => this.connect(), 10000);
         }
     }
 
     getRealtimeData() {
         return this.realtimeData;
+    }
+    
+    getConnectionStatus() {
+        return {
+            connected: this.connected,
+            active_coins: Object.keys(this.realtimeData).length,
+            coins: Object.keys(this.realtimeData)
+        };
+    }
+    
+    // ✅ تابع برای subscribe کردن به ارزهای بیشتر
+    subscribeToCoins(codes) {
+        if (this.connected && this.ws) {
+            const subscription = [
+                {
+                    "ticket": "scanner-app-add-" + Date.now()
+                },
+                {
+                    "type": "ticker",
+                    "codes": codes
+                },
+                {
+                    "format": "DEFAULT"
+                }
+            ];
+            
+            this.ws.send(JSON.stringify(subscription));
+            console.log(`✅ Subscribe به ${codes.length} ارز جدید`);
+        }
     }
 }
 
@@ -116,7 +178,8 @@ app.get('/', (req, res) => {
             coins_list: '/api/coins/list',
             historical_data: '/api/coins/historical?coins=bitcoin,ethereum&period=1m',
             realtime_prices: '/api/coins/realtime',
-            market_overview: '/api/market/overview'
+            market_overview: '/api/market/overview',
+            websocket_status: '/api/websocket/status'
         },
         scan_options: {
             basic: { limit: 100, description: 'اسکن پایه - ۱۰۰ ارز برتر' },
@@ -127,12 +190,18 @@ app.get('/', (req, res) => {
     });
 });
 
-// سلامت سرور
+// سلامت سرور - آپدیت شده
 app.get('/health', (req, res) => {
+    const wsStatus = wsManager.getConnectionStatus();
+    
     res.json({ 
         status: 'OK', 
         message: 'سرور میانی سالم است!',
-        websocket_status: wsManager.connected ? 'connected' : 'disconnected',
+        websocket_status: {
+            connected: wsStatus.connected,
+            active_coins: wsStatus.active_coins,
+            coins_count: wsStatus.coins.length
+        },
         cache_status: {
             coins_list: cache.coinsList.data ? 'cached' : 'empty',
             realtime_prices: Object.keys(cache.realtimePrices).length + ' coins'
@@ -323,6 +392,57 @@ app.get('/api/market/overview', async (req, res) => {
 
     } catch (error) {
         console.error('❌ خطا در دریافت overview بازار:', error.message);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// ✅ endpoint برای وضعیت WebSocket
+app.get('/api/websocket/status', (req, res) => {
+    try {
+        const status = wsManager.getConnectionStatus();
+        
+        res.json({
+            success: true,
+            websocket_status: status.connected ? 'connected' : 'disconnected',
+            active_coins: status.active_coins,
+            connected_coins: status.coins,
+            timestamp: new Date().toISOString()
+        });
+        
+    } catch (error) {
+        console.error('❌ خطا در دریافت وضعیت WebSocket:', error.message);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// ✅ endpoint برای subscribe کردن به ارزهای جدید
+app.post('/api/websocket/subscribe', (req, res) => {
+    try {
+        const { codes } = req.body;
+        
+        if (!codes || !Array.isArray(codes)) {
+            return res.status(400).json({
+                success: false,
+                error: 'پارامتر codes الزامی است و باید آرایه باشد'
+            });
+        }
+        
+        wsManager.subscribeToCoins(codes);
+        
+        res.json({
+            success: true,
+            message: `درخواست subscribe برای ${codes.length} ارز ارسال شد`,
+            codes: codes
+        });
+        
+    } catch (error) {
+        console.error('❌ خطا در subscribe کردن:', error.message);
         res.status(500).json({
             success: false,
             error: error.message
@@ -625,4 +745,5 @@ app.listen(PORT, () => {
     console.log(`📋 لیست ارزها: http://localhost:${PORT}/api/coins/list`);
     console.log(`📊 داده تاریخی: http://localhost:${PORT}/api/coins/historical?coins=bitcoin,ethereum`);
     console.log(`⚡ داده لحظه‌ای: http://localhost:${PORT}/api/coins/realtime`);
+    console.log(`🔗 وضعیت WebSocket: http://localhost:${PORT}/api/websocket/status`);
 });
