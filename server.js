@@ -27,80 +27,105 @@ let cache = {
     realtimePrices: {}
 };
 
-// ✅ کلاس WebSocketManager اصلاح شده
+// ✅ لیست کامل 300 جفت ارز برای LBank - فقط USDT
+const ALL_TRADING_PAIRS = [
+    "btc_usdt", "eth_usdt", "xrp_usdt", "ada_usdt", "dot_usdt", "doge_usdt", "sol_usdt", "matic_usdt", "avax_usdt", "link_usdt",
+    "bch_usdt", "ltc_usdt", "etc_usdt", "trx_usdt", "atom_usdt", "bnb_usdt", "xlm_usdt", "eos_usdt", "xtz_usdt", "algo_usdt",
+    "neo_usdt", "ftm_usdt", "hbar_usdt", "egld_usdt", "theta_usdt", "vet_usdt", "fil_usdt", "icp_usdt", "xmr_usdt", "ape_usdt",
+    "gala_usdt", "sand_usdt", "mana_usdt", "enj_usdt", "bat_usdt", "comp_usdt", "mkr_usdt", "zec_usdt", "dash_usdt", "waves_usdt",
+    "omg_usdt", "zil_usdt", "ont_usdt", "iost_usdt", "stx_usdt", "celo_usdt", "rvn_usdt", "sc_usdt", "zen_usdt", "hot_usdt",
+    "iotx_usdt", "ong_usdt", "one_usdt", "nano_usdt", "ardr_usdt", "qtum_usdt", "lsk_usdt", "strat_usdt", "kmd_usdt", "pivx_usdt",
+    "grs_usdt", "nav_usdt", "emc2_usdt", "xvg_usdt", "sys_usdt", "via_usdt", "mona_usdt", "dcr_usdt", "sia_usdt", "lbc_usdt",
+    "rep_usdt", "gnt_usdt", "loom_usdt", "poly_usdt", "ren_usdt", "fun_usdt", "req_usdt", "salt_usdt", "mtl_usdt", "mco_usdt",
+    "edo_usdt", "powr_usdt", "lrc_usdt", "gto_usdt", "eng_usdt", "ast_usdt", "dgd_usdt", "adx_usdt", "qsp_usdt", "mda_usdt",
+    "snt_usdt", "agix_usdt", "ocean_usdt", "band_usdt", "nmr_usdt", "rlc_usdt", "uos_usdt", "storj_usdt", "keep_usdt", "orn_usdt",
+    "front_usdt", "perp_usdt", "api3_usdt", "grt_usdt", "lqty_usdt", "alcx_usdt", "pool_usdt", "rad_usdt", "farm_usdt", "audio_usdt",
+    "fis_usdt", "dodo_usdt", "tlm_usdt", "ilv_usdt", "ygg_usdt", "slp_usdt", "axs_usdt", "sandbox_usdt", "enjin_usdt", "rndr_usdt",
+    "flow_usdt", "rose_usdt", "ar_usdt", "rune_usdt", "sushi_usdt", "crv_usdt", "1inch_usdt", "knc_usdt", "bal_usdt", "uma_usdt",
+    "badger_usdt", "fxs_usdt", "cvx_usdt", "tribe_usdt", "gno_usdt", "ilus_usdt", "pla_usdt", "super_usdt", "ach_usdt", "imx_usdt",
+    "gods_usdt", "vra_usdt", "sps_usdt", "dar_usdt", "mgp_usdt", "ceek_usdt", "titan_usdt", "vr_usdt", "bnx_usdt", "hero_usdt",
+    "pyr_usdt", "ufo_usdt", "elon_usdt", "shib_usdt", "floki_usdt", "samo_usdt", "baby_usdt", "kishu_usdt", "hoge_usdt", "akita_usdt",
+    "husky_usdt", "safemoon_usdt", "evergrow_usdt", "lunc_usdt", "bonk_usdt", "wif_usdt", "myro_usdt", "popcat_usdt", "toshi_usdt",
+    "mew_usdt", "mog_usdt", "rett_usdt", "turbo_usdt", "pepe_usdt", "wojak_usdt", "aidos_usdt", "pudgy_usdt", "lady_usdt", "jeo_usdt",
+    "based_usdt", "degen_usdt", "moutai_usdt", "aave_usdt", "snx_usdt", "uni_usdt", "cake_usdt", "bake_usdt", "burger_usdt", "toko_usdt",
+    "inj_usdt", "lina_usdt", "reef_usdt", "dusk_usdt", "atm_usdt", "ogn_usdt", "for_usdt", "mir_usdt", "lto_usdt", "cos_usdt",
+    "ctk_usdt", "tko_usdt", "alpaca_usdt", "perl_usdt", "stpt_usdt", "troy_usdt", "vite_usdt", "sxp_usdt", "hbtc_usdt", "mdt_usdt",
+    "mbox_usdt", "gmt_usdt", "time_usdt", "raca_usdt", "beans_usdt", "edu_usdt", "id_usdt", "ondo_usdt", "pixel_usdt", "voxel_usdt",
+    "high_usdt", "looks_usdt", "blur_usdt", "psp_usdt", "oxt_usdt", "num_usdt", "mask_usdt", "glm_usdt", "ant_usdt", "bond_usdt",
+    "fida_usdt", "maps_usdt", "drep_usdt", "pcx_usdt", "clv_usdt", "cfx_usdt", "ckb_usdt", "mx_usdt", "celr_usdt", "fet_usdt",
+    "stmx_usdt", "chz_usdt", "ankr_usdt", "coti_usdt", "skl_usdt", "arpa_usdt", "strax_usdt", "fio_usdt", "mbl_usdt", "quick_usdt",
+    "sfund_usdt", "bsw_usdt", "axie_usdt", "tfuel_usdt", "hnt_usdt", "loka_usdt", "dydx_usdt", "pundix_usdt", "vtho_usdt", "dent_usdt",
+    "rsr_usdt", "cvc_usdt", "data_usdt", "nkn_usdt", "lit_usdt", "key_usdt", "dock_usdt", "phb_usdt", "mxc_usdt", "front_usdt"
+];
+
+// ✅ کلاس WebSocketManager برای LBank با تمام 300 ارز
 class WebSocketManager {
     constructor() {
         this.ws = null;
         this.connected = false;
         this.realtimeData = {};
+        this.subscribedPairs = new Set();
         this.connect();
     }
 
     connect() {
         try {
-            this.ws = new WebSocket('wss://api.upbit.com/websocket/v1');
+            this.ws = new WebSocket('wss://www.lbkex.net/ws/V2/');
             
             this.ws.on('open', () => {
-                console.log('✅ WebSocket به Upbit متصل شد');
+                console.log('✅ WebSocket به LBank متصل شد');
                 this.connected = true;
                 
-                // ✅ فرمت صحیح درخواست Subscribe (آرایه از آبجکت‌ها)
-                const subscription = [
-                    {
-                        "ticket": "scanner-app-" + Date.now()
-                    },
-                    {
-                        "type": "ticker",
-                        "codes": [
-                            "KRW-BTC", "KRW-ETH", "KRW-XRP", "KRW-ADA", "KRW-DOT",
-                            "KRW-DOGE", "KRW-SOL", "KRW-MATIC", "KRW-AVAX", "KRW-LINK",
-                            "KRW-BCH", "KRW-LTC", "KRW-ETC", "KRW-TRX", "KRW-ATOM"
-                        ]
-                    },
-                    {
-                        "format": "DEFAULT"
-                    }
-                ];
-                
-                console.log('📨 ارسال درخواست Subscribe به Upbit...');
-                this.ws.send(JSON.stringify(subscription));
+                // ✅ Subscribe به تمام 300 جفت ارز
+                this.subscribeToAllPairs();
             });
 
             this.ws.on('message', (data) => {
                 try {
-                    const message = JSON.parse(data);
+                    const message = JSON.parse(data.toString());
                     
-                    // ✅ پردازش داده‌های ticker با فیلدهای صحیح
-                    if (message.type === 'ticker') {
-                        const symbol = message.code;
+                    // ✅ پردازش داده‌های tick از LBank
+                    if (message.type === 'tick' && message.tick) {
+                        const symbol = message.pair;
+                        const tickData = message.tick;
                         
                         this.realtimeData[symbol] = {
-                            // ✅ استفاده از فیلدهای کامل (نه مخفف‌ها)
-                            price: message.trade_price,
-                            opening_price: message.opening_price,
-                            high_price: message.high_price,
-                            low_price: message.low_price,
-                            volume: message.acc_trade_volume_24h || message.acc_trade_volume,
-                            change: message.change,
-                            change_rate: message.change_rate,
-                            change_price: message.change_price,
-                            prev_closing_price: message.prev_closing_price,
-                            acc_trade_price: message.acc_trade_price_24h || message.acc_trade_price,
-                            trade_volume: message.trade_volume,
-                            market_state: message.market_state,
-                            timestamp: message.timestamp,
-                            stream_type: message.stream_type,
+                            price: tickData.latest,
+                            high_24h: tickData.high,
+                            low_24h: tickData.low,
+                            volume: tickData.vol,
+                            turnover: tickData.turnover,
+                            change: tickData.change,
+                            change_rate: tickData.change,
+                            direction: tickData.dir,
+                            usd_price: tickData.usd,
+                            cny_price: tickData.cny,
+                            timestamp: message.TS,
                             last_updated: new Date().toISOString()
                         };
                         
                         // ✅ آپدیت کش global
                         cache.realtimePrices = { ...this.realtimeData };
-                        
-                        // لاگ برای debug (می‌تونی بعداً غیرفعال کنی)
-                        if (Object.keys(this.realtimeData).length <= 5) {
-                            console.log(`📊 داده دریافتی از ${symbol}:`, this.realtimeData[symbol].price);
-                        }
                     }
+                    
+                    // ✅ پردازش داده‌های trade
+                    if (message.type === 'trade' && message.trade) {
+                        const symbol = message.pair;
+                        const tradeData = message.trade;
+                        
+                        if (!this.realtimeData[symbol]) {
+                            this.realtimeData[symbol] = {};
+                        }
+                        
+                        this.realtimeData[symbol].last_trade = {
+                            price: tradeData.price,
+                            volume: tradeData.volume,
+                            amount: tradeData.amount,
+                            direction: tradeData.direction,
+                            timestamp: tradeData.TS
+                        };
+                    }
+                    
                 } catch (error) {
                     console.error('❌ خطا در پردازش WebSocket message:', error);
                 }
@@ -124,9 +149,37 @@ class WebSocketManager {
 
         } catch (error) {
             console.error('❌ خطا در اتصال WebSocket:', error);
-            // تلاش مجدد پس از 10 ثانیه
             setTimeout(() => this.connect(), 10000);
         }
+    }
+
+    // ✅ تابع برای subscribe کردن به تمام 300 جفت ارز
+    subscribeToAllPairs() {
+        if (this.connected && this.ws) {
+            console.log(`📨 شروع Subscribe به ${ALL_TRADING_PAIRS.length} جفت ارز...`);
+            
+            // Subscribe به صورت دسته‌ای برای جلوگیری از overload
+            const batchSize = 50;
+            for (let i = 0; i < ALL_TRADING_PAIRS.length; i += batchSize) {
+                setTimeout(() => {
+                    const batch = ALL_TRADING_PAIRS.slice(i, i + batchSize);
+                    this.subscribeBatch(batch);
+                }, i * 100); // تأخیر 100ms بین هر دسته
+            }
+        }
+    }
+
+    subscribeBatch(pairs) {
+        pairs.forEach(pair => {
+            const subscription = {
+                "action": "subscribe",
+                "subscribe": "tick", 
+                "pair": pair
+            };
+            this.ws.send(JSON.stringify(subscription));
+            this.subscribedPairs.add(pair);
+        });
+        console.log(`✅ Subscribe به ${pairs.length} جفت ارز انجام شد`);
     }
 
     getRealtimeData() {
@@ -137,44 +190,37 @@ class WebSocketManager {
         return {
             connected: this.connected,
             active_coins: Object.keys(this.realtimeData).length,
+            total_subscribed: this.subscribedPairs.size,
             coins: Object.keys(this.realtimeData)
         };
     }
     
-    // ✅ تابع برای subscribe کردن به ارزهای بیشتر
-    subscribeToCoins(codes) {
+    // ✅ تابع برای subscribe کردن به جفت ارزهای خاص
+    subscribeToPairs(pairs) {
         if (this.connected && this.ws) {
-            const subscription = [
-                {
-                    "ticket": "scanner-app-add-" + Date.now()
-                },
-                {
-                    "type": "ticker",
-                    "codes": codes
-                },
-                {
-                    "format": "DEFAULT"
-                }
-            ];
+            const newPairs = pairs.filter(pair => !this.subscribedPairs.has(pair));
             
-            this.ws.send(JSON.stringify(subscription));
-            console.log(`✅ Subscribe به ${codes.length} ارز جدید`);
+            if (newPairs.length > 0) {
+                this.subscribeBatch(newPairs);
+            }
+            
+            return newPairs.length;
         }
+        return 0;
     }
 }
 
-// ✅ راه‌اندازی WebSocket
+// ✅ راه‌اندازی WebSocket جدید با 300 ارز
 const wsManager = new WebSocketManager();
 
 // صفحه اصلی با endpointهای جدید
 app.get('/', (req, res) => {
     res.json({ 
-        message: 'سرور میانی فعال - CoinState Scanner Pro',
+        message: 'سرور میانی فعال - CoinState Scanner Pro (LBank Version)',
         endpoints: {
             health: '/health',
-            scan_all: '/scan-all?limit=100|500|1000&filter=volume|price_change|signals',
+            scan_all: '/scan-all?limit=100|200|300&filter=volume|price_change|signals',
             scan_custom: '/scan-custom?filters={...}',
-            // ✅ endpointهای جدید
             coins_list: '/api/coins/list',
             historical_data: '/api/coins/historical?coins=bitcoin,ethereum&period=1m',
             realtime_prices: '/api/coins/realtime',
@@ -183,24 +229,28 @@ app.get('/', (req, res) => {
         },
         scan_options: {
             basic: { limit: 100, description: 'اسکن پایه - ۱۰۰ ارز برتر' },
-            advanced: { limit: 500, description: 'اسکن پیشرفته - ۵۰۰ ارز برتر' },
-            pro: { limit: 1000, description: 'اسکن حرفه‌ای - ۱۰۰۰ ارز برتر' }
+            advanced: { limit: 200, description: 'اسکن پیشرفته - ۲۰۰ ارز برتر' },
+            pro: { limit: 300, description: 'اسکن حرفه‌ای - ۳۰۰ ارز برتر' }
         },
+        websocket_provider: "LBank Exchange",
+        total_pairs: ALL_TRADING_PAIRS.length,
         timestamp: new Date().toISOString()
     });
 });
 
-// سلامت سرور - آپدیت شده
+// سلامت سرور - آپدیت شده برای LBank
 app.get('/health', (req, res) => {
     const wsStatus = wsManager.getConnectionStatus();
     
     res.json({ 
         status: 'OK', 
-        message: 'سرور میانی سالم است!',
+        message: 'سرور میانی سالم است! (LBank WebSocket)',
         websocket_status: {
             connected: wsStatus.connected,
             active_coins: wsStatus.active_coins,
-            coins_count: wsStatus.coins.length
+            total_subscribed: wsStatus.total_subscribed,
+            target_pairs: ALL_TRADING_PAIRS.length,
+            provider: "LBank"
         },
         cache_status: {
             coins_list: cache.coinsList.data ? 'cached' : 'empty',
@@ -333,7 +383,7 @@ app.get('/api/coins/historical', async (req, res) => {
     }
 });
 
-// ✅ ۳. دریافت داده‌های لحظه‌ای از Upbit WebSocket
+// ✅ ۳. دریافت داده‌های لحظه‌ای از LBank WebSocket
 app.get('/api/coins/realtime', (req, res) => {
     try {
         const realtimeData = wsManager.getRealtimeData();
@@ -408,6 +458,8 @@ app.get('/api/websocket/status', (req, res) => {
             success: true,
             websocket_status: status.connected ? 'connected' : 'disconnected',
             active_coins: status.active_coins,
+            total_subscribed: status.total_subscribed,
+            target_pairs: ALL_TRADING_PAIRS.length,
             connected_coins: status.coins,
             timestamp: new Date().toISOString()
         });
@@ -421,24 +473,26 @@ app.get('/api/websocket/status', (req, res) => {
     }
 });
 
-// ✅ endpoint برای subscribe کردن به ارزهای جدید
+// ✅ endpoint برای subscribe کردن به جفت ارزهای جدید در LBank
 app.post('/api/websocket/subscribe', (req, res) => {
     try {
-        const { codes } = req.body;
+        const { pairs } = req.body;
         
-        if (!codes || !Array.isArray(codes)) {
+        if (!pairs || !Array.isArray(pairs)) {
             return res.status(400).json({
                 success: false,
-                error: 'پارامتر codes الزامی است و باید آرایه باشد'
+                error: 'پارامتر pairs الزامی است و باید آرایه باشد'
             });
         }
         
-        wsManager.subscribeToCoins(codes);
+        const newPairsCount = wsManager.subscribeToPairs(pairs);
         
         res.json({
             success: true,
-            message: `درخواست subscribe برای ${codes.length} ارز ارسال شد`,
-            codes: codes
+            message: `درخواست subscribe برای ${newPairsCount} جفت ارز جدید ارسال شد`,
+            total_subscribed: wsManager.subscribedPairs.size,
+            pairs: pairs,
+            provider: "LBank"
         });
         
     } catch (error) {
@@ -450,13 +504,14 @@ app.post('/api/websocket/subscribe', (req, res) => {
     }
 });
 
-// ✅ endpoint اصلی با فیلترهای پیشرفته (کد موجود)
+// ✅ endpoint اصلی با فیلترهای پیشرفته - آپدیت شده برای 100,200,300
 app.get('/scan-all', async (req, res) => {
     try {
         let limit = parseInt(req.query.limit) || 100;
         const filterType = req.query.filter || 'volume';
         
-        const allowedLimits = [100, 500, 1000];
+        // ✅ محدوده جدید: 100, 200, 300
+        const allowedLimits = [100, 200, 300];
         if (!allowedLimits.includes(limit)) {
             limit = 100;
         }
@@ -510,7 +565,9 @@ app.get('/scan-all', async (req, res) => {
                 request_limit: limit,
                 actual_results: scanResults.length,
                 filter_type: filterType,
-                response_time: Date.now() - req.startTime + 'ms'
+                response_time: Date.now() - req.startTime + 'ms',
+                websocket_provider: "LBank",
+                websocket_pairs: ALL_TRADING_PAIRS.length
             }
         });
         
@@ -533,7 +590,7 @@ app.get('/scan-all', async (req, res) => {
     }
 });
 
-// ✅ endpoint جدید برای اسکن کاملاً سفارشی (کد موجود)
+// ✅ endpoint جدید برای اسکن کاملاً سفارشی
 app.get('/scan-custom', async (req, res) => {
     try {
         const { 
@@ -596,7 +653,7 @@ app.get('/scan-custom', async (req, res) => {
     }
 });
 
-// ✅ توابع کمکی موجود
+// ✅ توابع کمکی
 function applyAdvancedFilters(coins, filterType, limit) {
     if (!coins || !coins.length) return coins;
     
@@ -679,8 +736,8 @@ function applyCustomFilters(coins, filters) {
 function getScanMode(limit) {
     switch(limit) {
         case 100: return 'basic';
-        case 500: return 'advanced';
-        case 1000: return 'pro';
+        case 200: return 'advanced'; 
+        case 300: return 'pro';
         default: return 'custom';
     }
 }
@@ -739,11 +796,11 @@ app.use((req, res, next) => {
 app.listen(PORT, () => {
     console.log(`🚀 سرور میانی فعال روی پورت ${PORT}`);
     console.log(`🔑 API Key: فعال`);
-    console.log(`📊 گزینه‌های اسکن: 100, 500, 1000 ارز`);
-    console.log(`🌐 WebSocket: فعال برای داده‌های لحظه‌ای`);
+    console.log(`📊 گزینه‌های اسکن جدید: 100, 200, 300 ارز`);
+    console.log(`🌐 WebSocket: LBank فعال برای ${ALL_TRADING_PAIRS.length} جفت ارز`);
     console.log(`✅ سلامت: http://localhost:${PORT}/health`);
     console.log(`📋 لیست ارزها: http://localhost:${PORT}/api/coins/list`);
     console.log(`📊 داده تاریخی: http://localhost:${PORT}/api/coins/historical?coins=bitcoin,ethereum`);
-    console.log(`⚡ داده لحظه‌ای: http://localhost:${PORT}/api/coins/realtime`);
+    console.log(`⚡ داده لحظه‌ای LBank: http://localhost:${PORT}/api/coins/realtime`);
     console.log(`🔗 وضعیت WebSocket: http://localhost:${PORT}/api/websocket/status`);
 });
