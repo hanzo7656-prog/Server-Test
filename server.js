@@ -2,6 +2,7 @@ const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
 const WebSocket = require('ws');
+const { Octokit } = require('@octokit/rest');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -58,6 +59,159 @@ const ALL_TRADING_PAIRS = [
     "rsr_usdt", "cvc_usdt", "data_usdt", "nkn_usdt", "lit_usdt", "key_usdt", "dock_usdt", "phb_usdt", "mxc_usdt", "front_usdt"
 ];
 
+// ✅ کلاس Gist Manager برای ذخیره‌سازی داده‌های تاریخی
+class GistManager {
+    constructor() {
+        this.octokit = new Octokit({ 
+            auth: process.env.GITHUB_TOKEN 
+        });
+        this.gistId = process.env.GIST_ID;
+        this.priceHistory = { prices: {}, last_updated: new Date().toISOString() };
+        this.init();
+    }
+
+    async init() {
+        try {
+            if (this.gistId) {
+                await this.loadFromGist();
+            }
+            // ذخیره خودکار هر 5 دقیقه
+            setInterval(() => this.saveToGist(), 300000);
+            console.log('✅ Gist Manager راه‌اندازی شد');
+        } catch (error) {
+            console.error('❌ خطا در راه‌اندازی Gist Manager:', error);
+        }
+    }
+
+    async loadFromGist() {
+        try {
+            const response = await this.octokit.rest.gists.get({
+                gist_id: this.gistId
+            });
+
+            const content = response.data.files['prices.json'].content;
+            this.priceHistory = JSON.parse(content);
+            console.log('✅ داده‌ها از Gist بارگذاری شد');
+        } catch (error) {
+            console.log('ℹ️ Gist پیدا نشد، با داده خالی شروع میکنیم');
+            this.priceHistory = { prices: {}, last_updated: new Date().toISOString() };
+        }
+    }
+
+    async saveToGist() {
+        try {
+            this.priceHistory.last_updated = new Date().toISOString();
+            const content = JSON.stringify(this.priceHistory, null, 2);
+
+            if (!this.gistId) {
+                // ایجاد Gist جدید
+                const response = await this.octokit.rest.gists.create({
+                    description: 'CryptoScanner Price Data - Historical 1h/4h Changes',
+                    files: {
+                        'prices.json': {
+                            content: content
+                        }
+                    },
+                    public: false
+                });
+                this.gistId = response.data.id;
+                console.log('✅ Gist جدید ایجاد شد:', this.gistId);
+            } else {
+                // آپدیت Gist موجود
+                await this.octokit.rest.gists.update({
+                    gist_id: this.gistId,
+                    files: {
+                        'prices.json': {
+                            content: content
+                        }
+                    }
+                });
+                console.log('💾 داده‌ها در Gist ذخیره شد');
+            }
+        } catch (error) {
+            console.error('❌ خطا در ذخیره Gist:', error);
+        }
+    }
+
+    // اضافه کردن قیمت جدید و محاسبه تغییرات
+    addPrice(symbol, currentPrice) {
+        if (!this.priceHistory.prices) this.priceHistory.prices = {};
+        
+        const now = Date.now();
+        const existingData = this.priceHistory.prices[symbol] || {};
+        
+        // محاسبه تغییرات 1h و 4h
+        const change1h = this.calculateChange(symbol, currentPrice, 60);
+        const change4h = this.calculateChange(symbol, currentPrice, 240);
+        
+        this.priceHistory.prices[symbol] = {
+            price: currentPrice,
+            timestamp: now,
+            change_1h: change1h,
+            change_4h: change4h,
+            history: existingData.history || []
+        };
+        
+        // اضافه کردن به تاریخچه (حداکثر 24 ساعت)
+        this.priceHistory.prices[symbol].history.push({
+            timestamp: now,
+            price: currentPrice
+        });
+        
+        // حفظ فقط 24 ساعت داده
+        this.cleanOldHistory(symbol);
+    }
+
+    // محاسبه تغییرات بر اساس تاریخچه
+    calculateChange(symbol, currentPrice, minutes) {
+        const data = this.priceHistory.prices[symbol];
+        if (!data || !data.history || data.history.length === 0) return 0;
+        
+        const targetTime = Date.now() - (minutes * 60 * 1000);
+        const pastPrice = this.findClosestPrice(data.history, targetTime);
+        
+        if (!pastPrice || pastPrice === 0) return 0;
+        
+        return ((currentPrice - pastPrice) / pastPrice) * 100;
+    }
+
+    findClosestPrice(history, targetTime) {
+        let closest = null;
+        let minDiff = Infinity;
+        
+        for (const item of history) {
+            const diff = Math.abs(item.timestamp - targetTime);
+            if (diff < minDiff && diff <= 300000) { // 5 دقیقه tolerance
+                minDiff = diff;
+                closest = item.price;
+            }
+        }
+        
+        return closest;
+    }
+
+    cleanOldHistory(symbol) {
+        const data = this.priceHistory.prices[symbol];
+        if (!data || !data.history) return;
+        
+        const cutoffTime = Date.now() - (24 * 60 * 60 * 1000); // 24 ساعت قبل
+        data.history = data.history.filter(item => item.timestamp >= cutoffTime);
+    }
+
+    // گرفتن داده‌های تاریخی
+    getPriceData(symbol) {
+        return this.priceHistory.prices?.[symbol] || null;
+    }
+
+    // گرفتن تمام داده‌ها
+    getAllData() {
+        return this.priceHistory;
+    }
+}
+
+// ✅ ایجاد Gist Manager
+const gistManager = new GistManager();
+
 // ✅ کلاس WebSocketManager برای LBank
 class WebSocketManager {
     constructor() {
@@ -85,14 +239,17 @@ class WebSocketManager {
                     if (message.type === 'tick' && message.tick) {
                         const symbol = message.pair;
                         const tickData = message.tick;
+                        const currentPrice = tickData.latest;
+                        
+                        // ذخیره در Gist Manager
+                        gistManager.addPrice(symbol, currentPrice);
                         
                         this.realtimeData[symbol] = {
-                            price: tickData.latest,
+                            price: currentPrice,
                             high_24h: tickData.high,
                             low_24h: tickData.low,
                             volume: tickData.vol,
                             change: tickData.change,
-                            change_rate: tickData.change,
                             timestamp: message.TS,
                             last_updated: new Date().toISOString()
                         };
@@ -164,126 +321,32 @@ class WebSocketManager {
             coins: Object.keys(this.realtimeData)
         };
     }
-    
-    subscribeToPairs(pairs) {
-        if (this.connected && this.ws) {
-            const newPairs = pairs.filter(pair => !this.subscribedPairs.has(pair));
-            if (newPairs.length > 0) {
-                this.subscribeBatch(newPairs);
-            }
-            return newPairs.length;
-        }
-        return 0;
-    }
 }
 
 // ✅ راه‌اندازی WebSocket
 const wsManager = new WebSocketManager();
 
-
-// در فایل سرور میانی، بعد از WebSocket Manager
-const { Octokit } = require('@octokit/rest');
-
-class GistManager {
-    constructor() {
-        this.octokit = new Octokit({ 
-            auth: process.env.GITHUB_TOKEN 
-        });
-        this.gistId = process.env.GIST_ID; // بعداً میسازیم
-        this.priceHistory = {};
-        this.loadFromGist();
-    }
-
-    async loadFromGist() {
-        try {
-            if (!this.gistId) return;
-            
-            const response = await this.octokit.rest.gists.get({
-                gist_id: this.gistId
-            });
-
-            const content = response.data.files['prices.json'].content;
-            this.priceHistory = JSON.parse(content);
-            console.log('✅ داده‌ها از Gist بارگذاری شد');
-        } catch (error) {
-            console.log('ℹ️ Gist پیدا نشد، با داده خالی شروع میکنیم');
-            this.priceHistory = { prices: {} };
-        }
-    }
-
-    async saveToGist() {
-        try {
-            const content = {
-                last_updated: new Date().toISOString(),
-                prices: this.priceHistory.prices || {}
-            };
-
-            if (!this.gistId) {
-                // ایجاد Gist جدید
-                const response = await this.octokit.rest.gists.create({
-                    description: 'CryptoScanner Price Data',
-                    files: {
-                        'prices.json': {
-                            content: JSON.stringify(content, null, 2)
-                        }
-                    },
-                    public: false
-                });
-                this.gistId = response.data.id;
-                console.log('✅ Gist جدید ایجاد شد:', this.gistId);
-            } else {
-                // آپدیت Gist موجود
-                await this.octokit.rest.gists.update({
-                    gist_id: this.gistId,
-                    files: {
-                        'prices.json': {
-                            content: JSON.stringify(content, null, 2)
-                        }
-                    }
-                });
-                console.log('✅ داده‌ها در Gist ذخیره شد');
-            }
-        } catch (error) {
-            console.error('❌ خطا در ذخیره Gist:', error);
-        }
-    }
-
-    // اضافه کردن قیمت جدید
-    addPrice(symbol, price, change1h = 0, change4h = 0) {
-        if (!this.priceHistory.prices) this.priceHistory.prices = {};
-        
-        this.priceHistory.prices[symbol] = {
-            price: price,
-            timestamp: Date.now(),
-            change_1h: change1h,
-            change_4h: change4h
-        };
-        
-        // ذخیره در Gist (می‌تونی periodic کنی)
-        this.saveToGist();
-    }
-
-    // گرفتن تاریخچه
-    getPriceHistory(symbol) {
-        return this.priceHistory.prices?.[symbol] || null;
-    }
-}
-
-// ایجاد نمونه
-const gistManager = new GistManager();
 // ==================== ENDPOINTهای اصلی ====================
 
 // صفحه اصلی
 app.get('/', (req, res) => {
     res.json({ 
-        message: 'سرور میانی فعال - CryptoScanner Pro',
+        message: 'سرور میانی فعال - CryptoScanner Pro v3.0',
         endpoints: {
             health: '/health',
             scan_all: '/scan-all?limit=100|200|300&filter=volume|momentum|breakout|oversold|overbought',
+            scan_advanced: '/scan-advanced?limit=100|200|300&filter=volume|momentum_1h|momentum_4h|breakout|oversold|overbought',
             coins_list: '/api/coins/list',
             realtime_prices: '/api/coins/realtime',
             market_overview: '/api/market/overview',
-            websocket_status: '/api/websocket/status'
+            websocket_status: '/api/websocket/status',
+            gist_status: '/api/gist/status'
+        },
+        features: {
+            historical_data: true,
+            gist_storage: true,
+            realtime_updates: true,
+            multi_timeframe: true
         },
         timestamp: new Date().toISOString()
     });
@@ -292,6 +355,7 @@ app.get('/', (req, res) => {
 // سلامت سرور
 app.get('/health', (req, res) => {
     const wsStatus = wsManager.getConnectionStatus();
+    const gistData = gistManager.getAllData();
     
     res.json({ 
         status: 'OK', 
@@ -302,12 +366,17 @@ app.get('/health', (req, res) => {
             total_subscribed: wsStatus.total_subscribed,
             provider: "LBank"
         },
+        gist_status: {
+            active: !!process.env.GITHUB_TOKEN,
+            total_coins: Object.keys(gistData.prices || {}).length,
+            last_updated: gistData.last_updated
+        },
         timestamp: new Date().toISOString()
     });
 });
 
-// ✅ endpoint اصلی اسکن - کاملاً اصلاح شده
-app.get('/scan-all', async (req, res) => {
+// ✅ endpoint اصلی اسکن - نسخه پیشرفته
+app.get('/scan-advanced', async (req, res) => {
     const startTime = Date.now();
     
     try {
@@ -315,6 +384,134 @@ app.get('/scan-all', async (req, res) => {
         const filterType = req.query.filter || 'volume';
         
         // ✅ تطبیق فیلترها با فرانت‌اند
+        const filterMapping = {
+            'volume': 'volume',
+            'momentum_1h': 'momentum_1h',
+            'momentum_4h': 'momentum_4h', 
+            'breakout': 'signals',
+            'oversold': 'price_change_24h',
+            'overbought': 'price_change_24h'
+        };
+        
+        const serverFilter = filterMapping[filterType] || 'volume';
+        
+        console.log('🌐 اسکن پیشرفته بازار...', 'تعداد:', limit, 'فیلتر:', filterType);
+        
+        // دریافت داده از CoinStats API
+        const response = await axios.get(
+            'https://openapiv1.coinstats.app/coins',
+            {
+                headers: {
+                    'X-API-KEY': COINSTATS_API_KEY
+                },
+                params: {
+                    limit: Math.min(limit, 300),
+                    currency: 'USD'
+                },
+                timeout: 30000
+            }
+        );
+        
+        let coins = response.data.result || response.data;
+        
+        if (!coins || !Array.isArray(coins)) {
+            throw new Error('داده دریافتی از API معتبر نیست');
+        }
+        
+        console.log(`✅ دریافت ${coins.length} ارز از API`);
+        
+        // اضافه کردن داده‌های تاریخی از Gist
+        const enhancedCoins = coins.map(coin => {
+            const symbol = `${coin.symbol.toLowerCase()}_usdt`;
+            const historicalData = gistManager.getPriceData(symbol);
+            
+            return {
+                ...coin,
+                change_1h: historicalData?.change_1h || 0,
+                change_4h: historicalData?.change_4h || 0,
+                has_historical_data: !!historicalData,
+                historical_timestamp: historicalData?.timestamp
+            };
+        });
+        
+        // اعمال فیلترهای پیشرفته
+        coins = applyAdvancedFilters(enhancedCoins, serverFilter, limit);
+        
+        // ساخت پاسخ نهایی
+        const scanResults = coins.map(coin => ({
+            id: coin.id,
+            name: coin.name,
+            symbol: coin.symbol,
+            price: coin.price || 0,
+            priceChange24h: coin.priceChange1d || coin.priceChange24h || 0,
+            priceChange1h: coin.change_1h || 0,  // از Gist
+            priceChange4h: coin.change_4h || 0,  // از Gist
+            marketCap: coin.marketCap || 0,
+            volume: coin.volume || 0,
+            high24h: coin.high24h || 0,
+            low24h: coin.low24h || 0,
+            rank: coin.rank || 999,
+            liquidity: (coin.volume || 0) * (coin.price || 0),
+            absoluteChange: Math.abs(coin.priceChange1d || coin.priceChange24h || 0),
+            hasHistoricalData: coin.has_historical_data || false
+        }));
+        
+        const responseTime = Date.now() - startTime;
+        
+        console.log(`✅ اسکن پیشرفته کامل: ${scanResults.length} ارز در ${responseTime}ms`);
+        
+        res.json({
+            success: true,
+            scan_results: scanResults,
+            total_coins: scanResults.length,
+            scan_mode: getScanMode(limit),
+            filter_applied: filterType,
+            filter_description: getFilterDescription(filterType),
+            scan_time: new Date().toISOString(),
+            features: {
+                has_1h_data: true,
+                has_4h_data: true,
+                data_source: 'CoinStats + Gist Historical',
+                historical_coins: scanResults.filter(c => c.hasHistoricalData).length
+            },
+            performance: {
+                request_limit: limit,
+                actual_results: scanResults.length,
+                filter_type: filterType,
+                response_time: `${responseTime}ms`
+            }
+        });
+        
+    } catch (error) {
+        console.error('❌ خطا در اسکن پیشرفته بازار:', error.message);
+        
+        const limit = parseInt(req.query.limit) || 100;
+        const filterType = req.query.filter || 'volume';
+        
+        // ✅ فال‌بک با داده‌های نمونه
+        const sampleData = generateFilteredSampleData(limit, filterType);
+        
+        res.json({
+            success: true,
+            scan_results: sampleData,
+            total_coins: sampleData.length,
+            scan_mode: getScanMode(limit),
+            filter_applied: filterType,
+            scan_time: new Date().toISOString(),
+            note: 'اسکن با داده‌های نمونه انجام شد',
+            error: error.message
+        });
+    }
+});
+
+// ✅ endpoint اصلی اسکن - نسخه معمولی (برای سازگاری)
+app.get('/scan-all', async (req, res) => {
+    const startTime = Date.now();
+    
+    try {
+        let limit = parseInt(req.query.limit) || 100;
+        const filterType = req.query.filter || 'volume';
+        
         const filterMapping = {
             'volume': 'volume',
             'momentum': 'price_change_24h', 
@@ -327,7 +524,6 @@ app.get('/scan-all', async (req, res) => {
         
         console.log('🌐 اسکن بازار...', 'تعداد:', limit, 'فیلتر:', filterType);
         
-        // دریافت داده از CoinStats API
         const response = await axios.get(
             'https://openapiv1.coinstats.app/coins',
             {
@@ -376,7 +572,7 @@ app.get('/scan-all', async (req, res) => {
         
         res.json({
             success: true,
-            scan_results: scanResults, // ✅ فیلد مورد انتظار فرانت‌اند
+            scan_results: scanResults,
             total_coins: scanResults.length,
             scan_mode: getScanMode(limit),
             filter_applied: filterType,
@@ -396,7 +592,6 @@ app.get('/scan-all', async (req, res) => {
         const limit = parseInt(req.query.limit) || 100;
         const filterType = req.query.filter || 'volume';
         
-        // ✅ فال‌بک با داده‌های نمونه
         const sampleData = generateFilteredSampleData(limit, filterType);
         
         res.json({
@@ -500,63 +695,36 @@ app.get('/api/coins/realtime', (req, res) => {
     }
 });
 
-// endpoint برای داده‌های پیشرفته
-app.get('/scan-advanced', async (req, res) => {
+// وضعیت Gist
+app.get('/api/gist/status', (req, res) => {
     try {
-        const limit = parseInt(req.query.limit) || 100;
-        const filterType = req.query.filter || 'volume';
-        
-        // دریافت داده از API اصلی
-        const response = await axios.get(
-            'https://openapiv1.coinstats.app/coins',
-            {
-                headers: { 'X-API-KEY': COINSTATS_API_KEY },
-                params: { limit: Math.min(limit, 300), currency: 'USD' }
-            }
-        );
-        
-        let coins = response.data.result || [];
-        
-        // اضافه کردن تغییرات 1h و 4h از Gist
-        const enhancedCoins = coins.map((coin) => {
-            const symbol = `${coin.symbol.toLowerCase()}_usdt`;
-            const history = gistManager.getPriceHistory(symbol);
-            
-            return {
-                ...coin,
-                change_1h: history?.change_1h || 0,
-                change_4h: history?.change_4h || 0,
-                has_historical_data: !!history
-            };
-        });
-        
-        // اعمال فیلترهای پیشرفته
-        const filteredCoins = applyAdvancedFilters(enhancedCoins, filterType, limit);
+        const gistData = gistManager.getAllData();
         
         res.json({
             success: true,
-            scan_results: filteredCoins,
-            total_coins: filteredCoins.length,
-            features: {
-                has_1h_data: true,
-                has_4h_data: true,
-                data_source: 'Gist + CoinStats'
-            },
+            gist_id: gistManager.gistId,
+            total_coins: Object.keys(gistData.prices || {}).length,
+            last_updated: gistData.last_updated,
+            storage_used: JSON.stringify(gistData).length,
             timestamp: new Date().toISOString()
         });
         
     } catch (error) {
-        console.error('❌ خطا در اسکن پیشرفته:', error);
-        res.status(500).json({ success: false, error: error.message });
+        console.error('❌ خطا در دریافت وضعیت Gist:', error.message);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
     }
 });
 
 // overview بازار
 app.get('/api/market/overview', async (req, res) => {
     try {
-        const [coinsList, realtimeData] = await Promise.all([
+        const [coinsList, realtimeData, gistStatus] = await Promise.all([
             axios.get(`http://localhost:${PORT}/api/coins/list`).catch(() => ({ data: { data: [] } })),
-            Promise.resolve({ data: { data: wsManager.getRealtimeData() } })
+            Promise.resolve({ data: { data: wsManager.getRealtimeData() } }),
+            Promise.resolve({ data: { data: gistManager.getAllData() } })
         ]);
 
         const coins = coinsList.data.data || [];
@@ -564,7 +732,9 @@ app.get('/api/market/overview', async (req, res) => {
         const overview = {
             total_coins: coins.length,
             realtime_coins: Object.keys(realtimeData.data.data).length,
+            historical_coins: Object.keys(gistStatus.data.data.prices || {}).length,
             websocket_status: wsManager.connected ? 'connected' : 'disconnected',
+            gist_status: !!gistManager.gistId,
             top_coins: coins.slice(0, 10).map(coin => ({
                 id: coin.id,
                 name: coin.name,
@@ -635,6 +805,12 @@ function applyAdvancedFilters(coins, filterType, limit) {
                 return changeB - changeA;
             });
             break;
+        case 'momentum_1h':
+            filteredCoins.sort((a, b) => Math.abs(b.change_1h || 0) - Math.abs(a.change_1h || 0));
+            break;
+        case 'momentum_4h':
+            filteredCoins.sort((a, b) => Math.abs(b.change_4h || 0) - Math.abs(a.change_4h || 0));
+            break;
         case 'signals':
             filteredCoins.forEach(coin => {
                 const volatility = Math.abs(coin.priceChange1d || 0);
@@ -663,6 +839,8 @@ function getFilterDescription(filterType) {
     const descriptions = {
         'volume': 'ارزهای با بیشترین حجم معاملات',
         'momentum': 'ارزهای با حرکت قیمت قوی',
+        'momentum_1h': 'ارزهای با حرکت 1 ساعته قوی',
+        'momentum_4h': 'ارزهای با حرکت 4 ساعته قوی',
         'breakout': 'ارزهای با سیگنال‌های تکنیکال قوی',
         'oversold': 'ارزهای با بیشترین تغییرات قیمت',
         'overbought': 'ارزهای با بیشترین تغییرات قیمت'
@@ -683,6 +861,8 @@ function generateFilteredSampleData(limit, filterType) {
         const price = baseCoin.basePrice * (1 + Math.random() * 0.1 - 0.05);
         const volume = baseCoin.baseVolume * (1 + Math.random() * 0.5 - 0.25);
         const change24h = (Math.random() * 20 - 10);
+        const change1h = (Math.random() * 8 - 4);
+        const change4h = (Math.random() * 15 - 7.5);
         
         sampleCoins.push({
             id: `${baseCoin.id}-${i}`,
@@ -690,14 +870,16 @@ function generateFilteredSampleData(limit, filterType) {
             symbol: `${baseCoin.symbol}${i}`,
             price: price,
             priceChange24h: change24h,
-            priceChange1h: (Math.random() * 4 - 2),
+            priceChange1h: change1h,
+            priceChange4h: change4h,
             marketCap: price * (1000000 + Math.random() * 10000000),
             volume: volume,
             high24h: price * (1 + Math.random() * 0.05),
             low24h: price * (1 - Math.random() * 0.05),
             rank: i + 1,
             liquidity: volume * price,
-            absoluteChange: Math.abs(change24h)
+            absoluteChange: Math.abs(change24h),
+            hasHistoricalData: Math.random() > 0.3
         });
     }
     
@@ -714,8 +896,11 @@ app.use((req, res, next) => {
 app.listen(PORT, () => {
     console.log(`🚀 سرور میانی فعال روی پورت ${PORT}`);
     console.log(`🔑 API Key: فعال`);
+    console.log(`🔗 Gist Storage: ${process.env.GITHUB_TOKEN ? 'فعال' : 'غیرفعال'}`);
     console.log(`📊 گزینه‌های اسکن: 100, 200, 300 ارز`);
     console.log(`🌐 WebSocket: LBank فعال برای ${ALL_TRADING_PAIRS.length} جفت ارز`);
+    console.log(`⏰ ویژگی‌های جدید: تغییرات 1h/4h با ذخیره‌سازی Gist`);
     console.log(`✅ سلامت: http://localhost:${PORT}/health`);
     console.log(`🎯 اسکن اصلی: http://localhost:${PORT}/scan-all?limit=100&filter=volume`);
+    console.log(`🚀 اسکن پیشرفته: http://localhost:${PORT}/scan-advanced?limit=100&filter=momentum_1h`);
 });
