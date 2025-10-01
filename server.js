@@ -180,6 +180,97 @@ class WebSocketManager {
 // ✅ راه‌اندازی WebSocket
 const wsManager = new WebSocketManager();
 
+
+// در فایل سرور میانی، بعد از WebSocket Manager
+const { Octokit } = require('@octokit/rest');
+
+class GistManager {
+    constructor() {
+        this.octokit = new Octokit({ 
+            auth: process.env.GITHUB_TOKEN 
+        });
+        this.gistId = process.env.GIST_ID; // بعداً میسازیم
+        this.priceHistory = {};
+        this.loadFromGist();
+    }
+
+    async loadFromGist() {
+        try {
+            if (!this.gistId) return;
+            
+            const response = await this.octokit.rest.gists.get({
+                gist_id: this.gistId
+            });
+
+            const content = response.data.files['prices.json'].content;
+            this.priceHistory = JSON.parse(content);
+            console.log('✅ داده‌ها از Gist بارگذاری شد');
+        } catch (error) {
+            console.log('ℹ️ Gist پیدا نشد، با داده خالی شروع میکنیم');
+            this.priceHistory = { prices: {} };
+        }
+    }
+
+    async saveToGist() {
+        try {
+            const content = {
+                last_updated: new Date().toISOString(),
+                prices: this.priceHistory.prices || {}
+            };
+
+            if (!this.gistId) {
+                // ایجاد Gist جدید
+                const response = await this.octokit.rest.gists.create({
+                    description: 'CryptoScanner Price Data',
+                    files: {
+                        'prices.json': {
+                            content: JSON.stringify(content, null, 2)
+                        }
+                    },
+                    public: false
+                });
+                this.gistId = response.data.id;
+                console.log('✅ Gist جدید ایجاد شد:', this.gistId);
+            } else {
+                // آپدیت Gist موجود
+                await this.octokit.rest.gists.update({
+                    gist_id: this.gistId,
+                    files: {
+                        'prices.json': {
+                            content: JSON.stringify(content, null, 2)
+                        }
+                    }
+                });
+                console.log('✅ داده‌ها در Gist ذخیره شد');
+            }
+        } catch (error) {
+            console.error('❌ خطا در ذخیره Gist:', error);
+        }
+    }
+
+    // اضافه کردن قیمت جدید
+    addPrice(symbol, price, change1h = 0, change4h = 0) {
+        if (!this.priceHistory.prices) this.priceHistory.prices = {};
+        
+        this.priceHistory.prices[symbol] = {
+            price: price,
+            timestamp: Date.now(),
+            change_1h: change1h,
+            change_4h: change4h
+        };
+        
+        // ذخیره در Gist (می‌تونی periodic کنی)
+        this.saveToGist();
+    }
+
+    // گرفتن تاریخچه
+    getPriceHistory(symbol) {
+        return this.priceHistory.prices?.[symbol] || null;
+    }
+}
+
+// ایجاد نمونه
+const gistManager = new GistManager();
 // ==================== ENDPOINTهای اصلی ====================
 
 // صفحه اصلی
@@ -406,6 +497,57 @@ app.get('/api/coins/realtime', (req, res) => {
             success: false,
             error: error.message
         });
+    }
+});
+
+// endpoint برای داده‌های پیشرفته
+app.get('/scan-advanced', async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit) || 100;
+        const filterType = req.query.filter || 'volume';
+        
+        // دریافت داده از API اصلی
+        const response = await axios.get(
+            'https://openapiv1.coinstats.app/coins',
+            {
+                headers: { 'X-API-KEY': COINSTATS_API_KEY },
+                params: { limit: Math.min(limit, 300), currency: 'USD' }
+            }
+        );
+        
+        let coins = response.data.result || [];
+        
+        // اضافه کردن تغییرات 1h و 4h از Gist
+        const enhancedCoins = coins.map((coin) => {
+            const symbol = `${coin.symbol.toLowerCase()}_usdt`;
+            const history = gistManager.getPriceHistory(symbol);
+            
+            return {
+                ...coin,
+                change_1h: history?.change_1h || 0,
+                change_4h: history?.change_4h || 0,
+                has_historical_data: !!history
+            };
+        });
+        
+        // اعمال فیلترهای پیشرفته
+        const filteredCoins = applyAdvancedFilters(enhancedCoins, filterType, limit);
+        
+        res.json({
+            success: true,
+            scan_results: filteredCoins,
+            total_coins: filteredCoins.length,
+            features: {
+                has_1h_data: true,
+                has_4h_data: true,
+                data_source: 'Gist + CoinStats'
+            },
+            timestamp: new Date().toISOString()
+        });
+        
+    } catch (error) {
+        console.error('❌ خطا در اسکن پیشرفته:', error);
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
