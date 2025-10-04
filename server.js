@@ -94,7 +94,7 @@ class AdvancedCoinStatsAPIClient {
     this.request_count++;
     }
 
-    async _makeRequest(url, params = {}, maxRetries = MAX_RETRIES) {
+  async _makeRequest(url, params = {}, maxRetries = MAX_RETRIES) {
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
         await this._rateLimit();
