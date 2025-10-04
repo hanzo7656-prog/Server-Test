@@ -837,6 +837,30 @@ app.get('/api/vortexai/advanced-market-data', async (req, res) => {
   }
 });
 
+// ==================== STATUS ROUTE ====================
+app.get('/status', async (req, res) => {
+  try {
+    // تست اتصال به APIهای خارجی
+    const [coinsStatus, newsStatus] = await Promise.all([
+      apiClient.getCoins(1).then(data => !!data),
+      apiClient.getNews(1).then(data => !!data)
+    ]);
+    
+    res.json({
+      server: 'active',
+      coinstats_api: coinsStatus ? 'connected' : 'disconnected',
+      news_api: newsStatus ? 'connected' : 'disconnected',
+      websocket: 'active',
+      active_clients: activeConnections.size,
+      technical_analysis_engine: 'active',
+      vortexai_integration: 'ready',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    logger.error(`Status check error: ${error.message}`);
+    res.status(500).json({ status: 'error', error: error.message });
+  }
+});
 // ==================== HEALTH & MONITORING ====================
 app.get('/health', (req, res) => {
   res.json({
