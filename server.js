@@ -92,23 +92,36 @@ class AdvancedCoinStatsAPIClient {
     
     this.last_request_time = Date.now();
     this.request_count++;
-  }
+    }
 
-  async _makeRequest(url, params = {}, maxRetries = MAX_RETRIES) {
+    async _makeRequest(url, params = {}, maxRetries = MAX_RETRIES) {
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
         await this._rateLimit();
-        const response = await this.axiosInstance.get(url, { params });
-        
-        logger.debug(`API Request successful: ${url}`);
-        return response.data;
-        
+      
+        const queryString = new URLSearchParams(params).toString();
+        const fullUrl = queryString ? `${url}?${queryString}` : url;
+      
+        const response = await fetch(fullUrl, {
+          method: 'GET',
+          headers: {
+            'X-API-KEY': COINSTATS_API_KEY,
+            'Accept': 'application/json'
+          }
+        });
+      
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+      
+        const data = await response.json();
+        return data;
+      
       } catch (error) {
         logger.warn(`API Request attempt ${attempt + 1} failed: ${error.message}`);
         if (attempt < maxRetries - 1) {
           await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * Math.pow(2, attempt)));
         } else {
-          logger.error(`All API request attempts failed for ${url}`);
           return {};
         }
       }
