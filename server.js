@@ -121,7 +121,16 @@ class AdvancedCoinStatsAPIClient {
     logger.info(`Fetching ${limit} coins (skip: ${skip})`);
     const url = `${this.base_url}/coins`;
     const params = { limit, skip, currency };
-    return this._makeRequest(url, params);
+  
+    console.log('🔍 API Request Details:');
+    console.log('URL:', url);
+    console.log('Params:', params);
+    console.log('Headers:', this.axiosInstance.defaults.headers);
+  
+    const result = await this._makeRequest(url, params);
+  
+    console.log('📦 API Response:', result);
+    return result;
   }
 
   async getCoinHistory(coinId, period = "24h") {
