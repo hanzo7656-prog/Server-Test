@@ -151,14 +151,20 @@ class AdvancedCoinStatsAPIClient {
     }
     
     const data = await response.json();
-    console.log('🔍 RAW API RESPONSE:', data);
+    console.log('🔍 FULL API RESPONSE:', data);
     
-    // بررسی ساختار پاسخ
-    if (data && data.coins) {
-      console.log(`✅ Found ${data.coins.length} coins`);
+    // ✅ درست مثل کد قبلی - بررسی همه فرمت‌های ممکن
+    if (data.result && Array.isArray(data.result)) {
+      // فرمت: { result: [...] }
+      return { coins: data.result };
+    } else if (data.coins && Array.isArray(data.coins)) {
+      // فرمت: { coins: [...] }
       return data;
+    } else if (Array.isArray(data)) {
+      // فرمت: [...]
+      return { coins: data };
     } else {
-      console.log('❌ Unexpected response structure:', data);
+      console.log('❌ Unknown response structure');
       return { coins: [] };
     }
     
