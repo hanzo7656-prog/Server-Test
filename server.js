@@ -131,20 +131,34 @@ class AdvancedCoinStatsAPIClient {
 
   // ==================== CORE ENDPOINTS ====================
   async getCoins(limit = 300, skip = 0, currency = "USD") {
-    logger.info(`Fetching ${limit} coins (skip: ${skip})`);
-    const url = `${this.base_url}/coins`;
-    const params = { limit, skip, currency };
+  logger.info(`Fetching ${limit} coins (skip: ${skip})`);
   
-    console.log('🔍 API Request Details:');
-    console.log('URL:', url);
-    console.log('Params:', params);
-    console.log('Headers:', this.axiosInstance.defaults.headers);
-  
-    const result = await this._makeRequest(url, params);
-  
-    console.log('📦 API Response:', result);
-    return result;
+  try {
+    const queryString = new URLSearchParams({ limit, skip, currency }).toString();
+    const url = `${this.base_url}/coins?${queryString}`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'X-API-KEY': COINSTATS_API_KEY,
+        'Accept': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    console.log('✅ getCoins response:', data); // برای دیباگ
+    
+    return data;
+    
+  } catch (error) {
+    logger.error(`getCoins failed: ${error.message}`);
+    return { coins: [] };
   }
+}
 
   async getCoinHistory(coinId, period = "24h") {
     logger.info(`Fetching history for ${coinId} (period: ${period})`);
