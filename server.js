@@ -37,7 +37,7 @@ app.use(express.json());
 
 // تنظیمات پیشرفته
 const COINSTATS_API_BASE = "https://openapiv1.coinstats.app";
-const COINSTATS_API_KEY = "7qmXYUHlF+DWnF9fYml4Klz+/leL7EBRH+mA2WrpsEc=";
+const COINSTATS_API_KEY = "uNb+sOjnjCQmV30dYrChxgh55hRHElmiZLnKJX+5U6g=";
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000;
 
