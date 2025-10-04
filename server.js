@@ -859,18 +859,20 @@ app.get('/health', (req, res) => {
 // ==================== STATUS ROUTE ====================
 app.get('/status', async (req, res) => {
   try {
-    // تست اتصال به APIهای خارجی
     const [coinsStatus, newsStatus] = await Promise.all([
       apiClient.getCoins(1).then(data => !!data),
       apiClient.getNews(1).then(data => !!data)
     ]);
+    
+    // استفاده از global activeConnections اگر تعریف شده
+    const activeClients = global.activeConnections ? global.activeConnections.size : 0;
     
     res.json({
       server: 'active',
       coinstats_api: coinsStatus ? 'connected' : 'disconnected',
       news_api: newsStatus ? 'connected' : 'disconnected',
       websocket: 'active',
-      active_clients: activeConnections.size,
+      active_clients: activeClients,
       technical_analysis_engine: 'active',
       vortexai_integration: 'ready',
       timestamp: new Date().toISOString()
