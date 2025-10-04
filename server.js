@@ -837,6 +837,25 @@ app.get('/api/vortexai/advanced-market-data', async (req, res) => {
   }
 });
 
+// ==================== HEALTH & MONITORING ====================
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'healthy',
+    service: 'Advanced Crypto Scanner API',
+    version: '3.0',
+    timestamp: new Date().toISOString(),
+    uptime: 'active',
+    api_requests_count: apiClient.request_count,
+    features: [
+      'market_scanning',
+      'advanced_technical_analysis',
+      'vortexai_integration',
+      'real-time_websocket',
+      'news_sentiment_analysis',
+      'multi-indicator_support'
+    ]
+  });
+});
 // ==================== STATUS ROUTE ====================
 app.get('/status', async (req, res) => {
   try {
@@ -861,26 +880,6 @@ app.get('/status', async (req, res) => {
     res.status(500).json({ status: 'error', error: error.message });
   }
 });
-// ==================== HEALTH & MONITORING ====================
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'healthy',
-    service: 'Advanced Crypto Scanner API',
-    version: '3.0',
-    timestamp: new Date().toISOString(),
-    uptime: 'active',
-    api_requests_count: apiClient.request_count,
-    features: [
-      'market_scanning',
-      'advanced_technical_analysis',
-      'vortexai_integration',
-      'real-time_websocket',
-      'news_sentiment_analysis',
-      'multi-indicator_support'
-    ]
-  });
-});
-
 // ==================== SERVER STARTUP ====================
 const PORT = process.env.PORT || 5000;
 
