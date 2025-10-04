@@ -134,25 +134,33 @@ class AdvancedCoinStatsAPIClient {
   logger.info(`Fetching ${limit} coins (skip: ${skip})`);
   
   try {
-    const queryString = new URLSearchParams({ limit, skip, currency }).toString();
-    const url = `${this.base_url}/coins?${queryString}`;
+    const url = `${this.base_url}/coins?limit=${limit}&skip=${skip}&currency=${currency}`;
     
-    const response = await fetch(url, {
+    const options = {
       method: 'GET',
       headers: {
         'X-API-KEY': COINSTATS_API_KEY,
         'Accept': 'application/json'
       }
-    });
+    };
+
+    const response = await fetch(url, options);
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     
     const data = await response.json();
-    console.log('✅ getCoins response:', data); // برای دیباگ
+    console.log('🔍 RAW API RESPONSE:', data);
     
-    return data;
+    // بررسی ساختار پاسخ
+    if (data && data.coins) {
+      console.log(`✅ Found ${data.coins.length} coins`);
+      return data;
+    } else {
+      console.log('❌ Unexpected response structure:', data);
+      return { coins: [] };
+    }
     
   } catch (error) {
     logger.error(`getCoins failed: ${error.message}`);
