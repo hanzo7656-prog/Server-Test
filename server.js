@@ -358,6 +358,153 @@ function calculatePatternComplexity(coin, indicators) {
   if (indicators && Math.abs(indicators.rsi - 50) > 20) complexity += 1;
   return complexity;
 }
+// ==================== ROOT ROUTE ====================
+app.get('/', (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>VortexAI Crypto Scanner</title>
+        <style>
+            body { 
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+                margin: 0; 
+                padding: 0; 
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                min-height: 100vh;
+            }
+            .container { 
+                max-width: 900px; 
+                margin: 0 auto; 
+                background: white; 
+                padding: 40px; 
+                border-radius: 15px; 
+                box-shadow: 0 10px 30px rgba(0,0,0,0.2); 
+                margin-top: 40px;
+                margin-bottom: 40px;
+            }
+            h1 { 
+                color: #2c3e50; 
+                border-bottom: 3px solid #3498db; 
+                padding-bottom: 15px; 
+                text-align: center;
+            }
+            .status { 
+                background: #27ae60; 
+                color: white; 
+                padding: 10px 20px; 
+                border-radius: 20px; 
+                display: inline-block; 
+                font-weight: bold;
+            }
+            .endpoint { 
+                background: #f8f9fa; 
+                padding: 15px; 
+                margin: 15px 0; 
+                border-radius: 8px; 
+                border-left: 4px solid #3498db; 
+                transition: transform 0.2s;
+            }
+            .endpoint:hover {
+                transform: translateX(5px);
+                background: #e8f4fd;
+            }
+            .method { 
+                background: #3498db; 
+                color: white; 
+                padding: 4px 12px; 
+                border-radius: 4px; 
+                font-size: 12px; 
+                font-weight: bold;
+                margin-right: 10px;
+            }
+            .url { 
+                color: #2c3e50; 
+                font-weight: bold; 
+                font-family: 'Courier New', monospace;
+            }
+            .links {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 10px;
+                margin: 20px 0;
+            }
+            .links a {
+                display: block;
+                padding: 12px;
+                background: #3498db;
+                color: white;
+                text-decoration: none;
+                border-radius: 5px;
+                text-align: center;
+                transition: background 0.3s;
+            }
+            .links a:hover {
+                background: #2980b9;
+                transform: translateY(-2px);
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🚀 VortexAI Crypto Scanner API</h1>
+            <p style="text-align: center;">
+                <span class="status">🟢 Status: Active & Running</span>
+            </p>
+            <p style="text-align: center; font-size: 18px; color: #555;">
+                Advanced cryptocurrency market scanner with real-time technical analysis and VortexAI integration
+            </p>
+            
+            <h2>📡 Available Endpoints:</h2>
+            
+            <div class="endpoint">
+                <span class="method">GET</span> 
+                <span class="url">/health</span> 
+                <div style="color: #666; margin-top: 5px;">Service health check and detailed status</div>
+            </div>
+            
+            <div class="endpoint">
+                <span class="method">GET</span> 
+                <span class="url">/api/scan/market</span> 
+                <div style="color: #666; margin-top: 5px;">Real-time market scanning and analysis</div>
+            </div>
+            
+            <div class="endpoint">
+                <span class="method">GET</span> 
+                <span class="url">/api/scan/advanced</span> 
+                <div style="color: #666; margin-top: 5px;">Advanced technical analysis scanning</div>
+            </div>
+            
+            <div class="endpoint">
+                <span class="method">GET</span> 
+                <span class="url">/api/vortexai/advanced-market-data</span> 
+                <div style="color: #666; margin-top: 5px;">VortexAI enhanced market data with neural network insights</div>
+            </div>
+            
+            <div class="endpoint">
+                <span class="method">GET</span> 
+                <span class="url">/api/coin/:id/technical</span> 
+                <div style="color: #666; margin-top: 5px;">Detailed technical analysis for specific cryptocurrency</div>
+            </div>
+            
+            <h2>🔗 Quick Test Links:</h2>
+            <div class="links">
+                <a href="/health">Health Check</a>
+                <a href="/api/scan/market?limit=10">Market Scan</a>
+                <a href="/api/vortexai/advanced-market-data?limit=5">VortexAI Data</a>
+                <a href="/status">Service Status</a>
+            </div>
+            
+            <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                <p><strong>🕒 Server Time:</strong> ${new Date().toISOString()}</p>
+                <p><strong>🚀 Version:</strong> 3.0.0</p>
+                <p><strong>🎯 Environment:</strong> Production</p>
+            </div>
+        </div>
+    </body>
+    </html>
+  `);
+});
 
 // ==================== ROUTES FOR MAIN APP ====================
 app.get('/api/scan/market', async (req, res) => {
