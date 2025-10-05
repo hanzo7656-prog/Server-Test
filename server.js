@@ -780,7 +780,21 @@ app.get('/health-combined', (req, res) => {
 });
 
 // ۴. دشبورد اصلی
+
+// ==================== endpointهای قدیمی برای سازگاری ====================
+app.get('/health', (req, res) => {
+    res.redirect('/health-combined');
+});
+
+app.get('/scan-advanced', (req, res) => {
+    res.redirect(`/api/scan/vortexai?${new URLSearchParams(req.query)}`);
+});
+
+// ==================== صفحه اصلی دشبورد ====================
 app.get('/', (req, res) => {
+    const wsStatus = wsManager.getConnectionStatus();
+    const gistData = gistManager.getAllData();
+    
     res.send(`
     <!DOCTYPE html>
     <html>
@@ -818,131 +832,130 @@ app.get('/', (req, res) => {
             }
             .status-card {
                 background: #f8f9fa;
-                padding: 20px;
-                border-radius: 10px;
-                border-left: 4px solid #3498db;
+                padding: 25px;
+                border-radius: 12px;
+                border-left: 5px solid #3498db;
+                transition: transform 0.3s, box-shadow 0.3s;
+            }
+            .status-card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 8px 25px rgba(0,0,0,0.1);
             }
             .status-card.good { border-left-color: #27ae60; }
             .status-card.warning { border-left-color: #f39c12; }
-            .status-card.danger { border-left-color: #e74c3c; }
-            .endpoint {
-                background: #f8f9fa;
-                padding: 15px;
-                margin: 15px 0;
-                border-radius: 8px;
-                border-left: 4px solid #3498db;
+            .status-icon {
+                font-size: 2em;
+                margin-bottom: 15px;
             }
-            .method {
-                background: #3498db;
-                color: white;
-                padding: 4px 12px;
-                border-radius: 4px;
-                font-size: 12px;
+            .metric {
+                font-size: 2em;
                 font-weight: bold;
-                margin-right: 10px;
+                color: #2c3e50;
+                margin: 10px 0;
             }
-            .links {
+            .metric-label {
+                color: #7f8c8d;
+                font-size: 0.9em;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }
+            .links-grid {
                 display: grid;
                 grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                gap: 10px;
-                margin: 20px 0;
+                gap: 15px;
+                margin: 30px 0;
             }
-            .links a {
+            .nav-link {
                 display: block;
-                padding: 12px;
+                padding: 20px;
                 background: #3498db;
                 color: white;
                 text-decoration: none;
-                border-radius: 5px;
+                border-radius: 10px;
                 text-align: center;
-                transition: background 0.3s;
+                transition: all 0.3s;
+                font-weight: bold;
             }
-            .links a:hover {
+            .nav-link:hover {
                 background: #2980b9;
-                transform: translateY(-2px);
+                transform: translateY(-3px);
+                box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+            }
+            .footer {
+                text-align: center;
+                margin-top: 40px;
+                padding: 20px;
+                background: #f8f9fa;
+                border-radius: 10px;
             }
         </style>
     </head>
     <body>
         <div class="container">
             <h1>🚀 VortexAI Pro - Combined Crypto Scanner</h1>
-            <p style="text-align: center; color: #666;">
+            <p style="text-align: center; color: #666; font-size: 18px;">
                 Advanced cryptocurrency market scanner with real-time data, historical analysis, and AI-powered insights
             </p>
             
             <div class="status-grid">
                 <div class="status-card good">
-                    <h3>📊 Real-time Data</h3>
-                    <p>WebSocket: ${wsManager.connected ? '✅ Connected' : '❌ Disconnected'}</p>
-                    <p>Active Coins: ${Object.keys(wsManager.getRealtimeData()).length}</p>
+                    <div class="status-icon">📡</div>
+                    <div class="metric">${wsStatus.connected ? 'Connected' : 'Disconnected'}</div>
+                    <div class="metric-label">WebSocket Status</div>
+                    <div style="margin-top: 10px; font-size: 0.9em;">
+                        Active Coins: ${wsStatus.active_coins}<br>
+                        Total: ${wsStatus.total_subscribed}
+                    </div>
                 </div>
+                
                 <div class="status-card good">
-                    <h3>💾 Historical Storage</h3>
-                    <p>Gist: ${process.env.GITHUB_TOKEN ? '✅ Active' : '❌ Inactive'}</p>
-                    <p>Stored Coins: ${Object.keys(gistManager.getAllData().prices || {}).length}</p>
+                    <div class="status-icon">💾</div>
+                    <div class="metric">${Object.keys(gistData.prices || {}).length}</div>
+                    <div class="metric-label">Historical Storage</div>
+                    <div style="margin-top: 10px; font-size: 0.9em;">
+                        Gist: ${process.env.GITHUB_TOKEN ? 'Active' : 'Inactive'}<br>
+                        Last Updated: ${new Date(gistData.last_updated).toLocaleDateString()}
+                    </div>
                 </div>
+                
                 <div class="status-card good">
-                    <h3>🤖 AI Analysis</h3>
-                    <p>VortexAI: ✅ Ready</p>
-                    <p>Technical Indicators: 15+</p>
+                    <div class="status-icon">🤖</div>
+                    <div class="metric">15+</div>
+                    <div class="metric-label">AI Indicators</div>
+                    <div style="margin-top: 10px; font-size: 0.9em;">
+                        VortexAI: Ready<br>
+                        Analysis: Active
+                    </div>
                 </div>
             </div>
 
-            <h2>🔗 Advanced Endpoints</h2>
+            <h2 style="text-align: center; color: #2c3e50;">🔗 Navigation</h2>
             
-            <div class="endpoint">
-                <span class="method">GET</span>
-                <strong>/api/scan/vortexai?limit=100&filter=ai_signal</strong>
-                <div style="color: #666; margin-top: 5px;">Combined scan with real-time data, historical analysis, and AI insights</div>
-            </div>
-            
-            <div class="endpoint">
-                <span class="method">GET</span>
-                <strong>/api/coin/btc_usdt/technical</strong>
-                <div style="color: #666; margin-top: 5px;">Advanced technical analysis for any cryptocurrency</div>
-            </div>
-            
-            <div class="endpoint">
-                <span class="method">GET</span>
-                <strong>/health-combined</strong>
-                <div style="color: #666; margin-top: 5px;">Complete system status with all services</div>
+            <div class="links-grid">
+                <a href="/health" class="nav-link" style="background: #27ae60;">
+                    🩺 System Health
+                </a>
+                <a href="/scan" class="nav-link" style="background: #e74c3c;">
+                    🔍 Market Scanner
+                </a>
+                <a href="/analysis?symbol=btc_usdt" class="nav-link" style="background: #9b59b6;">
+                    📊 BTC Analysis
+                </a>
+                <a href="/api/scan/vortexai?limit=10&filter=ai_signal" class="nav-link" style="background: #f39c12;">
+                    📈 API Data
+                </a>
             </div>
 
-            <h2>🔍 Quick Links</h2>
-            <div class="links">
-                <a href="/health-combined">System Health</a>
-                <a href="/api/scan/vortexai?limit=10">VortexAI Scan</a>
-                <a href="/api/coin/btc_usdt/technical">BTC Analysis</a>
-                <a href="/api/scan/vortexai?limit=20&filter=ai_signal">Top AI Signals</a>
-            </div>
-
-            <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
-                <p><strong>🕒 Server Time:</strong> ${new Date().toISOString()}</p>
-                <p><strong>📦 Version:</strong> 4.0 - Combined Edition</p>
+            <div class="footer">
+                <p><strong>🕒 Server Time:</strong> ${new Date().toLocaleString()}</p>
+                <p><strong>📦 Version:</strong> 4.0 - Enhanced UI Edition</p>
                 <p><strong>🌐 Environment:</strong> Production</p>
-                <p><strong>💡 Features:</strong> Real-time WebSocket + Historical Gist + VortexAI Analysis</p>
+                <p><strong>💡 Features:</strong> Real-time WebSocket + Historical Gist + VortexAI Analysis + Beautiful UI</p>
             </div>
         </div>
     </body>
     </html>
     `);
-});
-
-// ==================== endpointهای قدیمی برای سازگاری ====================
-app.get('/health', (req, res) => {
-    res.redirect('/health-combined');
-});
-
-app.get('/scan-advanced', (req, res) => {
-    res.redirect(`/api/scan/vortexai?${new URLSearchParams(req.query)}`);
-});
-
-
-// ==================== ROUTES FOR BEAUTIFUL HTML PAGES ====================
-
-// صفحه اصلی - از قبل داری
-app.get('/', (req, res) => {
-    res.send(/* کد HTML صفحه اصلی که داری */);
 });
 
 // صفحه سلامت سیستم
