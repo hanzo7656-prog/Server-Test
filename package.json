@@ -1,9 +1,11 @@
 {
-  "name": "vortexai-scanner",
-  "version": "1.0.0",
-  "main": "server_combined.js",
+  "name": "vortexai-crypto-scanner-pro",
+  "version": "4.0.0",
+  "description": "Advanced cryptocurrency market scanner",
+  "main": "server.js",
   "scripts": {
-    "start": "node server_combined.js"
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
   "dependencies": {
     "express": "^4.18.2",
@@ -13,5 +15,8 @@
     "@octokit/rest": "^20.0.2",
     "winston": "^3.11.0",
     "dotenv": "^16.3.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
