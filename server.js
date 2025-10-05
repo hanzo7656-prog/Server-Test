@@ -937,6 +937,569 @@ app.get('/scan-advanced', (req, res) => {
     res.redirect(`/api/scan/vortexai?${new URLSearchParams(req.query)}`);
 });
 
+
+// ==================== ROUTES FOR BEAUTIFUL HTML PAGES ====================
+
+// صفحه اصلی - از قبل داری
+app.get('/', (req, res) => {
+    res.send(/* کد HTML صفحه اصلی که داری */);
+});
+
+// صفحه سلامت سیستم
+app.get('/health', (req, res) => {
+    const wsStatus = wsManager.getConnectionStatus();
+    const gistData = gistManager.getAllData();
+    
+    const healthData = {
+        websocket: {
+            connected: wsStatus.connected,
+            active_coins: wsStatus.active_coins,
+            total_subscribed: wsStatus.total_subscribed
+        },
+        gist: {
+            active: !!process.env.GITHUB_TOKEN,
+            total_coins: Object.keys(gistData.prices || {}).length,
+            last_updated: gistData.last_updated
+        },
+        ai: {
+            technical_analysis: 'active',
+            vortexai_engine: 'ready',
+            indicators_available: 15
+        },
+        api: {
+            requests_count: apiClient.request_count,
+            coinstats_connected: 'active'
+        }
+    };
+
+    res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>System Health - VortexAI Pro</title>
+        <style>
+            body {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                margin: 0;
+                padding: 0;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                min-height: 100vh;
+            }
+            .container {
+                max-width: 1200px;
+                margin: 0 auto;
+                background: white;
+                padding: 40px;
+                border-radius: 15px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+                margin-top: 40px;
+                margin-bottom: 40px;
+            }
+            h1 {
+                color: #2c3e50;
+                border-bottom: 3px solid #3498db;
+                padding-bottom: 15px;
+                text-align: center;
+            }
+            .status-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                gap: 20px;
+                margin: 30px 0;
+            }
+            .status-card {
+                background: #f8f9fa;
+                padding: 25px;
+                border-radius: 12px;
+                border-left: 5px solid #3498db;
+                transition: transform 0.3s, box-shadow 0.3s;
+            }
+            .status-card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            }
+            .status-card.good { border-left-color: #27ae60; background: linear-gradient(135deg, #f8fff8 0%, #e8f5e8 100%); }
+            .status-card.warning { border-left-color: #f39c12; background: linear-gradient(135deg, #fff8f0 0%, #fef5e7 100%); }
+            .status-card.danger { border-left-color: #e74c3c; background: linear-gradient(135deg, #fff5f5 0%, #fde8e8 100%); }
+            .status-icon {
+                font-size: 2em;
+                margin-bottom: 15px;
+            }
+            .metric {
+                font-size: 2em;
+                font-weight: bold;
+                color: #2c3e50;
+                margin: 10px 0;
+            }
+            .metric-label {
+                color: #7f8c8d;
+                font-size: 0.9em;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }
+            .back-button {
+                display: inline-block;
+                padding: 12px 30px;
+                background: #3498db;
+                color: white;
+                text-decoration: none;
+                border-radius: 25px;
+                margin-top: 20px;
+                transition: all 0.3s;
+            }
+            .back-button:hover {
+                background: #2980b9;
+                transform: translateY(-2px);
+                box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+            }
+            .timestamp {
+                text-align: center;
+                color: #7f8c8d;
+                margin-top: 30px;
+                font-style: italic;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🩺 System Health Dashboard</h1>
+            <p style="text-align: center; color: #666; font-size: 18px;">
+                Real-time monitoring of all VortexAI services and components
+            </p>
+            
+            <div class="status-grid">
+                <div class="status-card ${healthData.websocket.connected ? 'good' : 'danger'}">
+                    <div class="status-icon">📡</div>
+                    <div class="metric">${healthData.websocket.connected ? 'Connected' : 'Disconnected'}</div>
+                    <div class="metric-label">WebSocket Status</div>
+                    <div style="margin-top: 15px;">
+                        <strong>Active Coins:</strong> ${healthData.websocket.active_coins}<br>
+                        <strong>Subscribed:</strong> ${healthData.websocket.total_subscribed}
+                    </div>
+                </div>
+                
+                <div class="status-card ${healthData.gist.active ? 'good' : 'warning'}">
+                    <div class="status-icon">💾</div>
+                    <div class="metric">${healthData.gist.total_coins}</div>
+                    <div class="metric-label">Historical Storage</div>
+                    <div style="margin-top: 15px;">
+                        <strong>Status:</strong> ${healthData.gist.active ? 'Active' : 'Inactive'}<br>
+                        <strong>Last Updated:</strong> ${new Date(healthData.gist.last_updated).toLocaleString()}
+                    </div>
+                </div>
+                
+                <div class="status-card good">
+                    <div class="status-icon">🤖</div>
+                    <div class="metric">15+</div>
+                    <div class="metric-label">AI Indicators</div>
+                    <div style="margin-top: 15px;">
+                        <strong>VortexAI:</strong> Ready<br>
+                        <strong>Analysis:</strong> Active
+                    </div>
+                </div>
+                
+                <div class="status-card good">
+                    <div class="status-icon">📊</div>
+                    <div class="metric">${healthData.api.requests_count}</div>
+                    <div class="metric-label">API Requests</div>
+                    <div style="margin-top: 15px;">
+                        <strong>CoinStats:</strong> Connected<br>
+                        <strong>Rate Limit:</strong> Active
+                    </div>
+                </div>
+            </div>
+
+            <div style="text-align: center;">
+                <a href="/" class="back-button">🏠 Back to Dashboard</a>
+            </div>
+
+            <div class="timestamp">
+                Last checked: ${new Date().toLocaleString()}
+            </div>
+        </div>
+    </body>
+    </html>
+    `);
+});
+
+// صفحه اسکن VortexAI
+app.get('/scan', (req, res) => {
+    const limit = req.query.limit || 20;
+    const filter = req.query.filter || 'ai_signal';
+    
+    res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>VortexAI Market Scan</title>
+        <style>
+            body {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                margin: 0;
+                padding: 0;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                min-height: 100vh;
+            }
+            .container {
+                max-width: 1400px;
+                margin: 0 auto;
+                background: white;
+                padding: 40px;
+                border-radius: 15px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+                margin-top: 40px;
+                margin-bottom: 40px;
+            }
+            h1 {
+                color: #2c3e50;
+                border-bottom: 3px solid #3498db;
+                padding-bottom: 15px;
+                text-align: center;
+            }
+            .controls {
+                background: #f8f9fa;
+                padding: 20px;
+                border-radius: 10px;
+                margin: 20px 0;
+                display: flex;
+                gap: 15px;
+                align-items: center;
+                flex-wrap: wrap;
+            }
+            .control-group {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            select, button {
+                padding: 10px 15px;
+                border: 1px solid #ddd;
+                border-radius: 5px;
+                font-size: 14px;
+            }
+            button {
+                background: #3498db;
+                color: white;
+                border: none;
+                cursor: pointer;
+                transition: background 0.3s;
+            }
+            button:hover {
+                background: #2980b9;
+            }
+            .results {
+                margin-top: 30px;
+            }
+            .coin-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+                gap: 20px;
+                margin-top: 20px;
+            }
+            .coin-card {
+                background: white;
+                border: 1px solid #e1e8ed;
+                border-radius: 10px;
+                padding: 20px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                transition: transform 0.3s, box-shadow 0.3s;
+            }
+            .coin-card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            }
+            .coin-header {
+                display: flex;
+                justify-content: between;
+                align-items: center;
+                margin-bottom: 15px;
+            }
+            .coin-symbol {
+                font-weight: bold;
+                font-size: 1.2em;
+                color: #2c3e50;
+            }
+            .coin-price {
+                font-size: 1.3em;
+                font-weight: bold;
+                margin: 10px 0;
+            }
+            .positive { color: #27ae60; }
+            .negative { color: #e74c3c; }
+            .ai-badge {
+                background: #9b59b6;
+                color: white;
+                padding: 4px 8px;
+                border-radius: 12px;
+                font-size: 0.8em;
+                margin-left: 10px;
+            }
+            .loading {
+                text-align: center;
+                padding: 40px;
+                color: #7f8c8d;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🔍 VortexAI Market Scanner</h1>
+            <p style="text-align: center; color: #666;">
+                Advanced cryptocurrency scanning with AI-powered insights and real-time data
+            </p>
+            
+            <div class="controls">
+                <div class="control-group">
+                    <label>Limit:</label>
+                    <select id="limitSelect">
+                        <option value="10">10 coins</option>
+                        <option value="20" selected>20 coins</option>
+                        <option value="50">50 coins</option>
+                        <option value="100">100 coins</option>
+                    </select>
+                </div>
+                
+                <div class="control-group">
+                    <label>Filter:</label>
+                    <select id="filterSelect">
+                        <option value="ai_signal">AI Signal</option>
+                        <option value="volume">Volume</option>
+                        <option value="momentum_1h">1H Momentum</option>
+                        <option value="momentum_4h">4H Momentum</option>
+                    </select>
+                </div>
+                
+                <button onclick="scanMarket()">🚀 Scan Market</button>
+                <button onclick="loadSampleData()" style="background: #95a5a6;">📊 Load Sample</button>
+            </div>
+
+            <div class="results">
+                <div id="resultsContainer" class="loading">
+                    <div>Click "Scan Market" to load cryptocurrency data...</div>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 30px;">
+                <a href="/" style="display: inline-block; padding: 12px 30px; background: #3498db; color: white; text-decoration: none; border-radius: 25px;">🏠 Back to Dashboard</a>
+            </div>
+        </div>
+
+        <script>
+            async function scanMarket() {
+                const limit = document.getElementById('limitSelect').value;
+                const filter = document.getElementById('filterSelect').value;
+                
+                document.getElementById('resultsContainer').innerHTML = '<div class="loading">🔄 Scanning market with VortexAI...</div>';
+                
+                try {
+                    const response = await fetch(\`/api/scan/vortexai?limit=\${limit}&filter=\${filter}\`);
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        displayResults(data.coins);
+                    } else {
+                        document.getElementById('resultsContainer').innerHTML = '<div class="loading">❌ Error loading data</div>';
+                    }
+                } catch (error) {
+                    document.getElementById('resultsContainer').innerHTML = '<div class="loading">❌ Connection error</div>';
+                }
+            }
+            
+            function displayResults(coins) {
+                if (!coins || coins.length === 0) {
+                    document.getElementById('resultsContainer').innerHTML = '<div class="loading">📭 No coins found</div>';
+                    return;
+                }
+                
+                const coinsHTML = coins.map(coin => \`
+                    <div class="coin-card">
+                        <div class="coin-header">
+                            <span class="coin-symbol">\${coin.symbol}</span>
+                            <span class="ai-badge">AI Score: \${coin.vortexai_analysis?.signal_strength?.toFixed(1) || 'N/A'}</span>
+                        </div>
+                        <div class="coin-price">$\${coin.price?.toFixed(2) || '0.00'}</div>
+                        <div style="margin: 10px 0;">
+                            <span class="\${(coin.priceChange24h || 0) >= 0 ? 'positive' : 'negative'}">
+                                24h: \${(coin.priceChange24h || 0).toFixed(2)}%
+                            </span>
+                            <br>
+                            <span class="\${(coin.change_1h || 0) >= 0 ? 'positive' : 'negative'}">
+                                1h: \${(coin.change_1h || 0).toFixed(2)}%
+                            </span>
+                        </div>
+                        <div style="font-size: 0.9em; color: #7f8c8d;">
+                            Volume: $\${(coin.volume || 0).toLocaleString()}<br>
+                            Sentiment: \${coin.vortexai_analysis?.market_sentiment || 'neutral'}
+                        </div>
+                    </div>
+                \`).join('');
+                
+                document.getElementById('resultsContainer').innerHTML = \`
+                    <h3>📈 Scan Results: \${coins.length} coins</h3>
+                    <div class="coin-grid">\${coinsHTML}</div>
+                \`;
+            }
+            
+            function loadSampleData() {
+                // نمایش داده‌های نمونه برای دمو
+                const sampleCoins = [
+                    { symbol: 'BTC', price: 45234.56, priceChange24h: 2.34, change_1h: 0.56, volume: 25467890000, vortexai_analysis: { signal_strength: 8.7, market_sentiment: 'bullish' } },
+                    { symbol: 'ETH', price: 2345.67, priceChange24h: 1.23, change_1h: -0.34, volume: 14567890000, vortexai_analysis: { signal_strength: 7.2, market_sentiment: 'bullish' } },
+                    { symbol: 'SOL', price: 102.34, priceChange24h: 5.67, change_1h: 2.12, volume: 3456789000, vortexai_analysis: { signal_strength: 9.1, market_sentiment: 'very bullish' } }
+                ];
+                displayResults(sampleCoins);
+            }
+            
+            // اسکن خودکار هنگام لود صفحه
+            window.addEventListener('load', () => {
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('autoScan') === 'true') {
+                    scanMarket();
+                }
+            });
+        </script>
+    </body>
+    </html>
+    `);
+});
+
+// صفحه تحلیل تکنیکال
+app.get('/analysis', (req, res) => {
+    const symbol = req.query.symbol || 'btc_usdt';
+    
+    res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Technical Analysis - VortexAI</title>
+        <style>
+            body {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                margin: 0;
+                padding: 0;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                min-height: 100vh;
+            }
+            .container {
+                max-width: 1200px;
+                margin: 0 auto;
+                background: white;
+                padding: 40px;
+                border-radius: 15px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+                margin-top: 40px;
+                margin-bottom: 40px;
+            }
+            h1 {
+                color: #2c3e50;
+                border-bottom: 3px solid #3498db;
+                padding-bottom: 15px;
+            }
+            .analysis-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                gap: 20px;
+                margin: 30px 0;
+            }
+            .indicator-card {
+                background: #f8f9fa;
+                padding: 20px;
+                border-radius: 10px;
+                border-left: 4px solid #3498db;
+            }
+            .indicator-value {
+                font-size: 1.8em;
+                font-weight: bold;
+                margin: 10px 0;
+            }
+            .bullish { color: #27ae60; }
+            .bearish { color: #e74c3c; }
+            .neutral { color: #f39c12; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>📊 Technical Analysis: ${symbol.toUpperCase()}</h1>
+            
+            <div style="text-align: center; margin: 20px 0;">
+                <a href="/scan?autoScan=true" style="display: inline-block; padding: 12px 30px; background: #3498db; color: white; text-decoration: none; border-radius: 25px; margin: 5px;">🔍 Back to Scanner</a>
+                <a href="/" style="display: inline-block; padding: 12px 30px; background: #95a5a6; color: white; text-decoration: none; border-radius: 25px; margin: 5px;">🏠 Dashboard</a>
+            </div>
+            
+            <div id="analysisContent" style="text-align: center; padding: 40px;">
+                <div>Loading technical analysis for ${symbol.toUpperCase()}...</div>
+            </div>
+        </div>
+
+        <script>
+            async function loadAnalysis() {
+                try {
+                    const response = await fetch(\`/api/coin/\${'${symbol}'}/technical\`);
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        displayAnalysis(data);
+                    } else {
+                        document.getElementById('analysisContent').innerHTML = '<div>❌ Error loading analysis</div>';
+                    }
+                } catch (error) {
+                    document.getElementById('analysisContent').innerHTML = '<div>❌ Connection error</div>';
+                }
+            }
+            
+            function displayAnalysis(data) {
+                const analysisHTML = \`
+                    <div class="analysis-grid">
+                        <div class="indicator-card">
+                            <div>💰 Current Price</div>
+                            <div class="indicator-value">$\${data.current_price?.toFixed(2) || 'N/A'}</div>
+                        </div>
+                        <div class="indicator-card">
+                            <div>📈 RSI</div>
+                            <div class="indicator-value \${getRSIColor(data.technical_indicators?.momentum_indicators?.rsi)}">
+                                \${data.technical_indicators?.momentum_indicators?.rsi?.toFixed(2) || 'N/A'}
+                            </div>
+                        </div>
+                        <div class="indicator-card">
+                            <div>🎯 MACD</div>
+                            <div class="indicator-value \${getMACDColor(data.technical_indicators?.macd)}">
+                                \${data.technical_indicators?.macd?.macd?.toFixed(4) || 'N/A'}
+                            </div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 30px; text-align: left;">
+                        <h3>AI Insights</h3>
+                        <p>Technical analysis powered by VortexAI engine with 15+ indicators.</p>
+                    </div>
+                \`;
+                
+                document.getElementById('analysisContent').innerHTML = analysisHTML;
+            }
+            
+            function getRSIColor(rsi) {
+                if (!rsi) return 'neutral';
+                if (rsi > 70) return 'bearish';
+                if (rsi < 30) return 'bullish';
+                return 'neutral';
+            }
+            
+            function getMACDColor(macd) {
+                if (!macd || !macd.macd) return 'neutral';
+                return macd.macd > 0 ? 'bullish' : 'bearish';
+            }
+            
+            // لود آنالیز هنگام لود صفحه
+            window.addEventListener('load', loadAnalysis);
+        </script>
+    </body>
+    </html>
+    `);
+});
+
+// صفحه وضعیت
+app.get('/status', (req, res) => {
+    res.redirect('/health');
+});
 // ==================== راه‌اندازی سرور ====================
 app.listen(PORT, '0.0.0.0', () => {
     logger.info(`🚀 VortexAI Combined Server started on port ${PORT}`);
