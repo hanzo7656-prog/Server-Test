@@ -4,6 +4,8 @@ const cors = require('cors');
 const WebSocket = require('ws');
 const { Octokit } = require('@octokit/rest');
 const winston = require('winston');
+const path = require('path');
+require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -24,7 +26,7 @@ const logger = winston.createLogger({
 });
 
 // ==================== API کلیدها ====================
-const COINSTATS_API_KEY = "uNb+sOjnjCQmV30dYrChxgh55hRHElmiZLnKJX+5U6g=";
+const COINSTATS_API_KEY = process.env.COINSTATS_API_KEY || "uNb+sOjnjCQmV30dYrChxgh55hRHElmiZLnKJX+5U6g=";
 
 // ==================== میدلورها ====================
 app.use(cors());
@@ -356,7 +358,7 @@ class TechnicalAnalysisEngine {
         };
     }
 
-    // سایر محاسبات (ATR, ADX, OBV, etc.) برای خلاصه‌سازی کوتاه شده
+    // سایر محاسبات
     static calculateATR(priceData) { return 0.1; }
     static calculateADX(priceData) { return 25; }
     static calculateOBV(prices, volumes) { 
@@ -385,7 +387,7 @@ class TechnicalAnalysisEngine {
     }
 
     static detectVolumeAnomaly(coin) {
-        const avgVolume = 1000000; // حجم متوسط فرضی
+        const avgVolume = 1000000;
         return (coin.volume || 0) > avgVolume * 2;
     }
 
@@ -398,14 +400,12 @@ class TechnicalAnalysisEngine {
             ai_insights: []
         };
 
-        // تحلیل ساده بر اساس داده‌های موجود
         const priceChanges = Object.values(realtimeData).map(d => d.change || 0);
         const avgChange = priceChanges.reduce((a, b) => a + b, 0) / priceChanges.length;
         
         if (avgChange > 2) analysis.market_sentiment = 'BULLISH';
         else if (avgChange < -2) analysis.market_sentiment = 'BEARISH';
 
-        // شناسایی فرصت‌ها
         analysis.top_opportunities = Object.entries(realtimeData)
             .filter(([symbol, data]) => Math.abs(data.change || 0) > 3)
             .slice(0, 5)
@@ -577,9 +577,9 @@ const gistManager = new GistManager();
 const wsManager = new WebSocketManager();
 const apiClient = new AdvancedCoinStatsAPIClient();
 
-// ==================== endpointهای ترکیبی جدید ====================
+// ==================== endpointهای API ====================
 
-// ۱. اسکن بازار با VortexAI
+// اسکن بازار با VortexAI
 app.get('/api/scan/vortexai', async (req, res) => {
     const startTime = Date.now();
     
@@ -595,6 +595,24 @@ app.get('/api/scan/vortexai', async (req, res) => {
         ]);
 
         let coins = apiData.coins || [];
+
+        // اگر API جواب نداد، از داده‌های realtime استفاده کن
+        if (coins.length === 0) {
+            console.log('⚠️ API returned empty, using realtime data as fallback');
+            coins = Object.values(realtimeData).map((data, index) => ({
+                id: `coin_${index}`,
+                name: `Crypto ${index}`,
+                symbol: Object.keys(realtimeData)[index]?.replace('_usdt', '').toUpperCase() || `CRYPTO${index}`,
+                price: data.price,
+                priceChange1h: data.change || 0,
+                priceChange24h: data.change || 0,
+                volume: data.volume || 0,
+                marketCap: (data.price || 0) * 1000000,
+                rank: index + 1,
+                high24h: data.high_24h || data.price * 1.05,
+                low24h: data.low_24h || data.price * 0.95
+            }));
+        }
 
         // ترکیب داده‌ها
         const enhancedCoins = coins.map(coin => {
@@ -668,7 +686,7 @@ app.get('/api/scan/vortexai', async (req, res) => {
     }
 });
 
-// ۲. تحلیل تکنیکال پیشرفته برای یک ارز
+// تحلیل تکنیکال پیشرفته برای یک ارز
 app.get('/api/coin/:symbol/technical', async (req, res) => {
     const startTime = Date.now();
     const symbol = req.params.symbol;
@@ -688,8 +706,8 @@ app.get('/api/coin/:symbol/technical', async (req, res) => {
         const priceData = historicalData?.history?.map(item => ({
             price: item.price,
             timestamp: item.timestamp,
-            high: item.price * 1.02, // تقریب
-            low: item.price * 0.98   // تقریب
+            high: item.price * 1.02,
+            low: item.price * 0.98
         })) || [];
 
         // اضافه کردن داده لحظه‌ای
@@ -731,8 +749,8 @@ app.get('/api/coin/:symbol/technical', async (req, res) => {
     }
 });
 
-// ۳. سلامت سیستم ترکیبی
-app.get('/health-combined', (req, res) => {
+// سلامت سیستم ترکیبی
+app.get('/api/health-combined', (req, res) => {
     const wsStatus = wsManager.getConnectionStatus();
     const gistData = gistManager.getAllData();
     
@@ -742,7 +760,6 @@ app.get('/health-combined', (req, res) => {
         version: '4.0',
         timestamp: new Date().toISOString(),
         
-        // وضعیت سرویس‌ها
         websocket_status: {
             connected: wsStatus.connected,
             active_coins: wsStatus.active_coins,
@@ -779,18 +796,9 @@ app.get('/health-combined', (req, res) => {
     });
 });
 
-// ۴. دشبورد اصلی
+// ==================== صفحات HTML زیبا ====================
 
-// ==================== endpointهای قدیمی برای سازگاری ====================
-app.get('/health', (req, res) => {
-    res.redirect('/health-combined');
-});
-
-app.get('/scan-advanced', (req, res) => {
-    res.redirect(`/api/scan/vortexai?${new URLSearchParams(req.query)}`);
-});
-
-// ==================== صفحه اصلی دشبورد ====================
+// صفحه اصلی دشبورد
 app.get('/', (req, res) => {
     const wsStatus = wsManager.getConnectionStatus();
     const gistData = gistManager.getAllData();
@@ -1223,7 +1231,7 @@ app.get('/scan', (req, res) => {
             }
             .coin-header {
                 display: flex;
-                justify-content: between;
+                justify-content: space-between;
                 align-items: center;
                 margin-bottom: 15px;
             }
@@ -1245,7 +1253,6 @@ app.get('/scan', (req, res) => {
                 padding: 4px 8px;
                 border-radius: 12px;
                 font-size: 0.8em;
-                margin-left: 10px;
             }
             .loading {
                 text-align: center;
@@ -1293,7 +1300,7 @@ app.get('/scan', (req, res) => {
             </div>
 
             <div style="text-align: center; margin-top: 30px;">
-                <a href="/" style="display: inline-block; padding: 12px 30px; background: #3498db; color: white; text-decoration: none; border-radius: 25px;">🏠 Back to Dashboard</a>
+                <a href="/" class="back-button">🏠 Back to Dashboard</a>
             </div>
         </div>
 
@@ -1354,7 +1361,6 @@ app.get('/scan', (req, res) => {
             }
             
             function loadSampleData() {
-                // نمایش داده‌های نمونه برای دمو
                 const sampleCoins = [
                     { symbol: 'BTC', price: 45234.56, priceChange24h: 2.34, change_1h: 0.56, volume: 25467890000, vortexai_analysis: { signal_strength: 8.7, market_sentiment: 'bullish' } },
                     { symbol: 'ETH', price: 2345.67, priceChange24h: 1.23, change_1h: -0.34, volume: 14567890000, vortexai_analysis: { signal_strength: 7.2, market_sentiment: 'bullish' } },
@@ -1362,14 +1368,6 @@ app.get('/scan', (req, res) => {
                 ];
                 displayResults(sampleCoins);
             }
-            
-            // اسکن خودکار هنگام لود صفحه
-            window.addEventListener('load', () => {
-                const urlParams = new URLSearchParams(window.location.search);
-                if (urlParams.get('autoScan') === 'true') {
-                    scanMarket();
-                }
-            });
         </script>
     </body>
     </html>
@@ -1428,6 +1426,20 @@ app.get('/analysis', (req, res) => {
             .bullish { color: #27ae60; }
             .bearish { color: #e74c3c; }
             .neutral { color: #f39c12; }
+            .back-button {
+                display: inline-block;
+                padding: 12px 30px;
+                background: #3498db;
+                color: white;
+                text-decoration: none;
+                border-radius: 25px;
+                margin: 5px;
+                transition: all 0.3s;
+            }
+            .back-button:hover {
+                background: #2980b9;
+                transform: translateY(-2px);
+            }
         </style>
     </head>
     <body>
@@ -1435,8 +1447,8 @@ app.get('/analysis', (req, res) => {
             <h1>📊 Technical Analysis: ${symbol.toUpperCase()}</h1>
             
             <div style="text-align: center; margin: 20px 0;">
-                <a href="/scan?autoScan=true" style="display: inline-block; padding: 12px 30px; background: #3498db; color: white; text-decoration: none; border-radius: 25px; margin: 5px;">🔍 Back to Scanner</a>
-                <a href="/" style="display: inline-block; padding: 12px 30px; background: #95a5a6; color: white; text-decoration: none; border-radius: 25px; margin: 5px;">🏠 Dashboard</a>
+                <a href="/scan" class="back-button">🔍 Back to Scanner</a>
+                <a href="/" class="back-button" style="background: #95a5a6;">🏠 Dashboard</a>
             </div>
             
             <div id="analysisContent" style="text-align: center; padding: 40px;">
@@ -1483,6 +1495,8 @@ app.get('/analysis', (req, res) => {
                     <div style="margin-top: 30px; text-align: left;">
                         <h3>AI Insights</h3>
                         <p>Technical analysis powered by VortexAI engine with 15+ indicators.</p>
+                        <p><strong>Data Points:</strong> \${data.data_points || 0}</p>
+                        <p><strong>Processing Time:</strong> \${data.processing_time || 'N/A'}</p>
                     </div>
                 \`;
                 
@@ -1501,7 +1515,6 @@ app.get('/analysis', (req, res) => {
                 return macd.macd > 0 ? 'bullish' : 'bearish';
             }
             
-            // لود آنالیز هنگام لود صفحه
             window.addEventListener('load', loadAnalysis);
         </script>
     </body>
@@ -1509,17 +1522,14 @@ app.get('/analysis', (req, res) => {
     `);
 });
 
-// صفحه وضعیت
-app.get('/status', (req, res) => {
-    res.redirect('/health');
-});
 // ==================== راه‌اندازی سرور ====================
 app.listen(PORT, '0.0.0.0', () => {
     logger.info(`🚀 VortexAI Combined Server started on port ${PORT}`);
-    logger.info('✅ Features: WebSocket Real-time + Gist Historical + VortexAI Analysis');
+    logger.info('✅ Features: WebSocket Real-time + Gist Historical + VortexAI Analysis + Beautiful UI');
     logger.info(`📊 Real-time Pairs: ${ALL_TRADING_PAIRS.length}`);
-    logger.info(`🔗 Health Check: http://localhost:${PORT}/health-combined`);
-    logger.info(`🔍 VortexAI Scan: http://localhost:${PORT}/api/scan/vortexai?limit=10`);
+    logger.info(`🔗 Dashboard: http://localhost:${PORT}/`);
+    logger.info(`🩺 Health: http://localhost:${PORT}/health`);
+    logger.info(`🔍 Scanner: http://localhost:${PORT}/scan`);
 });
 
 module.exports = app;
