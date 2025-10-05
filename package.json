@@ -1,31 +1,10 @@
 {
-  "name": "vortexai-crypto-scanner-pro",
-  "version": "4.0.0",
-  "description": "Advanced cryptocurrency market scanner with real-time data, historical analysis, and AI-powered insights",
+  "name": "vortexai-scanner",
+  "version": "1.0.0",
   "main": "server_combined.js",
   "scripts": {
-    "start": "node server_combined.js",
-    "dev": "nodemon server_combined.js",
-    "test": "jest",
-    "debug": "node --inspect server_combined.js",
-    "production": "NODE_ENV=production node server_combined.js",
-    "docker:build": "docker build -t vortexai-scanner .",
-    "docker:run": "docker run -p 3000:3000 vortexai-scanner"
+    "start": "node server_combined.js"
   },
-  "keywords": [
-    "cryptocurrency",
-    "trading",
-    "scanner",
-    "ai",
-    "technical-analysis",
-    "websocket",
-    "real-time",
-    "bitcoin",
-    "ethereum",
-    "vortexai"
-  ],
-  "author": "VortexAI Team",
-  "license": "MIT",
   "dependencies": {
     "express": "^4.18.2",
     "axios": "^1.6.0",
@@ -33,21 +12,6 @@
     "ws": "^8.14.2",
     "@octokit/rest": "^20.0.2",
     "winston": "^3.11.0",
-    "dotenv": "^16.3.1",
-    "socket.io": "^4.7.4",
-    "helmet": "^7.1.0",
-    "compression": "^1.7.4",
-    "rate-limiter-flexible": "^3.0.8",
-    "moment": "^2.29.4",
-    "uuid": "^9.0.1"
-  },
-  "devDependencies": {
-    "nodemon": "^3.0.1",
-    "jest": "^29.7.0",
-    "supertest": "^6.3.3"
-  },
-  "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=9.0.0"
+    "dotenv": "^16.3.1"
   }
 }
