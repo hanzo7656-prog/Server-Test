@@ -235,11 +235,12 @@ class GistManager {
 
     // در تابع calculateChange - خط 10 صفحه 10
     calculateChange(symbol, currentPrice, minutes) {
-        const data = this.priceHistory.prices?.[symbol];
+        // ✅ اصلاح شده - بدون Optional Chaining
+        const data = this.priceHistory.prices && this.priceHistory.prices[symbol];
     
         console.log(`🔍 calculateChange برای ${symbol}, minutes: ${minutes}, data:`, data);
     
-        // 🔥 اگر داده تاریخی نداریم، از real-time data استفاده کنیم
+        // اگر داده تاریخی نداریم، از real-time data استفاده کنیم
         if (!data || !data.history || !data.history["1h"] || data.history["1h"].length === 0) {
             console.log(`⚠️ داده تاریخی برای ${symbol} وجود ندارد، از real-time استفاده میکنم`);
             const realtimeData = this.realtimeData[symbol];
