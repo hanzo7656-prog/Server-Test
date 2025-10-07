@@ -674,6 +674,10 @@ app.get("/api/scan/vortexai", async (req, res) => {
                 // داده تاریخی از Gist
                 change_1h: historical?.change_1h || 0,
                 change_4h: historical?.change_4h || 0,
+                change_24h: historical?.change_24h || 0,
+                change_7d: historical?.change_7d || 0,
+                change_30d: historical?.change_30d || 0,
+                change_180d: historical?.change_180d || 0,
                 historical_timestamp: historical?.timestamp,
                 // داده لحظه‌ای از WebSocket
                 realtime_price: realtime?.price,
