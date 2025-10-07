@@ -10,7 +10,7 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ==================== تنظیمات پیشرفته لاگ ====================
+// ===================== تنظیمات پیشرفته لاگینگ =====================
 const logger = winston.createLogger({
     level: 'info',
     format: winston.format.combine(
@@ -25,10 +25,10 @@ const logger = winston.createLogger({
     ]
 });
 
-// ==================== API کلیدها ====================
-const COINSTATS_API_KEY = process.env.COINSTATS_API_KEY || "uNb+sOjnjCQmV30dYrChxgh55hRHElmiZLnKJX+5U6g=";
+// ===================== API Keys =====================
+const COINSTATS_API_KEY = process.env.COINSTATS_API_KEY || "uNb+sQjnjCQmV30dYrChxgh55hRHElmiZLnKJX+5U6g=";
 
-// ==================== میدلورها ====================
+// ===================== میدلورها =====================
 app.use(cors());
 app.use(express.json());
 app.use((req, res, next) => {
@@ -38,54 +38,52 @@ app.use((req, res, next) => {
     next();
 });
 
-// ==================== کش سرور قدیمی ====================
+// ===================== کش سرور =====================
 let cache = {
     coinsList: { data: null, timestamp: null },
     historicalData: {},
     realtimePrices: {}
 };
 
-// ==================== لیست ارزها از سرور قدیمی ====================
+// ===================== لیست تمام جفت‌های معاملاتی =====================
 const ALL_TRADING_PAIRS = [
     "btc_usdt", "eth_usdt", "xrp_usdt", "ada_usdt", "dot_usdt", "doge_usdt", "sol_usdt", "matic_usdt",
     "avax_usdt", "link_usdt", "bch_usdt", "ltc_usdt", "etc_usdt", "trx_usdt", "atom_usdt", "bnb_usdt",
-    "xim_usdt", "eos_usdt", "xtz_usdt", "algo_usdt", "neo_usdt", "ftm_usdt", "hbar_usdt", "egld_usdt",
+    "xlm_usdt", "eos_usdt", "xtz_usdt", "algo_usdt", "neo_usdt", "ftm_usdt", "hbar_usdt", "egld_usdt",
     "theta_usdt", "vet_usdt", "fil_usdt", "icp_usdt", "xmr_usdt", "ape_usdt", "gala_usdt", "sand_usdt",
     "mana_usdt", "enj_usdt", "bat_usdt", "comp_usdt", "mkr_usdt", "zec_usdt", "dash_usdt",
-    "waves_usdt", "omp_usdt", "zil_usdt", "ont_usdt", "ost_usdt", "stx_usdt", "celo_usdt", "wn_usdt",
+    "waves_usdt", "omg_usdt", "zil_usdt", "ont_usdt", "ost_usdt", "stx_usdt", "celo_usdt", "wnxm_usdt",
     "sc_usdt", "zen_usdt", "hot_usdt", "iotx_usdt", "ong_usdt", "one_usdt", "nano_usdt", "ardr_usdt",
-    "qtum_usdt", "lsk_usdt", "strat_usdt", "kmd_usdt", "piyx_usdt", "grs_usdt", "nav_usdt", "emo2_usdt",
-    "xyg_usdt", "sys_usdt", "via_usdt", "mona_usdt", "dcr_usdt", "sia_usdt", "lbc_usdt", "rep_usdt",
-    "gnt_usdt", "loom_usdt", "poly_usdt", "ren_usdt", "fun_usdt", "reg_usdt", "salt_usdt", "mtl_usdt",
-    "mco_usdt", "edo_usdt", "powr_usdt", "irc_usdt", "gio_usdt", "eng_usdt", "ast_usdt", "dgd_usdt",
-    "adx_usdt", "qsp_usdt", "mda_usdt", "snt_usdt", "agix_usdt", "ocean_usdt", "band_usdt",
-    "mmr_usdt", "ric_usdt", "uos_usdt", "stopi_usdt", "keep_usdt", "om_usdt", "front_usdt", "perp_usdt",
+    "qtum_usdt", "lsk_usdt", "strat_usdt", "kmd_usdt", "pivx_usdt", "grs_usdt", "nav_usdt",
+    "emc2_usdt", "xvg_usdt", "sys_usdt", "via_usdt", "mona_usdt", "dcr_usdt", "sia_usdt", "lbc_usdt",
+    "rep_usdt", "gnt_usdt", "loom_usdt", "poly_usdt", "ren_usdt", "fun_usdt", "req_usdt", "salt_usdt",
+    "mtl_usdt", "mco_usdt", "edo_usdt", "powr_usdt", "irc_usdt", "gto_usdt", "eng_usdt", "ast_usdt",
+    "dgd_usdt", "adx_usdt", "qsp_usdt", "mda_usdt", "snt_usdt", "agix_usdt", "ocean_usdt", "band_usdt",
+    "nmr_usdt", "ric_usdt", "rlc_usdt", "storj_usdt", "keep_usdt", "om_usdt", "front_usdt", "perp_usdt",
     "api3_usdt", "grt_usdt", "lqty_usdt", "alcx_usdt", "pool_usdt", "rad_usdt", "farm_usdt", "audio_usdt",
-    "fs_usdt", "dodo_usdt", "tim_usdt", "liv_usdt", "ygg_usdt", "slp_usdt", "axs_usdt", "sandbox_usdt",
-    "enjin_usdt", "mdr_usdt", "flow_usdt", "rose_usdt", "ar_usdt", "rune_usdt", "sushi_usdt", "crv_usdt",
-    "linch_usdt", "knc_usdt", "bal_usdt", "uma_usdt", "badger_usdt", "fxs_usdt", "cvx_usdt",
-    "tribe_usdt", "gno_usdt", "ilus_usdt", "pla_usdt", "super_usdt", "ach_usdt", "imx_usdt", "gods_usdt",
-    "vra_usdt", "sps_usdt", "dar_usdt", "mgp_usdt", "ceek_usdt", "ttian_usdt", "vr_usdt", "bmx_usdt",
-    "hero_usdt", "pyr_usdt", "ufo_usdt", "elon_usdt", "shib_usdt", "floki_usdt", "samo_usdt",
-    "baby_usdt", "kishu_usdt", "hoge_usdt", "akita_usdt", "husky_usdt", "safernoon_usdt",
-    "evergrow_usdt", "lunc_usdt", "bonk_usdt", "wif_usdt", "myro_usdt", "popcat_usdt", "toshi_usdt",
-    "mew_usdt", "mog_usdt", "rett_usdt", "turbo_usdt", "pepe_usdt", "wojak_usdt", "aidos_usdt",
-    "pudgy_usdt", "lady_usdt", "jeo_usdt", "based_usdt", "degen_usdt", "moutai_usdt", "aave_usdt",
-    "snx_usdt", "uni_usdt", "cake_usdt", "bake_usdt", "burger_usdt", "toko_usdt", "inj_usdt", "lina_usdt",
-    "reef_usdt", "dusk_usdt", "atm_usdt", "ogn_usdt", "for_usdt", "mir_usdt", "ito_usdt", "cos_usdt",
-    "ctk_usdt", "tko_usdt", "alpaca_usdt", "perl_usdt", "stpt_usdt", "troy_usdt", "vite_usdt", "svp_usdt",
-    "hbtc_usdt", "mdt_usdt", "mbox_usdt", "gmt_usdt", "time_usdt", "raca_usdt", "beans_usdt",
-    "edu_usdt", "id_usdt", "ondo_usdt", "pixel_usdt", "voxel_usdt", "high_usdt", "looks_usdt",
+    "rsr_usdt", "dodo_usdt", "tlm_usdt", "lit_usdt", "ygg_usdt", "slp_usdt", "axs_usdt", "sandbox_usdt",
+    "enjin_usdt", "mdx_usdt", "flow_usdt", "rose_usdt", "ar_usdt", "rune_usdt", "sushi_usdt", "crv_usdt",
+    "lrc_usdt", "knc_usdt", "bal_usdt", "uma_usdt", "badger_usdt", "fxs_usdt", "cvx_usdt", "tribe_usdt",
+    "gno_usdt", "ilus_usdt", "pla_usdt", "super_usdt", "ach_usdt", "imx_usdt", "gods_usdt", "vra_usdt",
+    "sps_usdt", "dar_usdt", "mgp_usdt", "ceek_usdt", "titan_usdt", "vr_usdt", "bmx_usdt", "hero_usdt",
+    "pyr_usdt", "ufo_usdt", "elon_usdt", "shib_usdt", "floki_usdt", "samo_usdt", "baby_usdt", "kishu_usdt",
+    "hoge_usdt", "akita_usdt", "husky_usdt", "safemoon_usdt", "evergrow_usdt", "lunc_usdt", "bonk_usdt",
+    "wif_usdt", "myro_usdt", "popcat_usdt", "toshi_usdt", "mew_usdt", "mog_usdt", "rett_usdt", "turbo_usdt",
+    "pepe_usdt", "wojak_usdt", "aidoge_usdt", "pudgy_usdt", "lady_usdt", "jeo_usdt", "based_usdt", "degen_usdt",
+    "moutai_usdt", "aave_usdt", "snx_usdt", "uni_usdt", "cake_usdt", "bake_usdt", "burger_usdt", "toko_usdt",
+    "inj_usdt", "lina_usdt", "reef_usdt", "dusk_usdt", "atm_usdt", "ogn_usdt", "for_usdt", "mir_usdt",
+    "lto_usdt", "cos_usdt", "ctk_usdt", "tko_usdt", "alpaca_usdt", "perl_usdt", "stpt_usdt", "troy_usdt",
+    "vite_usdt", "sxp_usdt", "hbtc_usdt", "mdt_usdt", "mbox_usdt", "gmt_usdt", "time_usdt", "raca_usdt",
+    "beans_usdt", "edu_usdt", "id_usdt", "ondo_usdt", "pixel_usdt", "voxel_usdt", "high_usdt", "looks_usdt",
     "blur_usdt", "psp_usdt", "oxt_usdt", "num_usdt", "mask_usdt", "glm_usdt", "ant_usdt", "bond_usdt",
     "fida_usdt", "maps_usdt", "drop_usdt", "px_usdt", "clv_usdt", "cfx_usdt", "ckb_usdt", "mx_usdt",
-    "ceir_usdt", "ret_usdt", "stmx_usdt", "chz_usdt", "ankr_usdt", "coti_usdt", "skl_usdt", "arpa_usdt",
-    "strax_usdt", "fo_usdt", "mbl_usdt", "quick_usdt", "sfund_usdt", "bsw_usdt", "axie_usdt",
-    "tfuel_usdt", "hnt_usdt", "loka_usdt", "dydx_usdt", "pundix_usdt", "who_usdt", "dent_usdt",
-    "rsr_usdt", "cvc_usdt", "data_usdt", "nkn_usdt", "lit_usdt", "key_usdt", "dock_usdt", "phb_usdt",
-    "mxc_usdt", "front_usdt"
+    "celr_usdt", "fet_usdt", "stmx_usdt", "chz_usdt", "ankr_usdt", "coti_usdt", "skl_usdt", "arpa_usdt",
+    "strax_usdt", "fo_usdt", "mbl_usdt", "quick_usdt", "sfund_usdt", "bsw_usdt", "axie_usdt", "tfuel_usdt",
+    "hnt_usdt", "loka_usdt", "dydx_usdt", "pundix_usdt", "who_usdt", "dent_usdt", "rsr_usdt", "cvc_usdt",
+    "data_usdt", "nkn_usdt", "lit_usdt", "key_usdt", "dock_usdt", "phb_usdt", "mxc_usdt", "front_usdt"
 ];
 
-// ==================== کلاس Gist Manager از سرور قدیمی ====================
+// ===================== کلاس Gist Manager با سیستم ۶ لایه‌ای =====================
 class GistManager {
     constructor() {
         this.octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
@@ -102,8 +100,8 @@ class GistManager {
             if (this.gistId) {
                 await this.loadFromGist();
             }
-            setInterval(() => this.saveToGist(), 300000);
-            logger.info('✅ Gist Manager initialized');
+            setInterval(() => this.saveToGist(), 300000); // هر ۵ دقیقه ذخیره
+            logger.info('✔️ Gist Manager initialized with 6-layer system');
         } catch (error) {
             logger.error('❌ Gist Manager init error:', error);
         }
@@ -114,10 +112,13 @@ class GistManager {
             const response = await this.octokit.rest.gists.get({ gist_id: this.gistId });
             const content = response.data.files['prices.json'].content;
             this.priceHistory = JSON.parse(content);
-            logger.info('✅ Data loaded from Gist');
+            logger.info('✔️ Data loaded from Gist');
         } catch (error) {
-            logger.warn('⚠️ Could not load from Gist, starting fresh');
-            this.priceHistory = { prices: {}, last_updated: new Date().toISOString() };
+            logger.warn('△ Could not load from Gist, starting fresh');
+            this.priceHistory = { 
+                prices: {}, 
+                last_updated: new Date().toISOString() 
+            };
         }
     }
 
@@ -125,7 +126,7 @@ class GistManager {
         try {
             this.priceHistory.last_updated = new Date().toISOString();
             const content = JSON.stringify(this.priceHistory, null, 2);
-            
+
             if (this.gistId) {
                 await this.octokit.rest.gists.update({
                     gist_id: this.gistId,
@@ -133,15 +134,15 @@ class GistManager {
                 });
             } else {
                 const response = await this.octokit.rest.gists.create({
-                    description: 'VortexAI Crypto Price Data',
+                    description: 'VortexAI Crypto Price Data - 6 Layer System',
                     files: { 'prices.json': { content: content } },
                     public: false
                 });
                 this.gistId = response.data.id;
             }
-            logger.info('✅ Data saved to Gist');
+            logger.info("✔️ Data saved to Gist");
         } catch (error) {
-            logger.error('❌ Gist save error:', error);
+            logger.error("❌ Gist save error", error);
         }
     }
 
@@ -149,35 +150,75 @@ class GistManager {
         if (!this.priceHistory.prices) this.priceHistory.prices = {};
         
         const now = Date.now();
-        const existingData = this.priceHistory.prices[symbol] || {};
+        let existingData = this.priceHistory.prices[symbol];
         
-        // محاسبه تغییرات با AI
-        const change1h = this.calculateChange(symbol, currentPrice, 60);
-        const change4h = this.calculateChange(symbol, currentPrice, 240);
-        
-        this.priceHistory.prices[symbol] = {
-            price: currentPrice,
-            timestamp: now,
-            change_1h: change1h,
-            change_4h: change4h,
-            history: existingData.history || []
-        };
+        if (!existingData) {
+            existingData = {
+                price: currentPrice,
+                timestamp: now,
+                change_1h: 0,
+                change_4h: 0,
+                history: {
+                    "1h": [],    // هر ۱ دقیقه - ۶۰ رکورد
+                    "4h": [],    // هر ۵ دقیقه - ۴۸ رکورد
+                    "24h": [],   // هر ۱۵ دقیقه - ۹۶ رکورد
+                    "7d": [],    // هر ۱ ساعت - ۱۶۸ رکورد
+                    "30d": [],   // هر ۴ ساعت - ۱۸۰ رکورد
+                    "180d": []   // هر ۱ روز - ۱۸۰ رکورد
+                }
+            };
+            this.priceHistory.prices[symbol] = existingData;
+        }
 
-        // اضافه کردن به تاریخچه
-        this.priceHistory.prices[symbol].history.push({
-            timestamp: now,
-            price: currentPrice
-        });
+        // آپدیت قیمت فعلی
+        existingData.price = currentPrice;
+        existingData.timestamp = now;
 
-        this.cleanOldHistory(symbol);
+        // محاسبه تغییرات
+        existingData.change_1h = this.calculateChange(symbol, currentPrice, 60);
+        existingData.change_4h = this.calculateChange(symbol, currentPrice, 240);
+
+        // اضافه کردن به تمام لایه‌ها
+        this.addToLayer(existingData.history["1h"], now, currentPrice, 1 * 60 * 1000);    // هر ۱ دقیقه
+        this.addToLayer(existingData.history["4h"], now, currentPrice, 5 * 60 * 1000);    // هر ۵ دقیقه
+        this.addToLayer(existingData.history["24h"], now, currentPrice, 15 * 60 * 1000);  // هر ۱۵ دقیقه
+        this.addToLayer(existingData.history["7d"], now, currentPrice, 60 * 60 * 1000);   // هر ۱ ساعت
+        this.addToLayer(existingData.history["30d"], now, currentPrice, 4 * 60 * 60 * 1000); // هر ۴ ساعت
+        this.addToLayer(existingData.history["180d"], now, currentPrice, 24 * 60 * 60 * 1000); // هر ۱ روز
+
+        // پاک‌سازی خودکار هر لایه
+        this.cleanLayer(existingData.history["1h"], 1 * 60 * 60 * 1000);     // ۱ ساعت
+        this.cleanLayer(existingData.history["4h"], 4 * 60 * 60 * 1000);     // ۴ ساعت
+        this.cleanLayer(existingData.history["24h"], 24 * 60 * 60 * 1000);   // ۲۴ ساعت
+        this.cleanLayer(existingData.history["7d"], 7 * 24 * 60 * 60 * 1000);   // ۷ روز
+        this.cleanLayer(existingData.history["30d"], 30 * 24 * 60 * 60 * 1000); // ۳۰ روز
+        this.cleanLayer(existingData.history["180d"], 180 * 24 * 60 * 60 * 1000); // ۱۸۰ روز
+    }
+
+    addToLayer(layer, timestamp, price, interval) {
+        // فقط اگر از آخرین رکورد به اندازه interval گذشته باشد اضافه کن
+        const lastRecord = layer[layer.length - 1];
+        if (!lastRecord || (timestamp - lastRecord.timestamp) >= interval) {
+            layer.push({ timestamp, price });
+        }
+    }
+
+    cleanLayer(layer, maxAge) {
+        const cutoff = Date.now() - maxAge;
+        // حذف داده‌های قدیمی‌تر از maxAge
+        for (let i = layer.length - 1; i >= 0; i--) {
+            if (layer[i].timestamp < cutoff) {
+                layer.splice(i, 1);
+            }
+        }
     }
 
     calculateChange(symbol, currentPrice, minutes) {
         const data = this.priceHistory.prices[symbol];
-        if (!data || !data.history || data.history.length === 0) return 0;
-        
+        if (!data || !data.history || !data.history["1h"] || data.history["1h"].length === 0) return 0;
+
         const targetTime = Date.now() - (minutes * 60 * 1000);
-        const pastPrice = this.findClosestPrice(data.history, targetTime);
+        const pastPrice = this.findClosestPrice(data.history["1h"], targetTime);
         
         if (!pastPrice || pastPrice === 0) return 0;
         return ((currentPrice - pastPrice) / pastPrice) * 100;
@@ -186,10 +227,10 @@ class GistManager {
     findClosestPrice(history, targetTime) {
         let closest = null;
         let minDiff = Infinity;
-        
+
         for (const item of history) {
             const diff = Math.abs(item.timestamp - targetTime);
-            if (diff < minDiff && diff <= 300000) {
+            if (diff < minDiff && diff <= 300000) { // حداکثر ۵ دقیقه اختلاف
                 minDiff = diff;
                 closest = item.price;
             }
@@ -197,24 +238,28 @@ class GistManager {
         return closest;
     }
 
-    cleanOldHistory(symbol) {
-        const data = this.priceHistory.prices[symbol];
-        if (!data || !data.history) return;
-        
-        const cutoffTime = Date.now() - (24 * 60 * 60 * 1000);
-        data.history = data.history.filter(item => item.timestamp >= cutoffTime);
-    }
-
-    getPriceData(symbol) {
+    getPriceData(symbol, timeframe = null) {
+        if (timeframe) {
+            const data = this.priceHistory.prices?.[symbol];
+            return data ? {
+                current_price: data.price,
+                timestamp: data.timestamp,
+                history: data.history[timeframe] || []
+            } : null;
+        }
         return this.priceHistory.prices?.[symbol] || null;
     }
 
     getAllData() {
         return this.priceHistory;
     }
+
+    getAvailableTimeframes() {
+        return ["1h", "4h", "24h", "7d", "30d", "180d"];
+    }
 }
 
-// ==================== کلاس تحلیل تکنیکال از سرور جدید ====================
+// ===================== کلاس تحلیل تکنیکال =====================
 class TechnicalIndicators {
     constructor(data = {}) {
         this.rsi = data.rsi || 50;
@@ -247,7 +292,7 @@ class TechnicalAnalysisEngine {
 
         const prices = priceData.map(p => p.price);
         const volumes = priceData.map(p => p.volume || 1);
-        
+
         return new TechnicalIndicators({
             rsi: this.calculateRSI(prices),
             macd: this.calculateMACD(prices).macd,
@@ -273,20 +318,17 @@ class TechnicalAnalysisEngine {
 
     static calculateRSI(prices, period = 14) {
         if (prices.length < period + 1) return 50;
-        
         let gains = 0;
         let losses = 0;
-        
         for (let i = 1; i <= period; i++) {
             const difference = prices[i] - prices[i - 1];
             if (difference >= 0) gains += difference;
             else losses -= difference;
         }
-        
         const avgGain = gains / period;
         const avgLoss = losses / period;
+        if (avgLoss === 0) return 100;
         const rs = avgGain / avgLoss;
-        
         return 100 - (100 / (1 + rs));
     }
 
@@ -296,14 +338,12 @@ class TechnicalAnalysisEngine {
         const macd = ema12 - ema26;
         const signal = this.calculateEMA([macd], 9);
         const histogram = macd - signal;
-        
         return { macd, signal, histogram };
     }
 
     static calculateEMA(prices, period) {
         const multiplier = 2 / (period + 1);
         let ema = prices[0];
-        
         for (let i = 1; i < prices.length; i++) {
             ema = (prices[i] - ema) * multiplier + ema;
         }
@@ -319,7 +359,6 @@ class TechnicalAnalysisEngine {
     static calculateBollingerBands(prices, period = 20) {
         const ma = this.calculateMA(prices, period);
         const stdDev = this.calculateStdDev(prices.slice(-period), ma);
-        
         return {
             upper: ma + (stdDev * 2),
             middle: ma,
@@ -335,15 +374,12 @@ class TechnicalAnalysisEngine {
 
     static calculateStochastic(priceData, period = 14) {
         if (priceData.length < period) return { k: 50, d: 50 };
-        
         const recent = priceData.slice(-period);
         const high = Math.max(...recent.map(p => p.high || p.price));
         const low = Math.min(...recent.map(p => p.low || p.price));
         const current = recent[recent.length - 1].price;
-        
         const k = ((current - low) / (high - low)) * 100;
         const d = this.calculateMA([k], 3);
-        
         return { k, d };
     }
 
@@ -351,31 +387,32 @@ class TechnicalAnalysisEngine {
         const prices = priceData.map(p => p.price);
         const support = Math.min(...prices) * 0.98;
         const resistance = Math.max(...prices) * 1.02;
-        
         return {
             support: [support, support * 0.99],
             resistance: [resistance, resistance * 1.01]
         };
     }
 
-    // سایر محاسبات
     static calculateATR(priceData) { return 0.1; }
     static calculateADX(priceData) { return 25; }
-    static calculateOBV(prices, volumes) { 
+    
+    static calculateOBV(prices, volumes) {
         return prices.reduce((obv, price, i) => {
             if (i === 0) return volumes[0];
             return obv + (price > prices[i-1] ? volumes[i] : -volumes[i]);
         }, 0);
     }
+
     static calculateMFI(priceData) { return 50; }
     static calculateWilliamsR(priceData) { return -50; }
     static calculateCCI(priceData) { return 0; }
-    static calculateROC(prices) { 
+
+    static calculateROC(prices) {
         if (prices.length < 2) return 0;
         return ((prices[prices.length-1] - prices[prices.length-2]) / prices[prices.length-2]) * 100;
     }
 
-    // ==================== VortexAI Functions ====================
+    // ====================== VortexAI Functions ==========================
     static calculateSignalStrength(coin) {
         const volumeStrength = Math.min((coin.volume || 0) / 1000000, 10);
         const priceStrength = Math.min(Math.abs(coin.priceChange24h || 0) / 10, 5);
@@ -402,7 +439,7 @@ class TechnicalAnalysisEngine {
 
         const priceChanges = Object.values(realtimeData).map(d => d.change || 0);
         const avgChange = priceChanges.reduce((a, b) => a + b, 0) / priceChanges.length;
-        
+
         if (avgChange > 2) analysis.market_sentiment = 'BULLISH';
         else if (avgChange < -2) analysis.market_sentiment = 'BEARISH';
 
@@ -420,7 +457,7 @@ class TechnicalAnalysisEngine {
     }
 }
 
-// ==================== WebSocket Manager از سرور قدیمی ====================
+// ===================== WebSocket Manager =====================
 class WebSocketManager {
     constructor() {
         this.ws = null;
@@ -434,7 +471,7 @@ class WebSocketManager {
         try {
             this.ws = new WebSocket('wss://www.lbkex.net/ws/V2/');
             this.ws.on('open', () => {
-                logger.info('✅ WebSocket connected to LBank');
+                logger.info('✔️ WebSocket connected to LBank');
                 this.connected = true;
                 this.subscribeToAllPairs();
             });
@@ -447,7 +484,7 @@ class WebSocketManager {
                         const tickData = message.tick;
                         const currentPrice = tickData.latest;
 
-                        // ذخیره در Gist Manager
+                        // آپدیت در Gist Manager
                         gistManager.addPrice(symbol, currentPrice);
 
                         this.realtimeData[symbol] = {
@@ -463,33 +500,32 @@ class WebSocketManager {
                         cache.realtimePrices = { ...this.realtimeData };
                     }
                 } catch (error) {
-                    logger.error('❌ WebSocket message processing error:', error);
+                    logger.error('❌ WebSocket message processing error', error);
                 }
             });
 
             this.ws.on('error', (error) => {
-                logger.error('❌ WebSocket error:', error);
+                logger.error('❌ WebSocket error', error);
                 this.connected = false;
             });
 
             this.ws.on('close', (code, reason) => {
-                logger.warn(`⚠️ WebSocket disconnected - Code: ${code}, Reason: ${reason}`);
+                logger.warn(`△ WebSocket disconnected - Code: ${code}, Reason: ${reason}`);
                 this.connected = false;
                 setTimeout(() => {
-                    logger.info('🔄 Attempting WebSocket reconnection...');
+                    logger.info('Attempting WebSocket reconnection...');
                     this.connect();
                 }, 5000);
             });
         } catch (error) {
-            logger.error('❌ WebSocket connection error:', error);
+            logger.error('WebSocket connection error', error);
             setTimeout(() => this.connect(), 10000);
         }
     }
 
     subscribeToAllPairs() {
         if (this.connected && this.ws) {
-            logger.info(`📡 Subscribing to ${ALL_TRADING_PAIRS.length} trading pairs`);
-            
+            logger.info(`Subscribing to ${ALL_TRADING_PAIRS.length} trading pairs`);
             const batchSize = 50;
             for (let i = 0; i < ALL_TRADING_PAIRS.length; i += batchSize) {
                 setTimeout(() => {
@@ -504,13 +540,13 @@ class WebSocketManager {
         pairs.forEach(pair => {
             const subscription = {
                 "action": "subscribe",
-                "subscribe": "tick", 
+                "subscribe": "tick",
                 "pair": pair
             };
             this.ws.send(JSON.stringify(subscription));
             this.subscribedPairs.add(pair);
         });
-        logger.info(`✅ Subscribed to ${pairs.length} pairs`);
+        logger.info(`✔ Subscribed to ${pairs.length} pairs`);
     }
 
     getRealtimeData() {
@@ -527,7 +563,7 @@ class WebSocketManager {
     }
 }
 
-// ==================== API Client از سرور جدید ====================
+// ===================== API Client =====================
 class AdvancedCoinStatsAPIClient {
     constructor() {
         this.base_url = "https://openapiv1.coinstats.app";
@@ -548,7 +584,6 @@ class AdvancedCoinStatsAPIClient {
 
     async getCoins(limit = 100) {
         await this._rateLimit();
-        
         try {
             const url = `${this.base_url}/coins?limit=${limit}&currency=USD`;
             const response = await fetch(url, {
@@ -572,17 +607,16 @@ class AdvancedCoinStatsAPIClient {
     }
 }
 
-// ==================== نمونه‌سازی مدیران ====================
+// ===================== نمونه‌سازی مدیران =====================
 const gistManager = new GistManager();
 const wsManager = new WebSocketManager();
 const apiClient = new AdvancedCoinStatsAPIClient();
 
-// ==================== endpointهای API ====================
+// ===================== اندپوینت‌های API =====================
 
-// اسکن بازار با VortexAI
-app.get('/api/scan/vortexai', async (req, res) => {
+// اسکن بازار VortexAI
+app.get("/api/scan/vortexai", async (req, res) => {
     const startTime = Date.now();
-    
     try {
         const limit = Math.min(parseInt(req.query.limit) || 100, 300);
         const filterType = req.query.filter || 'volume';
@@ -598,7 +632,7 @@ app.get('/api/scan/vortexai', async (req, res) => {
 
         // اگر API جواب نداد، از داده‌های realtime استفاده کن
         if (coins.length === 0) {
-            console.log('⚠️ API returned empty, using realtime data as fallback');
+            console.log('∆ API returned empty, using realtime data as fallback');
             coins = Object.values(realtimeData).map((data, index) => ({
                 id: `coin_${index}`,
                 name: `Crypto ${index}`,
@@ -626,12 +660,10 @@ app.get('/api/scan/vortexai', async (req, res) => {
                 change_1h: historical?.change_1h || 0,
                 change_4h: historical?.change_4h || 0,
                 historical_timestamp: historical?.timestamp,
-                
                 // داده لحظه‌ای از WebSocket
                 realtime_price: realtime?.price,
                 realtime_volume: realtime?.volume,
                 realtime_change: realtime?.change,
-                
                 // تحلیل VortexAI
                 vortexai_analysis: {
                     signal_strength: TechnicalAnalysisEngine.calculateSignalStrength(coin),
@@ -661,7 +693,6 @@ app.get('/api/scan/vortexai', async (req, res) => {
         }
 
         const responseTime = Date.now() - startTime;
-        
         res.json({
             success: true,
             coins: filteredCoins.slice(0, limit),
@@ -676,9 +707,49 @@ app.get('/api/scan/vortexai', async (req, res) => {
             processing_time: `${responseTime}ms`,
             timestamp: new Date().toISOString()
         });
-
     } catch (error) {
         logger.error('❌ VortexAI scan error:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// دریافت داده‌های تاریخی بر اساس timeframe
+app.get('/api/coin/:symbol/history/:timeframe', async (req, res) => {
+    const { symbol, timeframe } = req.params;
+    const validTimeframes = gistManager.getAvailableTimeframes();
+    
+    if (!validTimeframes.includes(timeframe)) {
+        return res.status(400).json({
+            success: false,
+            error: `Invalid timeframe. Valid timeframes: ${validTimeframes.join(', ')}`
+        });
+    }
+
+    try {
+        const historicalData = gistManager.getPriceData(symbol, timeframe);
+        const realtimeData = wsManager.getRealtimeData()[symbol];
+
+        if (!historicalData && !realtimeData) {
+            return res.status(404).json({
+                success: false,
+                error: 'No data available for this symbol'
+            });
+        }
+
+        res.json({
+            success: true,
+            symbol,
+            timeframe,
+            current_price: realtimeData?.price || historicalData?.current_price,
+            history: historicalData?.history || [],
+            data_points: historicalData?.history?.length || 0,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        logger.error(`❌ History API error for ${symbol}:`, error);
         res.status(500).json({
             success: false,
             error: error.message
@@ -690,9 +761,8 @@ app.get('/api/scan/vortexai', async (req, res) => {
 app.get('/api/coin/:symbol/technical', async (req, res) => {
     const startTime = Date.now();
     const symbol = req.params.symbol;
-    
     try {
-        const historicalData = gistManager.getPriceData(symbol);
+        const historicalData = gistManager.getPriceData(symbol, "24h");
         const realtimeData = wsManager.getRealtimeData()[symbol];
 
         if (!historicalData && !realtimeData) {
@@ -724,14 +794,14 @@ app.get('/api/coin/:symbol/technical', async (req, res) => {
         const indicators = TechnicalAnalysisEngine.calculateAllIndicators(priceData);
         const supportResistance = TechnicalAnalysisEngine.calculateSupportResistance(priceData);
         const aiAnalysis = TechnicalAnalysisEngine.analyzeWithAI(
-            { [symbol]: realtimeData }, 
+            { [symbol]: realtimeData },
             { prices: { [symbol]: historicalData } }
         );
 
         res.json({
             success: true,
             symbol: symbol,
-            current_price: realtimeData?.price || historicalData?.price,
+            current_price: realtimeData?.price || historicalData?.current_price,
             technical_indicators: indicators,
             support_resistance: supportResistance,
             vortexai_analysis: aiAnalysis,
@@ -739,7 +809,6 @@ app.get('/api/coin/:symbol/technical', async (req, res) => {
             processing_time: `${Date.now() - startTime}ms`,
             timestamp: new Date().toISOString()
         });
-
     } catch (error) {
         logger.error(`❌ Technical analysis error for ${symbol}:`, error);
         res.status(500).json({
@@ -749,216 +818,422 @@ app.get('/api/coin/:symbol/technical', async (req, res) => {
     }
 });
 
+// دریافت لیست timeframeهای available
+app.get('/api/timeframes', (req, res) => {
+    res.json({
+        success: true,
+        timeframes: gistManager.getAvailableTimeframes(),
+        description: {
+            "1h": "1 hour history - 1 minute intervals",
+            "4h": "4 hours history - 5 minute intervals", 
+            "24h": "24 hours history - 15 minute intervals",
+            "7d": "7 days history - 1 hour intervals",
+            "30d": "30 days history - 4 hour intervals",
+            "180d": "180 days history - 1 day intervals"
+        }
+    });
+});
+
 // سلامت سیستم ترکیبی
 app.get('/api/health-combined', (req, res) => {
     const wsStatus = wsManager.getConnectionStatus();
     const gistData = gistManager.getAllData();
-    
+
     res.json({
         status: 'healthy',
         service: 'VortexAI Combined Crypto Scanner',
-        version: '4.0',
+        version: '5.0 - 6 Layer System',
         timestamp: new Date().toISOString(),
-        
         websocket_status: {
             connected: wsStatus.connected,
             active_coins: wsStatus.active_coins,
             total_subscribed: wsStatus.total_subscribed,
             provider: "LBank"
         },
-        
         gist_status: {
             active: !!process.env.GITHUB_TOKEN,
             total_coins: Object.keys(gistData.prices || {}).length,
-            last_updated: gistData.last_updated
+            last_updated: gistData.last_updated,
+            timeframes_available: gistManager.getAvailableTimeframes()
         },
-        
         ai_status: {
             technical_analysis: 'active',
             vortexai_engine: 'ready',
             indicators_available: 15
         },
-        
         api_status: {
             requests_count: apiClient.request_count,
             coinstats_connected: 'active'
         },
-        
         features: [
             'realtime_websocket_data',
-            'historical_gist_storage', 
-            'vortexai_analysis',
+            '6_layer_historical_data',
+            'vortexai_analysis', 
             'technical_indicators',
             'multi_source_data',
             'advanced_filtering',
-            'market_predictions'
+            'market_predictions',
+            'multi_timeframe_support'
         ]
     });
 });
 
-// ==================== صفحات HTML زیبا ====================
+// ===================== صفحات HTML زیبا =====================
 
 // صفحه اصلی دشبورد
-app.get('/', (req, res) => {
+app.get("/", (req, res) => {
     const wsStatus = wsManager.getConnectionStatus();
     const gistData = gistManager.getAllData();
     
     res.send(`
     <!DOCTYPE html>
-    <html>
+    <html lang="en">
     <head>
-        <title>VortexAI Pro - Combined Crypto Scanner</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>VortexAI Pro - 6 Layer Crypto Scanner</title>
         <style>
-            body {
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            * {
                 margin: 0;
                 padding: 0;
+                box-sizing: border-box;
+            }
+
+            body {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                 min-height: 100vh;
+                color: #333;
+                line-height: 1.6;
             }
+
             .container {
                 max-width: 1200px;
                 margin: 0 auto;
-                background: white;
-                padding: 40px;
-                border-radius: 15px;
-                box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-                margin-top: 40px;
-                margin-bottom: 40px;
+                padding: 20px;
             }
-            h1 {
-                color: #2c3e50;
-                border-bottom: 3px solid #3498db;
-                padding-bottom: 15px;
+
+            .header {
                 text-align: center;
+                margin-bottom: 40px;
+                padding: 40px 20px;
+                background: rgba(255, 255, 255, 0.95);
+                border-radius: 20px;
+                box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+                backdrop-filter: blur(10px);
             }
+
+            .header h1 {
+                font-size: 3rem;
+                background: linear-gradient(135deg, #667eea, #764ba2);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                margin-bottom: 10px;
+            }
+
+            .header p {
+                font-size: 1.2rem;
+                color: #666;
+                max-width: 600px;
+                margin: 0 auto;
+            }
+
             .status-grid {
                 display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-                gap: 20px;
-                margin: 30px 0;
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                gap: 25px;
+                margin-bottom: 40px;
             }
+
             .status-card {
-                background: #f8f9fa;
-                padding: 25px;
-                border-radius: 12px;
+                background: rgba(255, 255, 255, 0.95);
+                padding: 30px;
+                border-radius: 15px;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+                text-align: center;
+                transition: all 0.3s ease;
                 border-left: 5px solid #3498db;
-                transition: transform 0.3s, box-shadow 0.3s;
+                backdrop-filter: blur(10px);
             }
+
             .status-card:hover {
-                transform: translateY(-5px);
-                box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+                transform: translateY(-10px);
+                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
             }
-            .status-card.good { border-left-color: #27ae60; }
-            .status-card.warning { border-left-color: #f39c12; }
-            .status-icon {
-                font-size: 2em;
+
+            .status-card.good {
+                border-left-color: #27ae60;
+                background: linear-gradient(135deg, rgba(39, 174, 96, 0.1), rgba(255, 255, 255, 0.95));
+            }
+
+            .status-card.warning {
+                border-left-color: #f39c12;
+                background: linear-gradient(135deg, rgba(243, 156, 18, 0.1), rgba(255, 255, 255, 0.95));
+            }
+
+            .status-card.danger {
+                border-left-color: #e74c3c;
+                background: linear-gradient(135deg, rgba(231, 76, 60, 0.1), rgba(255, 255, 255, 0.95));
+            }
+
+            .card-icon {
+                font-size: 3rem;
                 margin-bottom: 15px;
             }
+
             .metric {
-                font-size: 2em;
+                font-size: 2.5rem;
                 font-weight: bold;
                 color: #2c3e50;
                 margin: 10px 0;
             }
+
             .metric-label {
                 color: #7f8c8d;
-                font-size: 0.9em;
+                font-size: 0.9rem;
                 text-transform: uppercase;
                 letter-spacing: 1px;
+                font-weight: 600;
             }
-            .links-grid {
+
+            .timeframe-grid {
                 display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
                 gap: 15px;
                 margin: 30px 0;
             }
-            .nav-link {
-                display: block;
+
+            .timeframe-card {
+                background: rgba(255, 255, 255, 0.9);
                 padding: 20px;
-                background: #3498db;
+                border-radius: 12px;
+                text-align: center;
+                border: 2px solid transparent;
+                transition: all 0.3s ease;
+                backdrop-filter: blur(10px);
+            }
+
+            .timeframe-card:hover {
+                border-color: #3498db;
+                transform: scale(1.05);
+                background: rgba(255, 255, 255, 0.95);
+            }
+
+            .timeframe-card strong {
+                display: block;
+                font-size: 1.5rem;
+                color: #2c3e50;
+                margin-bottom: 5px;
+            }
+
+            .timeframe-card small {
+                color: #7f8c8d;
+                font-size: 0.8rem;
+            }
+
+            .links-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                gap: 20px;
+                margin: 40px 0;
+            }
+
+            .nav-link {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 10px;
+                padding: 25px 20px;
+                background: linear-gradient(135deg, #667eea, #764ba2);
                 color: white;
                 text-decoration: none;
-                border-radius: 10px;
+                border-radius: 15px;
                 text-align: center;
-                transition: all 0.3s;
+                transition: all 0.3s ease;
                 font-weight: bold;
+                font-size: 1.1rem;
+                box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
             }
+
             .nav-link:hover {
-                background: #2980b9;
-                transform: translateY(-3px);
-                box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+                transform: translateY(-5px);
+                box-shadow: 0 15px 35px rgba(102, 126, 234, 0.4);
+                background: linear-gradient(135deg, #764ba2, #667eea);
             }
+
+            .nav-link.health { background: linear-gradient(135deg, #27ae60, #2ecc71); }
+            .nav-link.scan { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+            .nav-link.analysis { background: linear-gradient(135deg, #9b59b6, #8e44ad); }
+            .nav-link.timeframes { background: linear-gradient(135
+                        .nav-link.health { background: linear-gradient(135deg, #27ae60, #2ecc71); }
+            .nav-link.scan { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+            .nav-link.analysis { background: linear-gradient(135deg, #9b59b6, #8e44ad); }
+            .nav-link.timeframes { background: linear-gradient(135deg, #f39c12, #e67e22); }
+            .nav-link.api { background: linear-gradient(135deg, #3498db, #2980b9); }
+
             .footer {
                 text-align: center;
-                margin-top: 40px;
-                padding: 20px;
-                background: #f8f9fa;
-                border-radius: 10px;
+                margin-top: 50px;
+                padding: 30px;
+                background: rgba(255, 255, 255, 0.9);
+                border-radius: 15px;
+                backdrop-filter: blur(10px);
+            }
+
+            .footer p {
+                margin: 8px 0;
+                color: #555;
+            }
+
+            .feature-badge {
+                display: inline-block;
+                background: linear-gradient(135deg, #667eea, #764ba2);
+                color: white;
+                padding: 8px 16px;
+                border-radius: 20px;
+                font-size: 0.9rem;
+                margin: 5px;
+                box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            }
+
+            @media (max-width: 768px) {
+                .header h1 {
+                    font-size: 2rem;
+                }
+                
+                .status-grid {
+                    grid-template-columns: 1fr;
+                }
+                
+                .timeframe-grid {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+                
+                .links-grid {
+                    grid-template-columns: 1fr;
+                }
             }
         </style>
     </head>
     <body>
         <div class="container">
-            <h1>🚀 VortexAI Pro - Combined Crypto Scanner</h1>
-            <p style="text-align: center; color: #666; font-size: 18px;">
-                Advanced cryptocurrency market scanner with real-time data, historical analysis, and AI-powered insights
-            </p>
+            <div class="header">
+                <h1>🚀 VortexAI Pro</h1>
+                <p>Advanced 6-Layer Cryptocurrency Market Scanner with Real-time AI Analysis</p>
+            </div>
             
             <div class="status-grid">
-                <div class="status-card good">
-                    <div class="status-icon">📡</div>
+                <div class="status-card ${wsStatus.connected ? 'good' : 'danger'}">
+                    <div class="card-icon">📡</div>
                     <div class="metric">${wsStatus.connected ? 'Connected' : 'Disconnected'}</div>
                     <div class="metric-label">WebSocket Status</div>
-                    <div style="margin-top: 10px; font-size: 0.9em;">
-                        Active Coins: ${wsStatus.active_coins}<br>
-                        Total: ${wsStatus.total_subscribed}
+                    <div style="margin-top: 15px; font-size: 0.9rem; color: #666;">
+                        <strong>Active Coins:</strong> ${wsStatus.active_coins}<br>
+                        <strong>Subscribed:</strong> ${wsStatus.total_subscribed}<br>
+                        <strong>Provider:</strong> LBank
                     </div>
                 </div>
                 
-                <div class="status-card good">
-                    <div class="status-icon">💾</div>
+                <div class="status-card ${process.env.GITHUB_TOKEN ? 'good' : 'warning'}">
+                    <div class="card-icon">💾</div>
                     <div class="metric">${Object.keys(gistData.prices || {}).length}</div>
                     <div class="metric-label">Historical Storage</div>
-                    <div style="margin-top: 10px; font-size: 0.9em;">
-                        Gist: ${process.env.GITHUB_TOKEN ? 'Active' : 'Inactive'}<br>
-                        Last Updated: ${new Date(gistData.last_updated).toLocaleDateString()}
+                    <div style="margin-top: 15px; font-size: 0.9rem; color: #666;">
+                        <strong>Gist:</strong> ${process.env.GITHUB_TOKEN ? 'Active' : 'Inactive'}<br>
+                        <strong>Layers:</strong> 6 Timeframes<br>
+                        <strong>Last Updated:</strong> ${new Date(gistData.last_updated).toLocaleDateString()}
                     </div>
                 </div>
                 
                 <div class="status-card good">
-                    <div class="status-icon">🤖</div>
+                    <div class="card-icon">🤖</div>
                     <div class="metric">15+</div>
                     <div class="metric-label">AI Indicators</div>
-                    <div style="margin-top: 10px; font-size: 0.9em;">
-                        VortexAI: Ready<br>
-                        Analysis: Active
+                    <div style="margin-top: 15px; font-size: 0.9rem; color: #666;">
+                        <strong>VortexAI:</strong> Ready<br>
+                        <strong>Analysis:</strong> Active<br>
+                        <strong>Technical:</strong> 15 Indicators
                     </div>
                 </div>
             </div>
 
-            <h2 style="text-align: center; color: #2c3e50;">🔗 Navigation</h2>
-            
+            <div style="background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 15px; margin-bottom: 30px; backdrop-filter: blur(10px);">
+                <h2 style="text-align: center; color: #2c3e50; margin-bottom: 25px;">📊 Multi-Timeframe Data Layers</h2>
+                <div class="timeframe-grid">
+                    <div class="timeframe-card">
+                        <strong>1H</strong><br>
+                        <small>1-minute intervals</small><br>
+                        <span style="color: #27ae60; font-weight: bold;">60 records</span>
+                    </div>
+                    <div class="timeframe-card">
+                        <strong>4H</strong><br>
+                        <small>5-minute intervals</small><br>
+                        <span style="color: #27ae60; font-weight: bold;">48 records</span>
+                    </div>
+                    <div class="timeframe-card">
+                        <strong>24H</strong><br>
+                        <small>15-minute intervals</small><br>
+                        <span style="color: #27ae60; font-weight: bold;">96 records</span>
+                    </div>
+                    <div class="timeframe-card">
+                        <strong>7D</strong><br>
+                        <small>1-hour intervals</small><br>
+                        <span style="color: #27ae60; font-weight: bold;">168 records</span>
+                    </div>
+                    <div class="timeframe-card">
+                        <strong>30D</strong><br>
+                        <small>4-hour intervals</small><br>
+                        <span style="color: #27ae60; font-weight: bold;">180 records</span>
+                    </div>
+                    <div class="timeframe-card">
+                        <strong>180D</strong><br>
+                        <small>1-day intervals</small><br>
+                        <span style="color: #27ae60; font-weight: bold;">180 records</span>
+                    </div>
+                </div>
+            </div>
+
+            <h2 style="text-align: center; color: white; margin: 40px 0 25px 0;">💡 Quick Navigation</h2>
             <div class="links-grid">
-                <a href="/health" class="nav-link" style="background: #27ae60;">
-                    🩺 System Health
+                <a href="/health" class="nav-link health">
+                    <span>📊</span>
+                    System Health Dashboard
                 </a>
-                <a href="/scan" class="nav-link" style="background: #e74c3c;">
-                    🔍 Market Scanner
+                <a href="/scan" class="nav-link scan">
+                    <span>🔍</span>
+                    Market Scanner
                 </a>
-                <a href="/analysis?symbol=btc_usdt" class="nav-link" style="background: #9b59b6;">
-                    📊 BTC Analysis
+                <a href="/analysis?symbol=btc_usdt" class="nav-link analysis">
+                    <span>📈</span>
+                    Technical Analysis
                 </a>
-                <a href="/api/scan/vortexai?limit=10&filter=ai_signal" class="nav-link" style="background: #f39c12;">
-                    📈 API Data
+                <a href="/api/timeframes" class="nav-link timeframes">
+                    <span>⏰</span>
+                    Timeframes API
+                </a>
+                <a href="/api/scan/vortexai?limit=10&filter=ai_signal" class="nav-link api">
+                    <span>🔌</span>
+                    API Data
+                </a>
+                <a href="/api/health-combined" class="nav-link health">
+                    <span>❤️</span>
+                    Health API
                 </a>
             </div>
 
             <div class="footer">
+                <div style="margin-bottom: 20px;">
+                    <span class="feature-badge">Real-time WebSocket</span>
+                    <span class="feature-badge">6-Layer Historical Data</span>
+                    <span class="feature-badge">VortexAI Analysis</span>
+                    <span class="feature-badge">Technical Indicators</span>
+                    <span class="feature-badge">Multi-Source Data</span>
+                </div>
+                
                 <p><strong>🕒 Server Time:</strong> ${new Date().toLocaleString()}</p>
-                <p><strong>📦 Version:</strong> 4.0 - Enhanced UI Edition</p>
-                <p><strong>🌐 Environment:</strong> Production</p>
-                <p><strong>💡 Features:</strong> Real-time WebSocket + Historical Gist + VortexAI Analysis + Beautiful UI</p>
+                <p><strong>🚀 Version:</strong> 5.0 - 6 Layer Historical System</p>
+                <p><strong>⚡ Environment:</strong> Production Ready</p>
+                <p><strong>📈 Active Pairs:</strong> ${ALL_TRADING_PAIRS.length} Trading Pairs</p>
             </div>
         </div>
     </body>
@@ -970,7 +1245,6 @@ app.get('/', (req, res) => {
 app.get('/health', (req, res) => {
     const wsStatus = wsManager.getConnectionStatus();
     const gistData = gistManager.getAllData();
-    
     const healthData = {
         websocket: {
             connected: wsStatus.connected,
@@ -995,147 +1269,275 @@ app.get('/health', (req, res) => {
 
     res.send(`
     <!DOCTYPE html>
-    <html>
+    <html lang="en">
     <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>System Health - VortexAI Pro</title>
         <style>
-            body {
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            * {
                 margin: 0;
                 padding: 0;
+                box-sizing: border-box;
+            }
+
+            body {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                 min-height: 100vh;
+                color: #333;
+                line-height: 1.6;
             }
+
             .container {
                 max-width: 1200px;
                 margin: 0 auto;
-                background: white;
-                padding: 40px;
-                border-radius: 15px;
-                box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-                margin-top: 40px;
-                margin-bottom: 40px;
+                padding: 20px;
             }
-            h1 {
-                color: #2c3e50;
-                border-bottom: 3px solid #3498db;
-                padding-bottom: 15px;
+
+            .header {
                 text-align: center;
+                margin-bottom: 40px;
+                padding: 40px 20px;
+                background: rgba(255, 255, 255, 0.95);
+                border-radius: 20px;
+                box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+                backdrop-filter: blur(10px);
             }
+
+            .header h1 {
+                font-size: 2.5rem;
+                background: linear-gradient(135deg, #667eea, #764ba2);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                margin-bottom: 10px;
+            }
+
             .status-grid {
                 display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-                gap: 20px;
-                margin: 30px 0;
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: 25px;
+                margin-bottom: 40px;
             }
+
             .status-card {
-                background: #f8f9fa;
-                padding: 25px;
-                border-radius: 12px;
+                background: rgba(255, 255, 255, 0.95);
+                padding: 30px;
+                border-radius: 15px;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+                transition: all 0.3s ease;
                 border-left: 5px solid #3498db;
-                transition: transform 0.3s, box-shadow 0.3s;
+                backdrop-filter: blur(10px);
             }
+
             .status-card:hover {
                 transform: translateY(-5px);
-                box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+                box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
             }
-            .status-card.good { border-left-color: #27ae60; background: linear-gradient(135deg, #f8fff8 0%, #e8f5e8 100%); }
-            .status-card.warning { border-left-color: #f39c12; background: linear-gradient(135deg, #fff8f0 0%, #fef5e7 100%); }
-            .status-card.danger { border-left-color: #e74c3c; background: linear-gradient(135deg, #fff5f5 0%, #fde8e8 100%); }
-            .status-icon {
-                font-size: 2em;
+
+            .status-card.good { 
+                border-left-color: #27ae60;
+                background: linear-gradient(135deg, rgba(39, 174, 96, 0.1), rgba(255, 255, 255, 0.95));
+            }
+            .status-card.warning { 
+                border-left-color: #f39c12;
+                background: linear-gradient(135deg, rgba(243, 156, 18, 0.1), rgba(255, 255, 255, 0.95));
+            }
+            .status-card.danger { 
+                border-left-color: #e74c3c;
+                background: linear-gradient(135deg, rgba(231, 76, 60, 0.1), rgba(255, 255, 255, 0.95));
+            }
+
+            .card-icon {
+                font-size: 2.5rem;
                 margin-bottom: 15px;
             }
+
             .metric {
-                font-size: 2em;
+                font-size: 2rem;
                 font-weight: bold;
                 color: #2c3e50;
                 margin: 10px 0;
             }
+
             .metric-label {
                 color: #7f8c8d;
-                font-size: 0.9em;
+                font-size: 0.9rem;
                 text-transform: uppercase;
                 letter-spacing: 1px;
+                font-weight: 600;
             }
+
             .back-button {
-                display: inline-block;
-                padding: 12px 30px;
-                background: #3498db;
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 12px 25px;
+                background: linear-gradient(135deg, #3498db, #2980b9);
                 color: white;
                 text-decoration: none;
                 border-radius: 25px;
-                margin-top: 20px;
-                transition: all 0.3s;
-            }
-            .back-button:hover {
-                background: #2980b9;
-                transform: translateY(-2px);
+                margin: 10px;
+                transition: all 0.3s ease;
+                font-weight: bold;
                 box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
             }
+
+            .back-button:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 25px rgba(52, 152, 219, 0.4);
+            }
+
             .timestamp {
                 text-align: center;
-                color: #7f8c8d;
+                color: rgba(255, 255, 255, 0.8);
                 margin-top: 30px;
                 font-style: italic;
+            }
+
+            .detail-item {
+                margin: 8px 0;
+                padding: 8px 0;
+                border-bottom: 1px solid #eee;
+            }
+
+            .detail-item:last-child {
+                border-bottom: none;
+            }
+
+            .status-badge {
+                display: inline-block;
+                padding: 4px 12px;
+                border-radius: 15px;
+                font-size: 0.8rem;
+                font-weight: bold;
+                margin-left: 10px;
+            }
+
+            .status-online { background: #27ae60; color: white; }
+            .status-offline { background: #e74c3c; color: white; }
+            .status-warning { background: #f39c12; color: white; }
+
+            @media (max-width: 768px) {
+                .status-grid {
+                    grid-template-columns: 1fr;
+                }
             }
         </style>
     </head>
     <body>
         <div class="container">
-            <h1>🩺 System Health Dashboard</h1>
-            <p style="text-align: center; color: #666; font-size: 18px;">
-                Real-time monitoring of all VortexAI services and components
-            </p>
-            
+            <div class="header">
+                <h1>📊 System Health Dashboard</h1>
+                <p>Real-time monitoring of all VortexAI services and components</p>
+            </div>
+
             <div class="status-grid">
                 <div class="status-card ${healthData.websocket.connected ? 'good' : 'danger'}">
-                    <div class="status-icon">📡</div>
-                    <div class="metric">${healthData.websocket.connected ? 'Connected' : 'Disconnected'}</div>
-                    <div class="metric-label">WebSocket Status</div>
-                    <div style="margin-top: 15px;">
-                        <strong>Active Coins:</strong> ${healthData.websocket.active_coins}<br>
-                        <strong>Subscribed:</strong> ${healthData.websocket.total_subscribed}
+                    <div class="card-icon">📡</div>
+                    <div class="metric">${healthData.websocket.connected ? 'ONLINE' : 'OFFLINE'}</div>
+                    <div class="metric-label">WebSocket Connection</div>
+                    <div style="margin-top: 20px;">
+                        <div class="detail-item">
+                            <strong>Active Coins:</strong> 
+                            <span class="status-badge status-online">${healthData.websocket.active_coins}</span>
+                        </div>
+                        <div class="detail-item">
+                            <strong>Subscribed Pairs:</strong> 
+                            <span class="status-badge status-online">${healthData.websocket.total_subscribed}</span>
+                        </div>
+                        <div class="detail-item">
+                            <strong>Provider:</strong> LBank
+                        </div>
+                        <div class="detail-item">
+                            <strong>Status:</strong> 
+                            <span class="status-badge ${healthData.websocket.connected ? 'status-online' : 'status-offline'}">
+                                ${healthData.websocket.connected ? 'Connected' : 'Disconnected'}
+                            </span>
+                        </div>
                     </div>
                 </div>
-                
+
                 <div class="status-card ${healthData.gist.active ? 'good' : 'warning'}">
-                    <div class="status-icon">💾</div>
+                    <div class="card-icon">💾</div>
                     <div class="metric">${healthData.gist.total_coins}</div>
                     <div class="metric-label">Historical Storage</div>
-                    <div style="margin-top: 15px;">
-                        <strong>Status:</strong> ${healthData.gist.active ? 'Active' : 'Inactive'}<br>
-                        <strong>Last Updated:</strong> ${new Date(healthData.gist.last_updated).toLocaleString()}
+                    <div style="margin-top: 20px;">
+                        <div class="detail-item">
+                            <strong>Gist Status:</strong> 
+                            <span class="status-badge ${healthData.gist.active ? 'status-online' : 'status-warning'}">
+                                ${healthData.gist.active ? 'Active' : 'Inactive'}
+                            </span>
+                        </div>
+                        <div class="detail-item">
+                            <strong>Total Coins:</strong> ${healthData.gist.total_coins}
+                        </div>
+                        <div class="detail-item">
+                            <strong>Timeframes:</strong> 6 Layers
+                        </div>
+                        <div class="detail-item">
+                            <strong>Last Updated:</strong> ${new Date(healthData.gist.last_updated).toLocaleString()}
+                        </div>
                     </div>
                 </div>
-                
+
                 <div class="status-card good">
-                    <div class="status-icon">🤖</div>
+                    <div class="card-icon">🤖</div>
                     <div class="metric">15+</div>
-                    <div class="metric-label">AI Indicators</div>
-                    <div style="margin-top: 15px;">
-                        <strong>VortexAI:</strong> Ready<br>
-                        <strong>Analysis:</strong> Active
+                    <div class="metric-label">AI Engine</div>
+                    <div style="margin-top: 20px;">
+                        <div class="detail-item">
+                            <strong>VortexAI:</strong> 
+                            <span class="status-badge status-online">Ready</span>
+                        </div>
+                        <div class="detail-item">
+                            <strong>Technical Analysis:</strong> 
+                            <span class="status-badge status-online">Active</span>
+                        </div>
+                        <div class="detail-item">
+                            <strong>Indicators:</strong> 15+
+                        </div>
+                        <div class="detail-item">
+                            <strong>Analysis:</strong> Real-time
+                        </div>
                     </div>
                 </div>
-                
+
                 <div class="status-card good">
-                    <div class="status-icon">📊</div>
+                    <div class="card-icon">🔌</div>
                     <div class="metric">${healthData.api.requests_count}</div>
-                    <div class="metric-label">API Requests</div>
-                    <div style="margin-top: 15px;">
-                        <strong>CoinStats:</strong> Connected<br>
-                        <strong>Rate Limit:</strong> Active
+                    <div class="metric-label">API Services</div>
+                    <div style="margin-top: 20px;">
+                        <div class="detail-item">
+                            <strong>CoinStats API:</strong> 
+                            <span class="status-badge status-online">Connected</span>
+                        </div>
+                        <div class="detail-item">
+                            <strong>Requests Count:</strong> ${healthData.api.requests_count}
+                        </div>
+                        <div class="detail-item">
+                            <strong>Rate Limit:</strong> Active
+                        </div>
+                        <div class="detail-item">
+                            <strong>GitHub API:</strong> 
+                            <span class="status-badge ${healthData.gist.active ? 'status-online' : 'status-warning'}">
+                                ${healthData.gist.active ? 'Connected' : 'Disabled'}
+                            </span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div style="text-align: center;">
-                <a href="/" class="back-button">🏠 Back to Dashboard</a>
+            <div style="text-align: center; margin: 40px 0;">
+                <a href="/" class="back-button">🏠 Dashboard</a>
+                <a href="/scan" class="back-button" style="background: linear-gradient(135deg, #e74c3c, #c0392b);">🔍 Market Scanner</a>
+                <a href="/api/health-combined" class="back-button" style="background: linear-gradient(135deg, #9b59b6, #8e44ad);">📊 JSON API</a>
             </div>
 
             <div class="timestamp">
                 Last checked: ${new Date().toLocaleString()}
+                <br>
+                <small>VortexAI Pro v5.0 - 6 Layer System</small>
             </div>
         </div>
     </body>
@@ -1143,131 +1545,280 @@ app.get('/health', (req, res) => {
     `);
 });
 
-// صفحه اسکن VortexAI
+// صفحه اسکنر بازار
 app.get('/scan', (req, res) => {
     const limit = req.query.limit || 20;
     const filter = req.query.filter || 'ai_signal';
     
     res.send(`
     <!DOCTYPE html>
-    <html>
+    <html lang="en">
     <head>
-        <title>VortexAI Market Scan</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Market Scanner - VortexAI Pro</title>
         <style>
-            body {
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            * {
                 margin: 0;
                 padding: 0;
+                box-sizing: border-box;
+            }
+
+            body {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                 min-height: 100vh;
+                color: #333;
+                line-height: 1.6;
             }
+
             .container {
                 max-width: 1400px;
                 margin: 0 auto;
-                background: white;
-                padding: 40px;
-                border-radius: 15px;
-                box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-                margin-top: 40px;
-                margin-bottom: 40px;
-            }
-            h1 {
-                color: #2c3e50;
-                border-bottom: 3px solid #3498db;
-                padding-bottom: 15px;
-                text-align: center;
-            }
-            .controls {
-                background: #f8f9fa;
                 padding: 20px;
-                border-radius: 10px;
+            }
+
+            .header {
+                text-align: center;
+                margin-bottom: 30px;
+                padding: 30px 20px;
+                background: rgba(255, 255, 255, 0.95);
+                border-radius: 20px;
+                box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+                backdrop-filter: blur(10px);
+            }
+
+            .header h1 {
+                font-size: 2.5rem;
+                background: linear-gradient(135deg, #667eea, #764ba2);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                margin-bottom: 10px;
+            }
+
+            .controls {
+                background: rgba(255, 255, 255, 0.95);
+                padding: 25px;
+                border-radius: 15px;
                 margin: 20px 0;
                 display: flex;
-                gap: 15px;
+                gap: 20px;
                 align-items: center;
                 flex-wrap: wrap;
+                backdrop-filter: blur(10px);
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
             }
+
             .control-group {
                 display: flex;
                 align-items: center;
-                gap: 10px;
+                gap: 12px;
             }
+
+            .control-group label {
+                font-weight: 600;
+                color: #2c3e50;
+                min-width: 60px;
+            }
+
             select, button {
-                padding: 10px 15px;
-                border: 1px solid #ddd;
-                border-radius: 5px;
+                padding: 12px 18px;
+                border: 2px solid #e1e8ed;
+                border-radius: 10px;
                 font-size: 14px;
+                background: white;
+                transition: all 0.3s ease;
             }
+
+            select {
+                min-width: 150px;
+            }
+
+            select:focus, button:focus {
+                outline: none;
+                border-color: #3498db;
+                box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+            }
+
             button {
-                background: #3498db;
+                background: linear-gradient(135deg, #3498db, #2980b9);
                 color: white;
                 border: none;
                 cursor: pointer;
-                transition: background 0.3s;
+                font-weight: 600;
+                box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
             }
+
             button:hover {
-                background: #2980b9;
+                transform: translateY(-2px);
+                box-shadow: 0 8px 25px rgba(52, 152, 219, 0.4);
             }
+
+            button.secondary {
+                background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+            }
+
+            button.secondary:hover {
+                background: linear-gradient(135deg, #7f8c8d, #95a5a6);
+            }
+
             .results {
                 margin-top: 30px;
             }
+
             .coin-grid {
                 display: grid;
-                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-                gap: 20px;
+                grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+                gap: 25px;
                 margin-top: 20px;
             }
+
             .coin-card {
-                background: white;
-                border: 1px solid #e1e8ed;
-                border-radius: 10px;
-                padding: 20px;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-                transition: transform 0.3s, box-shadow 0.3s;
+                background: rgba(255, 255, 255, 0.95);
+                border-radius: 15px;
+                padding: 25px;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+                transition: all 0.3s ease;
+                border: 2px solid transparent;
+                backdrop-filter: blur(10px);
             }
+
             .coin-card:hover {
-                transform: translateY(-5px);
-                box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+                transform: translateY(-8px);
+                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+                border-color: #3498db;
             }
+
             .coin-header {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                margin-bottom: 15px;
+                margin-bottom: 20px;
+                padding-bottom: 15px;
+                border-bottom: 2px solid #f8f9fa;
             }
+
             .coin-symbol {
                 font-weight: bold;
-                font-size: 1.2em;
+                font-size: 1.4rem;
                 color: #2c3e50;
             }
+
             .coin-price {
-                font-size: 1.3em;
+                font-size: 1.8rem;
                 font-weight: bold;
-                margin: 10px 0;
+                margin: 15px 0;
+                color: #2c3e50;
             }
+
             .positive { color: #27ae60; }
             .negative { color: #e74c3c; }
+
             .ai-badge {
-                background: #9b59b6;
+                background: linear-gradient(135deg, #9b59b6, #8e44ad);
                 color: white;
-                padding: 4px 8px;
-                border-radius: 12px;
-                font-size: 0.8em;
+                padding: 8px 15px;
+                border-radius: 20px;
+                font-size: 0.9rem;
+                font-weight: 600;
+                box-shadow: 0 4px 15px rgba(155, 89, 182, 0.3);
             }
+
             .loading {
                 text-align: center;
-                padding: 40px;
+                padding: 60px 20px;
                 color: #7f8c8d;
+                font-size: 1.2rem;
+            }
+
+            .loading::after {
+                content: '';
+                display: inline-block;
+                width: 20px;
+                height: 20px;
+                border: 3px solid #f3f3f3;
+                border-top: 3px solid #3498db;
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+                margin-left: 10px;
+            }
+
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+
+            .back-button {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 12px 25px;
+                background: linear-gradient(135deg, #3498db, #2980b9);
+                color: white;
+                text-decoration: none;
+                border-radius: 25px;
+                margin: 10px;
+                transition: all 0.3s ease;
+                font-weight: bold;
+                box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+            }
+
+            .back-button:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 25px rgba(52, 152, 219, 0.4);
+            }
+
+            .stats-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+                margin: 15px 0;
+            }
+
+            .stat-item {
+                display: flex;
+                justify-content: space-between;
+                padding: 8px 0;
+                border-bottom: 1px solid #f8f9fa;
+            }
+
+            .stat-label {
+                color: #7f8c8d;
+                font-size: 0.9rem;
+            }
+
+            .stat-value {
+                font-weight: 600;
+                color: #2c3e50;
+            }
+
+            @media (max-width: 768px) {
+                .controls {
+                    flex-direction: column;
+                    align-items: stretch;
+                }
+                
+                .control-group {
+                    justify-content: space-between;
+                }
+                
+                .coin-grid {
+                    grid-template-columns: 1fr;
+                }
+                
+                .stats-grid {
+                    grid-template-columns: 1fr;
+                }
             }
         </style>
     </head>
     <body>
         <div class="container">
-            <h1>🔍 VortexAI Market Scanner</h1>
-            <p style="text-align: center; color: #666;">
-                Advanced cryptocurrency scanning with AI-powered insights and real-time data
-            </p>
-            
+            <div class="header">
+                <h1>🔍 VortexAI Market Scanner</h1>
+                <p>Advanced cryptocurrency scanning with AI-powered insights and multi-timeframe data</p>
+            </div>
+
             <div class="controls">
                 <div class="control-group">
                     <label>Limit:</label>
@@ -1278,7 +1829,7 @@ app.get('/scan', (req, res) => {
                         <option value="100">100 coins</option>
                     </select>
                 </div>
-                
+
                 <div class="control-group">
                     <label>Filter:</label>
                     <select id="filterSelect">
@@ -1288,19 +1839,29 @@ app.get('/scan', (req, res) => {
                         <option value="momentum_4h">4H Momentum</option>
                     </select>
                 </div>
-                
-                <button onclick="scanMarket()">🚀 Scan Market</button>
-                <button onclick="loadSampleData()" style="background: #95a5a6;">📊 Load Sample</button>
+
+                <button onclick="scanMarket()" style="background: linear-gradient(135deg, #27ae60, #2ecc71);">
+                    🔄 Scan Market
+                </button>
+                <button onclick="loadSampleData()" class="secondary">
+                    📊 Load Sample
+                </button>
             </div>
 
             <div class="results">
                 <div id="resultsContainer" class="loading">
-                    <div>Click "Scan Market" to load cryptocurrency data...</div>
+                    Click "Scan Market" to load cryptocurrency data with VortexAI analysis...
                 </div>
             </div>
 
-            <div style="text-align: center; margin-top: 30px;">
-                <a href="/" class="back-button">🏠 Back to Dashboard</a>
+            <div style="text-align: center; margin-top: 40px;">
+                <a href="/" class="back-button">🏠 Dashboard</a>
+                <a href="/analysis?symbol=btc_usdt" class="back-button" style="background: linear-gradient(135deg, #9b59b6, #8e44ad);">
+                    📈 Technical Analysis
+                </a>
+                <a href="/health" class="back-button" style="background: linear-gradient(135deg, #f39c12, #e67e22);">
+                    📊 System Health
+                </a>
             </div>
         </div>
 
@@ -1309,65 +1870,140 @@ app.get('/scan', (req, res) => {
                 const limit = document.getElementById('limitSelect').value;
                 const filter = document.getElementById('filterSelect').value;
                 
-                document.getElementById('resultsContainer').innerHTML = '<div class="loading">🔄 Scanning market with VortexAI...</div>';
-                
+                document.getElementById('resultsContainer').innerHTML = '<div class="loading">🔍 Scanning market with VortexAI 6-Layer System...</div>';
+
                 try {
                     const response = await fetch(\`/api/scan/vortexai?limit=\${limit}&filter=\${filter}\`);
                     const data = await response.json();
-                    
+
                     if (data.success) {
                         displayResults(data.coins);
                     } else {
-                        document.getElementById('resultsContainer').innerHTML = '<div class="loading">❌ Error loading data</div>';
+                        document.getElementById('resultsContainer').innerHTML = 
+                            '<div class="loading" style="color: #e74c3c;">❌ Error loading data</div>';
                     }
                 } catch (error) {
-                    document.getElementById('resultsContainer').innerHTML = '<div class="loading">❌ Connection error</div>';
+                    document.getElementById('resultsContainer').innerHTML = 
+                        '<div class="loading" style="color: #e74c3c;">❌ Connection error - Please try again</div>';
                 }
             }
-            
+
             function displayResults(coins) {
                 if (!coins || coins.length === 0) {
-                    document.getElementById('resultsContainer').innerHTML = '<div class="loading">📭 No coins found</div>';
+                    document.getElementById('resultsContainer').innerHTML = 
+                        '<div class="loading">📭 No coins found matching your criteria</div>';
                     return;
                 }
-                
+
                 const coinsHTML = coins.map(coin => \`
                     <div class="coin-card">
                         <div class="coin-header">
                             <span class="coin-symbol">\${coin.symbol}</span>
                             <span class="ai-badge">AI Score: \${coin.vortexai_analysis?.signal_strength?.toFixed(1) || 'N/A'}</span>
                         </div>
+                        
                         <div class="coin-price">$\${coin.price?.toFixed(2) || '0.00'}</div>
-                        <div style="margin: 10px 0;">
-                            <span class="\${(coin.priceChange24h || 0) >= 0 ? 'positive' : 'negative'}">
-                                24h: \${(coin.priceChange24h || 0).toFixed(2)}%
-                            </span>
-                            <br>
-                            <span class="\${(coin.change_1h || 0) >= 0 ? 'positive' : 'negative'}">
-                                1h: \${(coin.change_1h || 0).toFixed(2)}%
-                            </span>
+                        
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <span class="stat-label">24h Change:</span>
+                                <span class="stat-value \${(coin.priceChange24h || 0) >= 0 ? 'positive' : 'negative'}">
+                                    \${(coin.priceChange24h || 0).toFixed(2)}%
+                                </span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">1h Change:</span>
+                                <span class="stat-value \${(coin.change_1h || 0) >= 0 ? 'positive' : 'negative'}">
+                                    \${(coin.change_1h || 0).toFixed(2)}%
+                                </span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Volume:</span>
+                                <span class="stat-value">$\${(coin.volume || 0).toLocaleString()}</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Market Cap:</span>
+                                <span class="stat-value">$\${(coin.marketCap || 0).toLocaleString()}</span>
+                            </div>
                         </div>
-                        <div style="font-size: 0.9em; color: #7f8c8d;">
-                            Volume: $\${(coin.volume || 0).toLocaleString()}<br>
-                            Sentiment: \${coin.vortexai_analysis?.market_sentiment || 'neutral'}
+
+                        <div style="margin-top: 15px; padding-top: 15px; border-top: 2px solid #f8f9fa;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="color: #7f8c8d; font-size: 0.9rem;">
+                                    Sentiment: <strong style="color: \${coin.vortexai_analysis?.market_sentiment === 'bullish' ? '#27ae60' : '#e74c3c'}">
+                                        \${coin.vortexai_analysis?.market_sentiment || 'neutral'}
+                                    </strong>
+                                </span>
+                                <span style="color: #7f8c8d; font-size: 0.9rem;">
+                                    Volatility: <strong>\${coin.vortexai_analysis?.volatility_score?.toFixed(1) || '0'}</strong>
+                                </span>
+                            </div>
+                            \${coin.vortexai_analysis?.volume_anomaly ? 
+                                '<div style="margin-top: 8px; padding: 5px 10px; background: #fff3cd; color: #856404; border-radius: 8px; font-size: 0.8rem; text-align: center;">⚠️ Volume Anomaly Detected</div>' 
+                                : ''}
                         </div>
                     </div>
                 \`).join('');
-                
+
                 document.getElementById('resultsContainer').innerHTML = \`
-                    <h3>📈 Scan Results: \${coins.length} coins</h3>
+                    <h3 style="color: white; text-align: center; margin-bottom: 20px;">
+                        📊 Scan Results: \${coins.length} coins found
+                    </h3>
                     <div class="coin-grid">\${coinsHTML}</div>
                 \`;
             }
-            
+
             function loadSampleData() {
                 const sampleCoins = [
-                    { symbol: 'BTC', price: 45234.56, priceChange24h: 2.34, change_1h: 0.56, volume: 25467890000, vortexai_analysis: { signal_strength: 8.7, market_sentiment: 'bullish' } },
-                    { symbol: 'ETH', price: 2345.67, priceChange24h: 1.23, change_1h: -0.34, volume: 14567890000, vortexai_analysis: { signal_strength: 7.2, market_sentiment: 'bullish' } },
-                    { symbol: 'SOL', price: 102.34, priceChange24h: 5.67, change_1h: 2.12, volume: 3456789000, vortexai_analysis: { signal_strength: 9.1, market_sentiment: 'very bullish' } }
+                    { 
+                        symbol: 'BTC', 
+                        price: 45234.56, 
+                        priceChange24h: 2.34, 
+                        change_1h: 0.56, 
+                        volume: 25467890000, 
+                        marketCap: 885234567890,
+                        vortexai_analysis: { 
+                            signal_strength: 8.7, 
+                            market_sentiment: 'bullish',
+                            volatility_score: 7.2,
+                            volume_anomaly: true
+                        } 
+                    },
+                    { 
+                        symbol: 'ETH', 
+                        price: 2345.67, 
+                        priceChange24h: 1.23, 
+                        change_1h: -0.34, 
+                        volume: 14567890000, 
+                        marketCap: 281234567890,
+                        vortexai_analysis: { 
+                            signal_strength: 7.2, 
+                            market_sentiment: 'bullish',
+                            volatility_score: 5.8,
+                            volume_anomaly: false
+                        } 
+                    },
+                    { 
+                        symbol: 'SOL', 
+                        price: 102.34, 
+                        priceChange24h: 5.67, 
+                        change_1h: 2.12, 
+                        volume: 3456789000, 
+                        marketCap: 41234567890,
+                        vortexai_analysis: { 
+                            signal_strength: 9.1, 
+                            market_sentiment: 'very bullish',
+                            volatility_score: 8.5,
+                            volume_anomaly: true
+                        } 
+                    }
                 ];
+
                 displayResults(sampleCoins);
             }
+
+            // Load sample data on page load for demo
+            setTimeout(loadSampleData, 1000);
         </script>
     </body>
     </html>
@@ -1378,158 +2014,419 @@ app.get('/scan', (req, res) => {
 app.get('/analysis', (req, res) => {
     const symbol = req.query.symbol || 'btc_usdt';
     
-    res.send(`
+    res.send(\`
     <!DOCTYPE html>
-    <html>
+    <html lang="en">
     <head>
-        <title>Technical Analysis - VortexAI</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Technical Analysis - VortexAI Pro</title>
         <style>
-            body {
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            * {
                 margin: 0;
                 padding: 0;
+                box-sizing: border-box;
+            }
+
+            body {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                 min-height: 100vh;
+                color: #333;
+                line-height: 1.6;
             }
+
             .container {
                 max-width: 1200px;
                 margin: 0 auto;
-                background: white;
-                padding: 40px;
-                border-radius: 15px;
-                box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-                margin-top: 40px;
-                margin-bottom: 40px;
+                padding: 20px;
             }
-            h1 {
-                color: #2c3e50;
-                border-bottom: 3px solid #3498db;
-                padding-bottom: 15px;
+
+            .header {
+                text-align: center;
+                margin-bottom: 30px;
+                padding: 30px 20px;
+                background: rgba(255, 255, 255, 0.95);
+                border-radius: 20px;
+                box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+                backdrop-filter: blur(10px);
             }
+
+            .header h1 {
+                font-size: 2.5rem;
+                background: linear-gradient(135deg, #667eea, #764ba2);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                margin-bottom: 10px;
+            }
+
             .analysis-grid {
                 display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
                 gap: 20px;
                 margin: 30px 0;
             }
+
             .indicator-card {
-                background: #f8f9fa;
-                padding: 20px;
-                border-radius: 10px;
+                background: rgba(255, 255, 255, 0.95);
+                padding: 25px;
+                border-radius: 15px;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+                text-align: center;
+                transition: all 0.3s ease;
                 border-left: 4px solid #3498db;
+                backdrop-filter: blur(10px);
             }
+
+            .indicator-card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+            }
+
             .indicator-value {
-                font-size: 1.8em;
+                font-size: 2.2rem;
                 font-weight: bold;
-                margin: 10px 0;
+                margin: 15px 0;
+                color: #2c3e50;
             }
+
             .bullish { color: #27ae60; }
             .bearish { color: #e74c3c; }
             .neutral { color: #f39c12; }
+
             .back-button {
-                display: inline-block;
-                padding: 12px 30px;
-                background: #3498db;
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 12px 25px;
+                background: linear-gradient(135deg, #3498db, #2980b9);
                 color: white;
                 text-decoration: none;
                 border-radius: 25px;
                 margin: 5px;
-                transition: all 0.3s;
+                transition: all 0.3s ease;
+                font-weight: bold;
+                box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
             }
+
             .back-button:hover {
-                background: #2980b9;
                 transform: translateY(-2px);
+                box-shadow: 0 8px 25px rgba(52, 152, 219, 0.4);
+            }
+
+            .loading {
+                text-align: center;
+                padding: 60px 20px;
+                color: #7f8c8d;
+                font-size: 1.2rem;
+            }
+
+            .loading::after {
+                content: '';
+                display: inline-block;
+                width: 20px;
+                height: 20px;
+                border: 3px solid #f3f3f3;
+                border-top: 3px solid #3498db;
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+                margin-left: 10px;
+            }
+
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+
+            .timeframe-selector {
+                display: flex;
+                gap: 10px;
+                justify-content: center;
+                margin: 20px 0;
+                flex-wrap: wrap;
+            }
+
+            .timeframe-btn {
+                padding: 10px 20px;
+                background: rgba(255, 255, 255, 0.9);
+                border: 2px solid #e1e8ed;
+                border-radius: 10px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                font-weight: 600;
+                color: #2c3e50;
+            }
+
+            .timeframe-btn.active {
+                background: linear-gradient(135deg, #3498db, #2980b9);
+                color: white;
+                border-color: #3498db;
+            }
+
+            .timeframe-btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            }
+
+            .info-section {
+                background: rgba(255, 255, 255, 0.95);
+                padding: 25px;
+                border-radius: 15px;
+                margin: 20px 0;
+                backdrop-filter: blur(10px);
+            }
+
+            @media (max-width: 768px) {
+                .analysis-grid {
+                    grid-template-columns: 1fr;
+                }
+                
+                .timeframe-selector {
+                    flex-direction: column;
+                    align-items: center;
+                }
+                
+                .timeframe-btn {
+                    width: 200px;
+                }
             }
         </style>
     </head>
     <body>
         <div class="container">
-            <h1>📊 Technical Analysis: ${symbol.toUpperCase()}</h1>
-            
+            <div class="header">
+                <h1>📈 Technical Analysis: \${symbol.toUpperCase()}</h1>
+                <p>Advanced technical indicators powered by VortexAI 6-Layer System</p>
+            </div>
+
             <div style="text-align: center; margin: 20px 0;">
                 <a href="/scan" class="back-button">🔍 Back to Scanner</a>
-                <a href="/" class="back-button" style="background: #95a5a6;">🏠 Dashboard</a>
+                <a href="/" class="back-button" style="background: linear-gradient(135deg, #95a5a6, #7f8c8d);">🏠 Dashboard</a>
+                
+                <div class="timeframe-selector">
+                    <button class="timeframe-btn" onclick="changeTimeframe('1h')">1H</button>
+                    <button class="timeframe-btn" onclick="changeTimeframe('4h')">4H</button>
+                    <button class="timeframe-btn" onclick="changeTimeframe('24h')">24H</button>
+                    <button class="timeframe-btn active" onclick="changeTimeframe('7d')">7D</button>
+                    <button class="timeframe-btn" onclick="changeTimeframe('30d')">30D</button>
+                    <button class="timeframe-btn" onclick="changeTimeframe('180d')">180D</button>
+                </div>
             </div>
-            
-            <div id="analysisContent" style="text-align: center; padding: 40px;">
-                <div>Loading technical analysis for ${symbol.toUpperCase()}...</div>
+
+            <div id="analysisContent" class="loading">
+                Loading technical analysis for \${symbol.toUpperCase()}...
             </div>
         </div>
 
         <script>
+            let currentSymbol = '\${symbol}';
+            let currentTimeframe = '7d';
+
             async function loadAnalysis() {
                 try {
-                    const response = await fetch(\`/api/coin/\${'${symbol}'}/technical\`);
+                    const response = await fetch(\`/api/coin/\${currentSymbol}/technical\`);
                     const data = await response.json();
-                    
+
                     if (data.success) {
                         displayAnalysis(data);
                     } else {
-                        document.getElementById('analysisContent').innerHTML = '<div>❌ Error loading analysis</div>';
+                        document.getElementById('analysisContent').innerHTML = 
+                            '<div class="loading" style="color: #e74c3c;">❌ Error loading analysis data</div>';
                     }
                 } catch (error) {
-                    document.getElementById('analysisContent').innerHTML = '<div>❌ Connection error</div>';
+                    document.getElementById('analysisContent').innerHTML = 
+                        '<div class="loading" style="color: #e74c3c;">❌ Connection error - Please try again</div>';
                 }
             }
-            
+
+            async function changeTimeframe(timeframe) {
+                currentTimeframe = timeframe;
+                
+                // Update active button
+                document.querySelectorAll('.timeframe-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                event.target.classList.add('active');
+                
+                // Load historical data for selected timeframe
+                try {
+                    const response = await fetch(\`/api/coin/\${currentSymbol}/history/\${timeframe}\`);
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        document.getElementById('analysisContent').innerHTML = \`
+                            <div class="info-section">
+                                <h3>📊 \${timeframe.toUpperCase()} Historical Data</h3>
+                                <p><strong>Data Points:</strong> \${data.data_points}</p>
+                                <p><strong>Current Price:</strong> $\${data.current_price?.toFixed(2) || 'N/A'}</p>
+                                <p><strong>Timeframe:</strong> \${timeframe}</p>
+                            </div>
+                            <div style="text-align: center; margin: 20px; color: white;">
+                                🔄 Loading technical indicators...
+                            </div>
+                        \`;
+                        
+                        // Reload full analysis
+                        setTimeout(loadAnalysis, 1000);
+                    }
+                } catch (error) {
+                    console.error('Error loading timeframe data:', error);
+                }
+            }
+
             function displayAnalysis(data) {
                 const analysisHTML = \`
                     <div class="analysis-grid">
                         <div class="indicator-card">
                             <div>💰 Current Price</div>
                             <div class="indicator-value">$\${data.current_price?.toFixed(2) || 'N/A'}</div>
+                            <div style="color: #7f8c8d; font-size: 0.9rem;">Live Price</div>
                         </div>
+
                         <div class="indicator-card">
-                            <div>📈 RSI</div>
-                            <div class="indicator-value \${getRSIColor(data.technical_indicators?.momentum_indicators?.rsi)}">
-                                \${data.technical_indicators?.momentum_indicators?.rsi?.toFixed(2) || 'N/A'}
+                            <div>📊 RSI</div>
+                            <div class="indicator-value \${getRSIColor(data.technical_indicators?.rsi)}">
+                                \${data.technical_indicators?.rsi?.toFixed(2) || 'N/A'}
                             </div>
+                            <div style="color: #7f8c8d; font-size: 0.9rem;">Momentum</div>
                         </div>
+
                         <div class="indicator-card">
-                            <div>🎯 MACD</div>
+                            <div>📈 MACD</div>
                             <div class="indicator-value \${getMACDColor(data.technical_indicators?.macd)}">
-                                \${data.technical_indicators?.macd?.macd?.toFixed(4) || 'N/A'}
+                                \${data.technical_indicators?.macd?.toFixed(4) || 'N/A'}
+                            </div>
+                            <div style="color: #7f8c8d; font-size: 0.9rem;">Trend</div>
+                        </div>
+
+                        <div class="indicator-card">
+                            <div>📉 Bollinger Bands</div>
+                            <div class="indicator-value">
+                                \${data.technical_indicators?.bollinger_upper?.toFixed(2) || 'N/A'}
+                            </div>
+                            <div style="color: #7f8c8d; font-size: 0.9rem;">Upper Band</div>
+                        </div>
+
+                        <div class="indicator-card">
+                            <div>🔄 Moving Average (20)</div>
+                            <div class="indicator-value">
+                                \${data.technical_indicators?.moving_avg_20?.toFixed(2) || 'N/A'}
+                            </div>
+                            <div style="color: #7f8c8d; font-size: 0.9rem;">Short Term</div>
+                        </div>
+
+                        <div class="indicator-card">
+                            <div>📅 Moving Average (50)</div>
+                            <div class="indicator-value">
+                                \${data.technical_indicators?.moving_avg_50?.toFixed(2) || 'N/A'}
+                            </div>
+                            <div style="color: #7f8c8d; font-size: 0.9rem;">Medium Term</div>
+                        </div>
+
+                        <div class="indicator-card">
+                            <div>🎯 Stochastic</div>
+                            <div class="indicator-value">
+                                \${data.technical_indicators?.stochastic_k?.toFixed(2) || 'N/A'}
+                            </div>
+                            <div style="color: #7f8c8d; font-size: 0.9rem;">K: \${data.technical_indicators?.stochastic_k?.toFixed(2) || 'N/A'}</div>
+                        </div>
+
+                        <div class="indicator-card">
+                            <div>📊 Volume Analysis</div>
+                            <div class="indicator-value">
+                                \${data.technical_indicators?.obv?.toLocaleString() || 'N/A'}
+                            </div>
+                            <div style="color: #7f8c8d; font-size: 0.9rem;">OBV Indicator</div>
+                        </div>
+                    </div>
+
+                    <div class="info-section">
+                        <h3>🤖 VortexAI Insights</h3>
+                        <p><strong>Market Sentiment:</strong> 
+                            <span style="color: \${data.vortexai_analysis?.market_sentiment === 'BULLISH' ? '#27ae60' : data.vortexai_analysis?.market_sentiment === 'BEARISH' ? '#e74c3c' : '#f39c12'}; font-weight: bold;">
+                                \${data.vortexai_analysis?.market_sentiment || 'NEUTRAL'}
+                            </span>
+                        </p>
+                        <p><strong>Prediction Confidence:</strong> \${(data.vortexai_analysis?.prediction_confidence * 100)?.toFixed(1) || '0'}%</p>
+                        <p><strong>Risk Level:</strong> \${data.vortexai_analysis?.risk_level || 'MEDIUM'}</p>
+                        
+                        <div style="margin-top: 15px;">
+                            <strong>AI Insights:</strong>
+                            <ul style="margin-top: 10px; padding-left: 20px;">
+                                \${data.vortexai_analysis?.ai_insights?.map(insight => \`<li>\${insight}</li>\`).join('') || '<li>No specific insights available</li>'}
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="info-section">
+                        <h3>📈 Support & Resistance</h3>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px;">
+                            <div>
+                                <strong>Support Levels:</strong>
+                                <div style="margin-top: 10px;">
+                                    \${data.support_resistance?.support?.map(level => \`
+                                        <div style="padding: 5px 0; border-bottom: 1px solid #eee;">
+                                            $\${level?.toFixed(2) || 'N/A'}
+                                        </div>
+                                    \`).join('') || 'N/A'}
+                                </div>
+                            </div>
+                            <div>
+                                <strong>Resistance Levels:</strong>
+                                <div style="margin-top: 10px;">
+                                    \${data.support_resistance?.resistance?.map(level => \`
+                                        <div style="padding: 5px 0; border-bottom: 1px solid #eee;">
+                                            $\${level?.toFixed(2) || 'N/A'}
+                                        </div>
+                                    \`).join('') || 'N/A'}
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div style="margin-top: 30px; text-align: left;">
-                        <h3>AI Insights</h3>
-                        <p>Technical analysis powered by VortexAI engine with 15+ indicators.</p>
-                        <p><strong>Data Points:</strong> \${data.data_points || 0}</p>
+
+                    <div class="info-section">
+                        <h3>⚙️ Technical Details</h3>
+                        <p><strong>Data Points Analyzed:</strong> \${data.data_points || 0}</p>
                         <p><strong>Processing Time:</strong> \${data.processing_time || 'N/A'}</p>
+                        <p><strong>Timeframe:</strong> \${currentTimeframe.toUpperCase()}</p>
+                        <p><strong>Analysis Timestamp:</strong> \${new Date(data.timestamp).toLocaleString()}</p>
                     </div>
                 \`;
-                
+
                 document.getElementById('analysisContent').innerHTML = analysisHTML;
             }
-            
+
             function getRSIColor(rsi) {
                 if (!rsi) return 'neutral';
                 if (rsi > 70) return 'bearish';
                 if (rsi < 30) return 'bullish';
                 return 'neutral';
             }
-            
+
             function getMACDColor(macd) {
-                if (!macd || !macd.macd) return 'neutral';
-                return macd.macd > 0 ? 'bullish' : 'bearish';
+                if (!macd) return 'neutral';
+                return macd > 0 ? 'bullish' : 'bearish';
             }
-            
+
+            // Load analysis on page load
             window.addEventListener('load', loadAnalysis);
         </script>
     </body>
     </html>
-    `);
+    \`);
 });
 
-// ==================== راه‌اندازی سرور ====================
+// ===================== راه‌اندازی سرور =====================
 app.listen(PORT, '0.0.0.0', () => {
-    logger.info(`🚀 VortexAI Combined Server started on port ${PORT}`);
-    logger.info('✅ Features: WebSocket Real-time + Gist Historical + VortexAI Analysis + Beautiful UI');
-    logger.info(`📊 Real-time Pairs: ${ALL_TRADING_PAIRS.length}`);
-    logger.info(`🔗 Dashboard: http://localhost:${PORT}/`);
-    logger.info(`🩺 Health: http://localhost:${PORT}/health`);
-    logger.info(`🔍 Scanner: http://localhost:${PORT}/scan`);
+    logger.info(\`✔ VortexAI 6-Layer Server started on port \${PORT}\`);
+    logger.info(\`✔ Features: 6-Timeframe Historical Data + WebSocket Real-time + VortexAI Analysis\`);
+    logger.info(\`✔ Real-time Pairs: \${ALL_TRADING_PAIRS.length}\`);
+    logger.info(\`✔ Dashboard: http://localhost:\${PORT}/\`);
+    logger.info(\`✔ Health: http://localhost:\${PORT}/health\`);
+    logger.info(\`✔ Scanner: http://localhost:\${PORT}/scan\`);
+    logger.info(\`✔ Analysis: http://localhost:\${PORT}/analysis\`);
 });
 
 module.exports = app;
+
+            
