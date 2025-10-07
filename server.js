@@ -2012,9 +2012,9 @@ app.get('/scan', (req, res) => {
 
 // صفحه تحلیل تکنیکال
 app.get('/analysis', (req, res) => {
-    const symbol = req.params.symbol || 'btc_usdt';
+    const symbol = req.query.symbol || 'btc_usdt';
     
-    res.send(\`
+    res.send(`
     <!DOCTYPE html>
     <html lang="en">
     <head>
@@ -2195,7 +2195,7 @@ app.get('/analysis', (req, res) => {
     <body>
         <div class="container">
             <div class="header">
-                <h1>📈 Technical Analysis: \${symbol.toUpperCase()}</h1>
+                <h1>📈 Technical Analysis: ${symbol.toUpperCase()}</h1>
                 <p>Advanced technical indicators powered by VortexAI 6-Layer System</p>
             </div>
 
@@ -2214,17 +2214,17 @@ app.get('/analysis', (req, res) => {
             </div>
 
             <div id="analysisContent" class="loading">
-                Loading technical analysis for \${symbol.toUpperCase()}...
+                Loading technical analysis for ${symbol.toUpperCase()}...
             </div>
         </div>
 
         <script>
-            let currentSymbol = '\${symbol}';
+            let currentSymbol = '${symbol}';
             let currentTimeframe = '7d';
 
             async function loadAnalysis() {
                 try {
-                    const response = await fetch(\`/api/coin/\${currentSymbol}/technical\`);
+                    const response = await fetch('/api/coin/' + currentSymbol + '/technical');
                     const data = await response.json();
 
                     if (data.success) {
@@ -2250,21 +2250,20 @@ app.get('/analysis', (req, res) => {
                 
                 // Load historical data for selected timeframe
                 try {
-                    const response = await fetch(\`/api/coin/\${currentSymbol}/history/\${timeframe}\`);
+                    const response = await fetch('/api/coin/' + currentSymbol + '/history/' + timeframe);
                     const data = await response.json();
                     
                     if (data.success) {
-                        document.getElementById('analysisContent').innerHTML = \`
-                            <div class="info-section">
-                                <h3>📊 \${timeframe.toUpperCase()} Historical Data</h3>
-                                <p><strong>Data Points:</strong> \${data.data_points}</p>
-                                <p><strong>Current Price:</strong> $\${data.current_price?.toFixed(2) || 'N/A'}</p>
-                                <p><strong>Timeframe:</strong> \${timeframe}</p>
-                            </div>
-                            <div style="text-align: center; margin: 20px; color: white;">
-                                🔄 Loading technical indicators...
-                            </div>
-                        \`;
+                        document.getElementById('analysisContent').innerHTML = 
+                            '<div class="info-section">' +
+                            '<h3>📊 ' + timeframe.toUpperCase() + ' Historical Data</h3>' +
+                            '<p><strong>Data Points:</strong> ' + data.data_points + '</p>' +
+                            '<p><strong>Current Price:</strong> $' + (data.current_price?.toFixed(2) || 'N/A') + '</p>' +
+                            '<p><strong>Timeframe:</strong> ' + timeframe + '</p>' +
+                            '</div>' +
+                            '<div style="text-align: center; margin: 20px; color: white;">' +
+                            '🔄 Loading technical indicators...' +
+                            '</div>';
                         
                         // Reload full analysis
                         setTimeout(loadAnalysis, 1000);
@@ -2275,123 +2274,127 @@ app.get('/analysis', (req, res) => {
             }
 
             function displayAnalysis(data) {
-                const analysisHTML = \`
-                    <div class="analysis-grid">
-                        <div class="indicator-card">
-                            <div>💰 Current Price</div>
-                            <div class="indicator-value">$\${data.current_price?.toFixed(2) || 'N/A'}</div>
-                            <div style="color: #7f8c8d; font-size: 0.9rem;">Live Price</div>
-                        </div>
+                const rsiColor = getRSIColor(data.technical_indicators?.rsi);
+                const macdColor = getMACDColor(data.technical_indicators?.macd);
+                const sentimentColor = data.vortexai_analysis?.market_sentiment === 'BULLISH' ? '#27ae60' : 
+                                    data.vortexai_analysis?.market_sentiment === 'BEARISH' ? '#e74c3c' : '#f39c12';
 
-                        <div class="indicator-card">
-                            <div>📊 RSI</div>
-                            <div class="indicator-value \${getRSIColor(data.technical_indicators?.rsi)}">
-                                \${data.technical_indicators?.rsi?.toFixed(2) || 'N/A'}
-                            </div>
-                            <div style="color: #7f8c8d; font-size: 0.9rem;">Momentum</div>
-                        </div>
+                const analysisHTML = 
+                    '<div class="analysis-grid">' +
+                        '<div class="indicator-card">' +
+                            '<div>💰 Current Price</div>' +
+                            '<div class="indicator-value">$' + (data.current_price?.toFixed(2) || 'N/A') + '</div>' +
+                            '<div style="color: #7f8c8d; font-size: 0.9rem;">Live Price</div>' +
+                        '</div>' +
 
-                        <div class="indicator-card">
-                            <div>📈 MACD</div>
-                            <div class="indicator-value \${getMACDColor(data.technical_indicators?.macd)}">
-                                \${data.technical_indicators?.macd?.toFixed(4) || 'N/A'}
-                            </div>
-                            <div style="color: #7f8c8d; font-size: 0.9rem;">Trend</div>
-                        </div>
+                        '<div class="indicator-card">' +
+                            '<div>📊 RSI</div>' +
+                            '<div class="indicator-value ' + rsiColor + '">' +
+                                (data.technical_indicators?.rsi?.toFixed(2) || 'N/A') +
+                            '</div>' +
+                            '<div style="color: #7f8c8d; font-size: 0.9rem;">Momentum</div>' +
+                        '</div>' +
 
-                        <div class="indicator-card">
-                            <div>📉 Bollinger Bands</div>
-                            <div class="indicator-value">
-                                \${data.technical_indicators?.bollinger_upper?.toFixed(2) || 'N/A'}
-                            </div>
-                            <div style="color: #7f8c8d; font-size: 0.9rem;">Upper Band</div>
-                        </div>
+                        '<div class="indicator-card">' +
+                            '<div>📈 MACD</div>' +
+                            '<div class="indicator-value ' + macdColor + '">' +
+                                (data.technical_indicators?.macd?.toFixed(4) || 'N/A') +
+                            '</div>' +
+                            '<div style="color: #7f8c8d; font-size: 0.9rem;">Trend</div>' +
+                        '</div>' +
 
-                        <div class="indicator-card">
-                            <div>🔄 Moving Average (20)</div>
-                            <div class="indicator-value">
-                                \${data.technical_indicators?.moving_avg_20?.toFixed(2) || 'N/A'}
-                            </div>
-                            <div style="color: #7f8c8d; font-size: 0.9rem;">Short Term</div>
-                        </div>
+                        '<div class="indicator-card">' +
+                            '<div>📉 Bollinger Bands</div>' +
+                            '<div class="indicator-value">' +
+                                (data.technical_indicators?.bollinger_upper?.toFixed(2) || 'N/A') +
+                            '</div>' +
+                            '<div style="color: #7f8c8d; font-size: 0.9rem;">Upper Band</div>' +
+                        '</div>' +
 
-                        <div class="indicator-card">
-                            <div>📅 Moving Average (50)</div>
-                            <div class="indicator-value">
-                                \${data.technical_indicators?.moving_avg_50?.toFixed(2) || 'N/A'}
-                            </div>
-                            <div style="color: #7f8c8d; font-size: 0.9rem;">Medium Term</div>
-                        </div>
+                        '<div class="indicator-card">' +
+                            '<div>🔄 Moving Average (20)</div>' +
+                            '<div class="indicator-value">' +
+                                (data.technical_indicators?.moving_avg_20?.toFixed(2) || 'N/A') +
+                            '</div>' +
+                            '<div style="color: #7f8c8d; font-size: 0.9rem;">Short Term</div>' +
+                        '</div>' +
 
-                        <div class="indicator-card">
-                            <div>🎯 Stochastic</div>
-                            <div class="indicator-value">
-                                \${data.technical_indicators?.stochastic_k?.toFixed(2) || 'N/A'}
-                            </div>
-                            <div style="color: #7f8c8d; font-size: 0.9rem;">K: \${data.technical_indicators?.stochastic_k?.toFixed(2) || 'N/A'}</div>
-                        </div>
+                        '<div class="indicator-card">' +
+                            '<div>📅 Moving Average (50)</div>' +
+                            '<div class="indicator-value">' +
+                                (data.technical_indicators?.moving_avg_50?.toFixed(2) || 'N/A') +
+                            '</div>' +
+                            '<div style="color: #7f8c8d; font-size: 0.9rem;">Medium Term</div>' +
+                        '</div>' +
 
-                        <div class="indicator-card">
-                            <div>📊 Volume Analysis</div>
-                            <div class="indicator-value">
-                                \${data.technical_indicators?.obv?.toLocaleString() || 'N/A'}
-                            </div>
-                            <div style="color: #7f8c8d; font-size: 0.9rem;">OBV Indicator</div>
-                        </div>
-                    </div>
+                        '<div class="indicator-card">' +
+                            '<div>🎯 Stochastic</div>' +
+                            '<div class="indicator-value">' +
+                                (data.technical_indicators?.stochastic_k?.toFixed(2) || 'N/A') +
+                            '</div>' +
+                            '<div style="color: #7f8c8d; font-size: 0.9rem;">K: ' + (data.technical_indicators?.stochastic_k?.toFixed(2) || 'N/A') + '</div>' +
+                        '</div>' +
 
-                    <div class="info-section">
-                        <h3>🤖 VortexAI Insights</h3>
-                        <p><strong>Market Sentiment:</strong> 
-                            <span style="color: \${data.vortexai_analysis?.market_sentiment === 'BULLISH' ? '#27ae60' : data.vortexai_analysis?.market_sentiment === 'BEARISH' ? '#e74c3c' : '#f39c12'}; font-weight: bold;">
-                                \${data.vortexai_analysis?.market_sentiment || 'NEUTRAL'}
-                            </span>
-                        </p>
-                        <p><strong>Prediction Confidence:</strong> \${(data.vortexai_analysis?.prediction_confidence * 100)?.toFixed(1) || '0'}%</p>
-                        <p><strong>Risk Level:</strong> \${data.vortexai_analysis?.risk_level || 'MEDIUM'}</p>
+                        '<div class="indicator-card">' +
+                            '<div>📊 Volume Analysis</div>' +
+                            '<div class="indicator-value">' +
+                                (data.technical_indicators?.obv?.toLocaleString() || 'N/A') +
+                            '</div>' +
+                            '<div style="color: #7f8c8d; font-size: 0.9rem;">OBV Indicator</div>' +
+                        '</div>' +
+                    '</div>' +
+
+                    '<div class="info-section">' +
+                        '<h3>🤖 VortexAI Insights</h3>' +
+                        '<p><strong>Market Sentiment:</strong> ' +
+                            '<span style="color: ' + sentimentColor + '; font-weight: bold;">' +
+                                (data.vortexai_analysis?.market_sentiment || 'NEUTRAL') +
+                            '</span>' +
+                        '</p>' +
+                        '<p><strong>Prediction Confidence:</strong> ' + ((data.vortexai_analysis?.prediction_confidence * 100)?.toFixed(1) || '0') + '%</p>' +
+                        '<p><strong>Risk Level:</strong> ' + (data.vortexai_analysis?.risk_level || 'MEDIUM') + '</p>' +
                         
-                        <div style="margin-top: 15px;">
-                            <strong>AI Insights:</strong>
-                            <ul style="margin-top: 10px; padding-left: 20px;">
-                                \${data.vortexai_analysis?.ai_insights?.map(insight => \`<li>\${insight}</li>\`).join('') || '<li>No specific insights available</li>'}
-                            </ul>
-                        </div>
-                    </div>
+                        '<div style="margin-top: 15px;">' +
+                            '<strong>AI Insights:</strong>' +
+                            '<ul style="margin-top: 10px; padding-left: 20px;">' +
+                                ((data.vortexai_analysis?.ai_insights?.map(insight => '<li>' + insight + '</li>').join('')) || '<li>No specific insights available</li>') +
+                            '</ul>' +
+                        '</div>' +
+                    '</div>' +
 
-                    <div class="info-section">
-                        <h3>📈 Support & Resistance</h3>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px;">
-                            <div>
-                                <strong>Support Levels:</strong>
-                                <div style="margin-top: 10px;">
-                                    \${data.support_resistance?.support?.map(level => \`
-                                        <div style="padding: 5px 0; border-bottom: 1px solid #eee;">
-                                            $\${level?.toFixed(2) || 'N/A'}
-                                        </div>
-                                    \`).join('') || 'N/A'}
-                                </div>
-                            </div>
-                            <div>
-                                <strong>Resistance Levels:</strong>
-                                <div style="margin-top: 10px;">
-                                    \${data.support_resistance?.resistance?.map(level => \`
-                                        <div style="padding: 5px 0; border-bottom: 1px solid #eee;">
-                                            $\${level?.toFixed(2) || 'N/A'}
-                                        </div>
-                                    \`).join('') || 'N/A'}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    '<div class="info-section">' +
+                        '<h3>📈 Support & Resistance</h3>' +
+                        '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px;">' +
+                            '<div>' +
+                                '<strong>Support Levels:</strong>' +
+                                '<div style="margin-top: 10px;">' +
+                                    ((data.support_resistance?.support?.map(level => 
+                                        '<div style="padding: 5px 0; border-bottom: 1px solid #eee;">' +
+                                            '$' + (level?.toFixed(2) || 'N/A') +
+                                        '</div>'
+                                    ).join('')) || 'N/A') +
+                                '</div>' +
+                            '</div>' +
+                            '<div>' +
+                                '<strong>Resistance Levels:</strong>' +
+                                '<div style="margin-top: 10px;">' +
+                                    ((data.support_resistance?.resistance?.map(level => 
+                                        '<div style="padding: 5px 0; border-bottom: 1px solid #eee;">' +
+                                            '$' + (level?.toFixed(2) || 'N/A') +
+                                        '</div>'
+                                    ).join('')) || 'N/A') +
+                                '</div>' +
+                            '</div>' +
+                        '</div>' +
+                    '</div>' +
 
-                    <div class="info-section">
-                        <h3>⚙️ Technical Details</h3>
-                        <p><strong>Data Points Analyzed:</strong> \${data.data_points || 0}</p>
-                        <p><strong>Processing Time:</strong> \${data.processing_time || 'N/A'}</p>
-                        <p><strong>Timeframe:</strong> \${currentTimeframe.toUpperCase()}</p>
-                        <p><strong>Analysis Timestamp:</strong> \${new Date(data.timestamp).toLocaleString()}</p>
-                    </div>
-                \`;
+                    '<div class="info-section">' +
+                        '<h3>⚙️ Technical Details</h3>' +
+                        '<p><strong>Data Points Analyzed:</strong> ' + (data.data_points || 0) + '</p>' +
+                        '<p><strong>Processing Time:</strong> ' + (data.processing_time || 'N/A') + '</p>' +
+                        '<p><strong>Timeframe:</strong> ' + currentTimeframe.toUpperCase() + '</p>' +
+                        '<p><strong>Analysis Timestamp:</strong> ' + new Date(data.timestamp).toLocaleString() + '</p>' +
+                    '</div>';
 
                 document.getElementById('analysisContent').innerHTML = analysisHTML;
             }
@@ -2413,7 +2416,7 @@ app.get('/analysis', (req, res) => {
         </script>
     </body>
     </html>
-    \`);
+    `);
 });
 
 // ===================== راه‌اندازی سرور =====================
