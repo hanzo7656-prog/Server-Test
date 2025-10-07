@@ -525,17 +525,25 @@ class WebSocketManager {
 
     subscribeToAllPairs() {
         if (this.connected && this.ws) {
-            logger.info(`Subscribing to ${ALL_TRADING_PAIRS.length} trading pairs`);
-            const batchSize = 50;
-            for (let i = 0; i < ALL_TRADING_PAIRS.length; i += batchSize) {
+            logger.info(`Subscribing to ${this.top20pairs.length} trading pairs`);
+            const batchSize = 10;
+            for (let i = 0; i < this.top20pair.length; i += batchSize) {
                 setTimeout(() => {
-                    const batch = ALL_TRADING_PAIRS.slice(i, i + batchSize);
+                    const batch = this.top20pairs.slice(i, i + batchSize);
                     this.subscribeBatch(batch);
                 }, i * 100);
             }
         }
     }
 
+    get top20Pairs() {
+        return [
+            'btc_usdt', 'eth_usdt', 'bnb_usdt', 'sol_usdt', 'xrp_usdt',
+            'ada_usdt', 'avax_usdt', 'dot_usdt', 'link_usdt', 'matic_usdt',
+            'ltc_usdt', 'bch_usdt', 'atom_usdt', 'etc_usdt', 'xlm_usdt',
+            'fil_usdt', 'hbar_usdt', 'near_usdt', 'apt_usdt', 'arb_usdt'
+        ];
+    }
     subscribeBatch(pairs) {
         pairs.forEach(pair => {
             const subscription = {
