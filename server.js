@@ -158,6 +158,10 @@ class GistManager {
                 timestamp: now,
                 change_1h: 0,
                 change_4h: 0,
+                change_24h: 0,
+                change_7d: 0,
+                change_30d: 0,
+                change_180d: 0,
                 history: {
                     "1h": [],    // هر ۱ دقیقه - ۶۰ رکورد
                     "4h": [],    // هر ۵ دقیقه - ۴۸ رکورد
@@ -177,7 +181,10 @@ class GistManager {
         // محاسبه تغییرات
         existingData.change_1h = this.calculateChange(symbol, currentPrice, 60);
         existingData.change_4h = this.calculateChange(symbol, currentPrice, 240);
-
+        existingData.change_24h = this.calculateChange(symbol, currentPrice, 1440);
+        existingData.change_7d = this.calculateChange(symbol, currentPrice, 10080);
+        existingData.change_30d = this.calculateChange(symbol, currentPrice, 43200);
+        existingData.change_180d = this.calculateChange(symbol, currentPrice, 259200);
         // اضافه کردن به تمام لایه‌ها
         this.addToLayer(existingData.history["1h"], now, currentPrice, 1 * 60 * 1000);    // هر ۱ دقیقه
         this.addToLayer(existingData.history["4h"], now, currentPrice, 5 * 60 * 1000);    // هر ۵ دقیقه
