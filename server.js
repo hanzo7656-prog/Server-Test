@@ -2012,7 +2012,7 @@ app.get('/scan', (req, res) => {
 
 // صفحه تحلیل تکنیکال
 app.get('/analysis', (req, res) => {
-    const symbol = req.query.symbol || 'btc_usdt';
+    const symbol = req.params.symbol || 'btc_usdt';
     
     res.send(\`
     <!DOCTYPE html>
