@@ -532,11 +532,11 @@ class WebSocketManager {
 
     subscribeToAllPairs() {
         if (this.connected && this.ws) {
-            logger.info(`Subscribing to ${this.top20pairs.length} trading pairs`);
+            logger.info(`Subscribing to ${ALL_TRADING_PAIRS.length} trading pairs`);
             const batchSize = 10;
-            for (let i = 0; i < this.top20pair.length; i += batchSize) {
+            for (let i = 0; i < ALL_TRADING_PAIRS.length; i += batchSize) {
                 setTimeout(() => {
-                    const batch = this.top20pairs.slice(i, i + batchSize);
+                    const batch = ALL_TRADING_PAIRS.slice(i, i + batchSize);
                     this.subscribeBatch(batch);
                 }, i * 100);
             }
