@@ -199,20 +199,20 @@ class GistManager {
         });
     }
         // اضافه کردن به تمام لایه‌ها
-        this.addToLayer(existingData.history["1h"], now, currentPrice, 1 * 60 * 1000);    // هر ۱ دقیقه
-        this.addToLayer(existingData.history["4h"], now, currentPrice, 5 * 60 * 1000);    // هر ۵ دقیقه
-        this.addToLayer(existingData.history["24h"], now, currentPrice, 15 * 60 * 1000);  // هر ۱۵ دقیقه
-        this.addToLayer(existingData.history["7d"], now, currentPrice, 60 * 60 * 1000);   // هر ۱ ساعت
-        this.addToLayer(existingData.history["30d"], now, currentPrice, 4 * 60 * 60 * 1000); // هر ۴ ساعت
-        this.addToLayer(existingData.history["180d"], now, currentPrice, 24 * 60 * 60 * 1000); // هر ۱ روز
+        this.addToLayer(existingData.history["1h"], now, currentPrice, 1 * 60 * 1000);    
+        this.addToLayer(existingData.history["4h"], now, currentPrice, 5 * 60 * 1000);    
+        this.addToLayer(existingData.history["24h"], now, currentPrice, 15 * 60 * 1000); 
+        this.addToLayer(existingData.history["7d"], now, currentPrice, 60 * 60 * 1000);   
+        this.addToLayer(existingData.history["30d"], now, currentPrice, 4 * 60 * 60 * 1000); 
+        this.addToLayer(existingData.history["180d"], now, currentPrice, 24 * 60 * 60 * 1000); 
 
         // پاک‌سازی خودکار هر لایه
-        this.cleanLayer(existingData.history["1h"], 1 * 60 * 60 * 1000);     // ۱ ساعت
-        this.cleanLayer(existingData.history["4h"], 4 * 60 * 60 * 1000);     // ۴ ساعت
-        this.cleanLayer(existingData.history["24h"], 24 * 60 * 60 * 1000);   // ۲۴ ساعت
-        this.cleanLayer(existingData.history["7d"], 7 * 24 * 60 * 60 * 1000);   // ۷ روز
-        this.cleanLayer(existingData.history["30d"], 30 * 24 * 60 * 60 * 1000); // ۳۰ روز
-        this.cleanLayer(existingData.history["180d"], 180 * 24 * 60 * 60 * 1000); // ۱۸۰ روز
+        this.cleanLayer(existingData.history["1h"], 1 * 60 * 60 * 1000);     
+        this.cleanLayer(existingData.history["4h"], 4 * 60 * 60 * 1000);     
+        this.cleanLayer(existingData.history["24h"], 24 * 60 * 60 * 1000);   
+        this.cleanLayer(existingData.history["7d"], 7 * 24 * 60 * 60 * 1000);   
+        this.cleanLayer(existingData.history["30d"], 30 * 24 * 60 * 60 * 1000);
+        this.cleanLayer(existingData.history["180d"], 180 * 24 * 60 * 60 * 1000); 
     }
 
     addToLayer(layer, timestamp, price, interval) {
