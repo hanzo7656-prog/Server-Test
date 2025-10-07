@@ -2418,16 +2418,15 @@ app.get('/analysis', (req, res) => {
     </html>
     `);
 });
-
 // ===================== راه‌اندازی سرور =====================
 app.listen(PORT, '0.0.0.0', () => {
-    logger.info(\`✔ VortexAI 6-Layer Server started on port \${PORT}\`);
-    logger.info(\`✔ Features: 6-Timeframe Historical Data + WebSocket Real-time + VortexAI Analysis\`);
-    logger.info(\`✔ Real-time Pairs: \${ALL_TRADING_PAIRS.length}\`);
-    logger.info(\`✔ Dashboard: http://localhost:\${PORT}/\`);
-    logger.info(\`✔ Health: http://localhost:\${PORT}/health\`);
-    logger.info(\`✔ Scanner: http://localhost:\${PORT}/scan\`);
-    logger.info(\`✔ Analysis: http://localhost:\${PORT}/analysis\`);
+    logger.info(`✔ VortexAI 6-Layer Server started on port ${PORT}`);
+    logger.info(`✔ Features: 6-Timeframe Historical Data + WebSocket Real-time + VortexAI Analysis`);
+    logger.info(`✔ Real-time Pairs: ${ALL_TRADING_PAIRS.length}`);
+    logger.info(`✔ Dashboard: http://localhost:${PORT}/`);
+    logger.info(`✔ Health: http://localhost:${PORT}/health`);
+    logger.info(`✔ Scanner: http://localhost:${PORT}/scan`);
+    logger.info(`✔ Analysis: http://localhost:${PORT}/analysis`);
 });
 
 module.exports = app;
