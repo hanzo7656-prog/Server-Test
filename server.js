@@ -463,6 +463,73 @@ class HistoricalDataAPI {
         this.cacheTimeout = 5 * 60 * 1000; // 5 minutes cache
     }
 
+    // متد symbolToCoinId - کاملاً اصلاح شده
+    symbolToCoinId(symbol) {
+        const symbolMap = {
+            'BTC': 'bitcoin', 'ETH': 'ethereum', 'BNB': 'binancecoin', 'SOL': 'solana',
+            'XRP': 'ripple', 'ADA': 'cardano', 'AVAX': 'avalanche-2', 'DOT': 'polkadot',
+            'LINK': 'chainlink', 'MATIC': 'matic-network', 'LTC': 'litecoin', 'BCH': 'bitcoin-cash',
+            'ATOM': 'cosmos', 'XLM': 'stellar', 'FIL': 'filecoin', 'HBAR': 'hedera-hashgraph',
+            'NEAR': 'near', 'APT': 'aptos', 'ARB': 'arbitrum', 'ZIL': 'zilliqa',
+            'VET': 'vechain', 'DOGE': 'dogecoin', 'TRX': 'tron', 'UNI': 'uniswap',
+            'ETC': 'ethereum-classic', 'XMR': 'monero', 'ALGO': 'algorand', 'XTZ': 'tezos',
+            'EOS': 'eos', 'AAVE': 'aave', 'MKR': 'maker', 'COMP': 'compound-governance-token',
+            'YFI': 'yearn-finance', 'SNX': 'havven', 'SUSHI': 'sushi', 'CRV': 'curve-dao-token',
+            '1INCH': '1inch', 'REN': 'republic-protocol', 'BAT': 'basic-attention-token',
+            'ZRX': '0x', 'ENJ': 'enjincoin', 'MANA': 'decentraland', 'SAND': 'the-sandbox',
+            'GALA': 'gala', 'APE': 'apecoin', 'GMT': 'stepn', 'AUDIO': 'audius',
+            'USDT': 'tether', 'USDC': 'usd-coin', 'DAI': 'dai',
+            'XMR': 'monero', 'ZEC': 'zcash', 'DASH': 'dash',
+            'WAVES': 'waves', 'KSM': 'kusama', 'EGLD': 'elrond-erd-2',
+            'THETA': 'theta-token', 'FTM': 'fantom', 'ONE': 'harmony',
+            'ICX': 'icon', 'ONT': 'ontology', 'ZEN': 'horizen',
+            'SC': 'siacoin', 'BTT': 'bittorrent', 'HOT': 'holotoken',
+            'NANO': 'nano', 'IOST': 'iostoken', 'IOTX': 'iotex',
+            'CELO': 'celo', 'KAVA': 'kava', 'RSR': 'reserve-rights-token',
+            'OCEAN': 'ocean-protocol', 'BAND': 'band-protocol', 'NMR': 'numeraire',
+            'UMA': 'uma', 'API3': 'api3', 'GRT': 'the-graph',
+            'LPT': 'livepeer', 'ANKR': 'ankr', 'COTI': 'coti',
+            'STMX': 'stormx', 'CHZ': 'chiliz', 'HIVE': 'hive-blockchain',
+            'AR': 'arweave', 'REN': 'republic-protocol', 'STORJ': 'storj',
+            'DODO': 'dodo', 'PERP': 'perpetual-protocol', 'RLC': 'iexec-rlc',
+            'POND': 'marinade', 'ALPHA': 'alpha-finance', 'MIR': 'mirror-protocol',
+            'TWT': 'trust-wallet-token', 'SXP': 'swipe', 'WRX': 'wazirx',
+            'FRONT': 'frontier', 'AKRO': 'akropolis', 'REEF': 'reef-finance',
+            'DUSK': 'dusk-network', 'TOMO': 'tomochain', 'BAL': 'balancer',
+            'KNC': 'kyber-network', 'SNT': 'status', 'FUN': 'funfair',
+            'CVC': 'civic', 'REQ': 'request-network', 'GNT': 'golem',
+            'LOOM': 'loom-network', 'MANA': 'decentraland', 'SAND': 'the-sandbox',
+            'ENJ': 'enjincoin', 'UFO': 'ufo-gaming', 'PYR': 'vulcan-forged',
+            'ILV': 'illuvium', 'YGG': 'yield-guild-games', 'GALA': 'gala',
+            'MBOX': 'mobox', 'C98': 'coin98', 'DYDX': 'dydx',
+            'IMX': 'immutable-x', 'GODS': 'gods-unchained', 'MAGIC': 'magic',
+            'RARE': 'superrare', 'TVK': 'the-virtua-kolect', 'CUBE': 'somnium-space-cubes',
+            'VRA': 'verasity', 'WAXP': 'wax', 'TLM': 'alien-worlds',
+            'SPS': 'splintershards', 'GHST': 'aavegotchi', 'DG': 'decentral-games',
+            'POLC': 'polkacity', 'MIST': 'alchemist', 'CRAFT': 'craft'
+        };
+
+        if (!symbol) {
+            console.log('❌ نماد خالی است');
+            return 'bitcoin'; // fallback
+        }
+
+        let cleanSymbol = symbol;
+        if (typeof symbol === 'string') {
+            cleanSymbol = symbol.replace(/[_\-]usdt/gi, '').toUpperCase();
+        }
+        
+        const coinId = symbolMap[cleanSymbol];
+        
+        if (!coinId) {
+            console.log(`⚠️ نماد ${symbol} (${cleanSymbol}) در mapping یافت نشد، استفاده از fallback`);
+            return cleanSymbol.toLowerCase();
+        }
+        
+        console.log(`🔤 تبدیل نماد: ${symbol} -> ${cleanSymbol} -> ${coinId}`);
+        return coinId;
+    }
+
     async getMultipleCoinsHistorical(coinIds, period = '1y') {
         // ایجاد کلید کش
         const cacheKey = `${coinIds.sort().join(',')}_${period}`;
@@ -888,7 +955,8 @@ app.get("/api/scan/vortexai", async (req, res) => {
         const limit = Math.min(parseInt(req.query.limit) || 100, 300);
         const filterType = req.query.filter || 'volume';
         
-        console.log(`✅ شروع اسکن با limit: ${limit}, filter: ${filterType}`);
+        console.log(`\n🎯 شروع اسکن جدید ==================================`);
+        console.log(`✅ limit: ${limit}, filter: ${filterType}`);
 
         // دریافت داده از همه منابع
         const [apiData, realtimeData, historicalData] = await Promise.all([
@@ -898,7 +966,7 @@ app.get("/api/scan/vortexai", async (req, res) => {
         ]);
 
         let coins = apiData.coins || [];
-        console.log(`✅ ${coins.length} ارز از API دریافت شد`);
+        console.log(`📊 ${coins.length} ارز از API اصلی دریافت شد`);
 
         // اگر API اصلی خالی بود، از real-time استفاده کن
         if (coins.length === 0) {
@@ -918,10 +986,30 @@ app.get("/api/scan/vortexai", async (req, res) => {
 
         // دریافت داده های تاریخی برای همه ارزها
         const historicalAPI = new HistoricalDataAPI();
-        const allCoinIds = coins.map(coin => historicalAPI.symbolToCoinId(coin.symbol));
+        
+        // بررسی اینکه historicalAPI به درستی ساخته شده
+        if (!historicalAPI || typeof historicalAPI.symbolToCoinId !== 'function') {
+            console.log('❌ HistoricalDataAPI initialization failed');
+            throw new Error('HistoricalDataAPI initialization failed - symbolToCoinId is not a function');
+        }
+        
+        const allCoinIds = coins.map(coin => {
+            try {
+                const coinId = historicalAPI.symbolToCoinId(coin.symbol);
+                return coinId;
+            } catch (error) {
+                console.log(`❌ خطا در تبدیل نماد ${coin.symbol}:`, error);
+                return 'bitcoin'; // fallback
+            }
+        });
         
         console.log(`🔍 دریافت داده تاریخی برای ${allCoinIds.length} ارز...`);
-        const allHistoricalData = await historicalAPI.getMultipleCoinsHistorical(allCoinIds, '1y');
+        const historicalResponse = await historicalAPI.getMultipleCoinsHistorical(allCoinIds, '1y');
+        
+        const allHistoricalData = historicalResponse.data;
+        const historicalSource = historicalResponse.source;
+        
+        console.log(`📦 منبع داده تاریخی: ${historicalSource}`);
 
         // تبدیل به Map برای دسترسی سریع
         const historicalMap = {};
@@ -931,7 +1019,12 @@ app.get("/api/scan/vortexai", async (req, res) => {
             }
         });
 
-        console.log(`✅ داده تاریخی برای ${Object.keys(historicalMap).length} ارز دریافت شد`);
+        console.log(`✅ داده تاریخی برای ${Object.keys(historicalMap).length} ارز پردازش شد`);
+
+        // آمار داده‌ها
+        let realDataCoins = 0;
+        let calculatedDataCoins = 0;
+        let mixedDataCoins = 0;
 
         // پردازش همه ارزها با داده تاریخی
         const enhancedCoins = coins.map((coin) => {
@@ -942,8 +1035,22 @@ app.get("/api/scan/vortexai", async (req, res) => {
             const gistHistorical = gistManager.getPriceData(symbol);
             const currentPrice = realtime?.price || coin.price;
 
-            const historicalChanges = historicalData ?
-                historicalAPI.calculatePriceChangesFromChart(historicalData, currentPrice) : null;
+            let historicalChanges = null;
+            let dataSource = 'no_historical';
+
+            if (historicalData) {
+                const changeResult = historicalAPI.calculatePriceChangesFromChart(historicalData, currentPrice);
+                historicalChanges = changeResult.changes;
+                dataSource = changeResult.source;
+                
+                // آمارگیری
+                if (dataSource === 'real') realDataCoins++;
+                else if (dataSource === 'calculated') calculatedDataCoins++;
+                else if (dataSource === 'mixed') mixedDataCoins++;
+            } else {
+                console.log(`❌ داده تاریخی برای ${coin.symbol} (${coinId}) یافت نشد`);
+                calculatedDataCoins++;
+            }
 
             return {
                 ...coin,
@@ -958,6 +1065,7 @@ app.get("/api/scan/vortexai", async (req, res) => {
                 realtime_price: realtime?.price,
                 realtime_volume: realtime?.volume,
                 realtime_change: realtime?.change,
+                data_source: dataSource,
                 VortexAI_analysis: {
                     signal_strength: TechnicalAnalysisEngine.calculateSignalStrength(coin),
                     trend: (historicalChanges?.['24h'] ?? coin.priceChange24h ?? 0) > 0 ? "up" : "down",
@@ -968,6 +1076,13 @@ app.get("/api/scan/vortexai", async (req, res) => {
                 }
             };
         });
+
+        // آمار نهایی
+        console.log(`\n📈 آمار نهایی داده‌های تاریخی:`);
+        console.log(`   ✅ داده واقعی: ${realDataCoins} ارز`);
+        console.log(`   ⚠️  داده ترکیبی: ${mixedDataCoins} ارز`);
+        console.log(`   ❌ داده محاسباتی: ${calculatedDataCoins} ارز`);
+        console.log(`   📊 کل ارزها: ${enhancedCoins.length} ارز`);
 
         // اعمال فيلتر
         let filteredCoins = [...enhancedCoins];
@@ -987,8 +1102,8 @@ app.get("/api/scan/vortexai", async (req, res) => {
         }
 
         const responseTime = Date.now() - startTime;
-        console.log(`✅ اسکن کامل شد در ${responseTime}ms`);
-        console.log(`✅ ${enhancedCoins.length} ارز پردازش شد`);
+        console.log(`\n✅ اسکن کامل شد در ${responseTime}ms`);
+        console.log(`=================================================\n`);
 
         res.json({
             success: true,
@@ -1000,7 +1115,13 @@ app.get("/api/scan/vortexai", async (req, res) => {
                 api: coins.length,
                 realtime: Object.keys(realtimeData).length,
                 historical: Object.keys(historicalData.prices || {}).length,
-                historical_api: Object.keys(historicalMap).length
+                historical_api: Object.keys(historicalMap).length,
+                data_quality: {
+                    real_historical: realDataCoins,
+                    mixed_historical: mixedDataCoins,
+                    calculated_historical: calculatedDataCoins,
+                    historical_source: historicalSource
+                }
             },
             processing_time: `${responseTime}ms`,
             timestamp: new Date().toISOString()
@@ -1010,7 +1131,8 @@ app.get("/api/scan/vortexai", async (req, res) => {
         console.error('❌ خطای کلی در اسکن:', error);
         res.status(500).json({
             success: false,
-            error: error.message
+            error: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
         });
     }
 });
