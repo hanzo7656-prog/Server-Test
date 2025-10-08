@@ -895,12 +895,12 @@ app.get("/api/scan/vortexai", async (req, res) => {
             return {
                 ...coin,
                 // داده‌های تاریخی واقعی
-                change_1h: historicalChanges['1h'] || ?? coin.change_1h ?? coin.pricechange1h ?? 0,
-                change_4h: historicalChanges['4h'] || ?? coin.change_4h ?? coin.pricechange4h ?? 0,
-                change_24h: historicalChanges['24h'] || ?? coin.change_24h ?? coin.pricechange24h ?? 0,
-                change_7d: historicalChanges['7d'] || ?? coin.change_7d ?? coin.pricechange7d ?? 0,
-                change_30d: historicalChanges['30d'] || ?? coin.change_30d ?? coin.pricechange30d ?? 0,
-                change_180d: historicalChanges['180d'] || ?? coin.change_180d ?? coin.pricechange180d ?? 0,
+                change_1h: historicalChanges['1h'] ?? coin.change_1h ?? coin.pricechange1h ?? 0,
+                change_4h: historicalChanges['4h'] ?? coin.change_4h ?? coin.pricechange4h ?? 0,
+                change_24h: historicalChanges['24h'] ?? coin.change_24h ?? coin.pricechange24h ?? 0,
+                change_7d: historicalChanges['7d'] ?? coin.change_7d ?? coin.pricechange7d ?? 0,
+                change_30d: historicalChanges['30d'] ?? coin.change_30d ?? coin.pricechange30d ?? 0,
+                change_180d: historicalChanges['180d'] ?? coin.change_180d ?? coin.pricechange180d ?? 0,
           
                 historical_timestamp: gistHistorical?.timestamp,
                 realtime_price: realtime?.price,
