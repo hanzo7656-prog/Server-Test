@@ -316,14 +316,14 @@ class GistManager {
 
     getPriceData(symbol, timeframe = null) {
         if (timeframe) {
-            const data = this.priceHistory.prices?.[symbol];
+            const data = this.priceHistory.prices && this.priceHistory.prices.[symbol];
             return data ? {
                 current_price: data.price,
                 timestamp: data.timestamp,
-                history: data.history[timeframe] || []
+                history: data.history && data.history[timeframe] || []
             } : null;
         }
-        return this.priceHistory.prices?.[symbol] || null;
+        return (this.priceHistory.prices && this.priceHistory.prices[symbol] || null;
     }
 
     getAllData() {
