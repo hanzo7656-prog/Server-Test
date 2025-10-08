@@ -26,7 +26,7 @@ const logger = winston.createLogger({
 });
 
 // ===================== API Keys =====================
-const COINSTATS_API_KEY = process.env.COINSTATS_API_KEY || "uNb+sQjnjCQmV30dYrChxgh55hRHElmiZLnKJX+5U6g=";
+const COINSTATS_API_KEY = process.env.COINSTATS_API_KEY || "uNb+sOjnjCQmV30dYrChxgh55hRHElmiZLnKJX+5U6g=";
 
 // ===================== میدلورها =====================
 app.use(cors());
