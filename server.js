@@ -3613,17 +3613,137 @@ app.get('/health/live', (req, res) => {
     timestamp: new Date().toISOString() 
   });
 });
-// ===================== راه‌اندازی سرور =====================
-app.listen(PORT, '0.0.0.0', () => {
-    logger.info(`✔ VortexAI 6-Layer Server started on port ${PORT}`);
-    logger.info(`✔ Features: 6-Timeframe Historical Data + WebSocket Real-time + VortexAI Analysis`);
-    logger.info(`✔ Real-time Pairs: ${ALL_TRADING_PAIRS.length}`);
-    logger.info(`✔ Dashboard: http://localhost:${PORT}/`);
-    logger.info(`✔ Health: http://localhost:${PORT}/health`);
-    logger.info(`✔ Scanner: http://localhost:${PORT}/scan`);
-    logger.info(`✔ Analysis: http://localhost:${PORT}/analysis`);
+// ==================== سلامت سرور (Health Checks) ==================== //
+
+// بررسی سلامت پایه (Liveness Probe)
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    service: 'VortexAI Crypto Scanner'
+  });
+});
+
+// بررسی سلامت کامل با وضعیت سرویس‌ها (Readiness Probe)
+app.get('/health/ready', (req, res) => {
+  const wsStatus = wsManager.getConnectionStatus();
+  const gistData = gistManager.getAllData();
+  
+  const healthStatus = {
+    status: 'Healthy',
+    timestamp: new Date().toISOString(),
+    services: {
+      websocket: {
+        connected: wsStatus.connected,
+        activeCoins: wsStatus.active_coins,
+        status: wsStatus.connected ? 'Healthy' : 'Unhealthy'
+      },
+      database: {
+        storedCoins: Object.keys(gistData.prices || {}).length,
+        status: process.env.GITHUB_TOKEN ? 'Healthy' : 'Degraded'
+      },
+      api: {
+        requestCount: apiClient.request_count,
+        status: 'Healthy'
+      }
+    }
+  };
+
+  // بررسی سلامت کلی همه سرویس‌ها
+  const allHealthy = wsStatus.connected && process.env.GITHUB_TOKEN;
+  const statusCode = allHealthy ? 200 : 503;
+  
+  res.status(statusCode).json(healthStatus);
+});
+
+// بررسی سلامت سرویس‌های حیاتی برای کوبرنتیز
+app.get('/health/live', (req, res) => {
+  const wsStatus = wsManager.getConnectionStatus();
+  
+  // اگر WebSocket قطع باشد، سرور زنده نیست
+  if (!wsStatus.connected) {
+    return res.status(503).json({ 
+      status: 'Unhealthy',
+      message: 'WebSocket connection lost',
+      timestamp: new Date().toISOString()
+    });
+  }
+  
+  res.status(200).json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString() 
+  });
+});
+// ==================== راه‌اندازی سرور ==================== 
+
+const server = app.listen(PORT, '0.0.0.0', () => {
+    logger.info('✔ VortexAI 6-Layer Server started on port ${PORT}');
+    logger.info('✔ Features: 6-Timeframe Historical Data + WebSocket Real-time + VortexAI Analysis');
+    logger.info('✔ Real-time Pairs: ${ALL_TRADING_PAIRS.length}');
+    logger.info('✔ Dashboard: http://localhost:${PORT}/');
+    logger.info('✔ Health: http://localhost:${PORT}/health');
+    logger.info('✔ Scanner: http://localhost:${PORT}/scan');
+    logger.info('✔ Analysis: http://localhost:${PORT}/analysis');
+});
+
+// ==================== Graceful Shutdown ==================== //
+
+async function gracefulShutdown(signal) {
+    logger.info(`🛑 ${signal} signal received: starting graceful shutdown`);
+    
+    let shutdownTimeout = setTimeout(() => {
+        logger.error('⏰ Force shutdown after 15 seconds timeout');
+        process.exit(1);
+    }, 15000);
+    
+    try {
+        // 1. توقف پذیرش درخواست‌های جدید
+        logger.info('⏹️  Stopping server from accepting new connections');
+        server.close(() => {
+            logger.info('✅ HTTP server stopped accepting new connections');
+        });
+        
+        // 2. بستن WebSocket connection
+        if (wsManager && wsManager.ws) {
+            logger.info('🔌 Closing WebSocket connections...');
+            wsManager.ws.close();
+            logger.info('✅ WebSocket connections closed');
+        }
+        
+        // 3. بستن اتصالات به API خارجی
+        logger.info('🔄 Closing external API connections...');
+        // اینجا می‌توانید اتصالات به دیتابیس یا APIهای دیگر را هم ببندید
+        
+        // 4. ذخیره داده‌های نهایی در Gist
+        logger.info('💾 Saving final data to Gist...');
+        await gistManager.saveToGist();
+        logger.info('✅ Final data saved to Gist');
+        
+        // 5. اتمام graceful shutdown
+        clearTimeout(shutdownTimeout);
+        logger.info('✅ Graceful shutdown completed successfully');
+        process.exit(0);
+        
+    } catch (error) {
+        clearTimeout(shutdownTimeout);
+        logger.error('❌ Error during graceful shutdown:', error);
+        process.exit(1);
+    }
+}
+
+// ثبت event handlers برای سیگنال‌های مختلف
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// مدیریت خطاهای unhandled
+process.on('uncaughtException', (error) => {
+    logger.error('💥 Uncaught Exception:', error);
+    gracefulShutdown('UNCAUGHT_EXCEPTION');
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    logger.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
+    gracefulShutdown('UNHANDLED_REJECTION');
 });
 
 module.exports = app;
-
-            
