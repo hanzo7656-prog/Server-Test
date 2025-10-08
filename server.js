@@ -865,6 +865,7 @@ app.get("/api/scan/vortexai", async (req, res) => {
         });
 
         // ✅ پردازش جدید - فقط از داده واقعی استفاده میشه
+        // اصلاح قسمت enhancedCoins
         const enhancedCoins = coins.map((coin) => {
             const coinId = historicalAPI.symbolToCoinId(coin.symbol);
             const historicalData = historicalMap[coinId];
@@ -872,41 +873,46 @@ app.get("/api/scan/vortexai", async (req, res) => {
             const realtime = realtimeData[symbol];
             const gistHistorical = gistManager.getPriceData(symbol);
             const currentPrice = realtime?.price || coin.price;
-
+    
             let historicalChanges = {};
             let dataSource = 'no_historical';
+            let hasRealHistorical = false;
 
             if (historicalData) {
                 const changeResult = historicalAPI.calculatePriceChangesFromChart(historicalData, currentPrice);
-                historicalChanges = changeResult.changes; // می‌تونه خالی باشه
+                historicalChanges = changeResult.changes;
                 dataSource = changeResult.source;
+                hasRealHistorical = Object.keys(historicalChanges).length > 0;
             }
 
             return {
                 ...coin,
-                // ✅ فقط از داده واقعی استفاده میشه
-                change_1h: historicalChanges['1h'], // اگر نباشه undefined میشه
-                change_4h: historicalChanges['4h'],
-                change_24h: historicalChanges['24h'], 
-                change_7d: historicalChanges['7d'],
-                change_30d: historicalChanges['30d'],
-                change_180d: historicalChanges['180d'],
+                // داده‌های تاریخی واقعی
+                change_1h: historicalChanges['1h'] || null,
+                change_4h: historicalChanges['4h'] || null,
+                change_24h: historicalChanges['24h'] || null,
+                change_7d: historicalChanges['7d'] || null,
+                change_30d: historicalChanges['30d'] || null,
+                change_180d: historicalChanges['180d'] || null,
+          
                 historical_timestamp: gistHistorical?.timestamp,
                 realtime_price: realtime?.price,
                 realtime_volume: realtime?.volume,
                 realtime_change: realtime?.change,
                 data_source: dataSource,
+                has_real_historical_data: hasRealHistorical, // ✅ اضافه کردن این فلگ
+
                 VortexAI_analysis: {
                     signal_strength: TechnicalAnalysisEngine.calculateSignalStrength(coin),
-                    trend: (historicalChanges['24h'] ?? coin.priceChange24h ?? 0) > 0 ? "up" : "down",
+                    trend: ((historicalChanges['24h'] ?? coin.priceChange24h ?? 0) > 0) ? "up" : "down",
                     volatility_score: TechnicalAnalysisEngine.calculateVolatility(coin),
                     volume_anomaly: TechnicalAnalysisEngine.detectVolumeAnomaly(coin),
-                    market_sentiment: (historicalChanges['1h'] ?? coin.priceChange1h ?? 0) > 0 && 
-                                     (historicalChanges['24h'] ?? coin.priceChange24h ?? 0) > 0 ? 'bullish' : 'bearish'
+                    market_sentiment: ((historicalChanges['1h'] ?? coin.priceChange1h ?? 0) > 0 &&
+                                      (historicalChanges['24h'] ?? coin.priceChange24h ?? 0) > 0) ? 'bullish' : 'bearish'
                 }
             };
         });
-
+ 
         // فیلتر و مرتب‌سازی...
         let filteredCoins = [...enhancedCoins];
         switch(filterType) {
