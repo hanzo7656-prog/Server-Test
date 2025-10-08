@@ -459,46 +459,137 @@ class HistoricalDataAPI {
     constructor() {
         this.base_url = "https://openapiv1.coinstats.app";
         this.api_key = "uNb+sQjnjCQmV30dYrChxgh55hRHElmiZLnKJX+5U6g=";
+        this.requestCache = new Map();
+        this.cacheTimeout = 5 * 60 * 1000; // 5 minutes cache
     }
 
     async getMultipleCoinsHistorical(coinIds, period = '1y') {
+        // ایجاد کلید کش
+        const cacheKey = `${coinIds.sort().join(',')}_${period}`;
+        const cached = this.requestCache.get(cacheKey);
+        
+        if (cached && (Date.now() - cached.timestamp < this.cacheTimeout)) {
+            console.log(`♻️ Using cached historical data for ${coinIds.length} coins`);
+            return cached.data;
+        }
+
         try {
-            // اصلاح: استفاده از کاما و encode کردن
-            const coinIdsString = coinIds.map(id => encodeURIComponent(id)).join(",");
-            const url = `${this.base_url}/coins/charts?period=${period}&coinIds=${coinIdsString}`;
+            // محدود کردن تعداد کوین‌ها در هر درخواست
+            const batchSize = 10;
+            const batches = [];
             
-            console.log(`[ ] درخواست تاريخي براي ${coinIds.length} ارز: ${coinIdsString}`);
-            console.log(`[ ] URL: ${url}`);
+            for (let i = 0; i < coinIds.length; i += batchSize) {
+                batches.push(coinIds.slice(i, i + batchSize));
+            }
+
+            console.log(`🔍 Fetching historical data in ${batches.length} batches...`);
+
+            const allResults = [];
+            
+            for (let i = 0; i < batches.length; i++) {
+                const batch = batches[i];
+                console.log(`📦 Batch ${i + 1}/${batches.length}: ${batch.join(', ')}`);
+                
+                const batchResult = await this.fetchBatchHistorical(batch, period);
+                allResults.push(...batchResult.data);
+                
+                // تاخیر بین batch ها
+                if (i < batches.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+            }
+
+            const result = {
+                data: allResults,
+                source: 'real_api',
+                timestamp: Date.now()
+            };
+
+            // ذخیره در کش
+            this.requestCache.set(cacheKey, {
+                data: result,
+                timestamp: Date.now()
+            });
+
+            console.log(`✅ Successfully fetched historical data for ${allResults.length} coins`);
+            return result;
+
+        } catch (error) {
+            console.error('❌ Error in getMultipleCoinsHistorical:', error.message);
+            return { data: [], source: 'fallback', error: error.message };
+        }
+    }
+
+    async fetchBatchHistorical(coinIds, period) {
+        const coinIdsString = coinIds.map(id => encodeURIComponent(id)).join(",");
+        const url = `${this.base_url}/coins/charts?period=${period}&coinIds=${coinIdsString}`;
+        
+        console.log(`🔗 Historical API URL: ${url.replace(this.api_key, '***')}`);
+
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
 
             const response = await fetch(url, {
                 method: 'GET',
                 headers: {
                     'X-API-KEY': this.api_key,
-                    'Accept': 'application/json'
-                }
+                    'Accept': 'application/json',
+                    'User-Agent': 'VortexAI-Server/1.0'
+                },
+                signal: controller.signal
             });
 
+            clearTimeout(timeoutId);
+
+            console.log(`📡 Historical API response: ${response.status} ${response.statusText}`);
+
+            if (response.status === 429) {
+                console.log('🚫 Rate limit hit for historical data');
+                throw new Error('Rate limit exceeded');
+            }
+
             if (!response.ok) {
-                console.log(`❌ HTTP خطا: ${response.status} - ${response.statusText}`);
-                return [];
+                console.log(`❌ Historical API error: ${response.status}`);
+                throw new Error(`HTTP ${response.status}`);
             }
 
             const data = await response.json();
-            console.log(`✅ داده تاريخي دريافت شد براي ${data.length} ارز`);
-            console.log('🔍 نمونه داده:', JSON.stringify(data[0] || {}, null, 2));
             
-            return data;
+            // اعتبارسنجی داده‌ها
+            const validData = data.filter(item => 
+                item && 
+                item.coinId && 
+                item.chart && 
+                Array.isArray(item.chart) && 
+                item.chart.length > 0
+            );
+
+            console.log(`✅ Batch result: ${validData.length}/${coinIds.length} valid coins`);
+            
+            if (validData.length === 0) {
+                console.log('❌ No valid historical data in batch');
+                throw new Error('No valid historical data');
+            }
+
+            return { data: validData, source: 'real_api' };
 
         } catch (error) {
-            console.error('❌ خطا در دريافت داده تاريخي:', error.message);
-            return [];
+            if (error.name === 'AbortError') {
+                console.log('⏰ Historical API request timeout');
+            }
+            throw error;
         }
     }
 
     calculatePriceChangesFromChart(coinData, currentPrice) {
         if (!coinData || !coinData.chart || coinData.chart.length === 0) {
-            console.log('❌ داده چارت خالي است يا موجود نيست');
-            return null;
+            console.log('❌ No chart data available');
+            return { 
+                changes: null, 
+                source: 'no_data',
+                error: 'No chart data'
+            };
         }
 
         const chart = coinData.chart;
@@ -514,60 +605,93 @@ class HistoricalDataAPI {
         };
 
         const changes = {};
-        console.log(`🔍 محاسبه تغييرات براي ${coinData.coinId}، قيمت جاري: ${currentPrice}`);
+        let realDataPoints = 0;
+        let fallbackDataPoints = 0;
+
+        console.log(`🔍 Calculating changes for ${coinData.coinId}:`);
+        console.log(`   - Current price: $${currentPrice}`);
+        console.log(`   - Historical points: ${chart.length}`);
+        console.log(`   - Latest point: ${new Date(chart[chart.length-1][0] * 1000).toLocaleString()}`);
 
         for (const [periodName, seconds] of Object.entries(periods)) {
             const targetTime = now - seconds;
             const historicalPoint = this.findClosestHistoricalPoint(chart, targetTime);
             
             if (historicalPoint && historicalPoint[1] > 0) {
-                const historicalPrice = historicalPoint[1]; // USD price در index 1
+                const historicalPrice = historicalPoint[1];
+                const timeDiff = Math.abs(historicalPoint[0] - targetTime);
                 const change = ((currentPrice - historicalPrice) / historicalPrice) * 100;
                 changes[periodName] = parseFloat(change.toFixed(2));
-                console.log(`✅ ${periodName}: ${historicalPrice} -> ${currentPrice} = ${changes[periodName]}%`);
+                realDataPoints++;
+                
+                console.log(`   ✅ ${periodName}: $${historicalPrice} -> $${currentPrice} = ${changes[periodName]}% (REAL, diff: ${Math.round(timeDiff/60)}min)`);
             } else {
-                console.log(`❌ نقطه تاريخي پيدا نشد براي ${periodName}`);
+                console.log(`   ❌ ${periodName}: No suitable historical point found`);
                 changes[periodName] = 0;
+                fallbackDataPoints++;
             }
         }
 
-        return changes;
+        const source = realDataPoints > 0 ? 
+            (fallbackDataPoints > 0 ? 'mixed' : 'real') : 
+            'no_data';
+
+        console.log(`📊 ${coinData.coinId}: ${realDataPoints} real, ${fallbackDataPoints} missing`);
+
+        return { 
+            changes: changes, 
+            source: source,
+            real_points: realDataPoints,
+            missing_points: fallbackDataPoints
+        };
     }
 
     findClosestHistoricalPoint(chart, targetTime) {
+        if (!chart || chart.length === 0) return null;
+
         let closestPoint = null;
         let minDiff = Infinity;
 
         for (const point of chart) {
-            const timeDiff = Math.abs(point[0] - targetTime); // timestamp در index 0
+            const timeDiff = Math.abs(point[0] - targetTime);
             if (timeDiff < minDiff) {
                 minDiff = timeDiff;
                 closestPoint = point;
             }
         }
 
-        // حداکثر اختلاف مجاز: 2 روز
-        return (minDiff <= 2 * 24 * 60 * 60) ? closestPoint : null;
-    }
-
-    symbolToCoinId(symbol) {
-        const symbolMap = {
-            'BTC': 'bitcoin', 'ETH': 'ethereum', 'BNB': 'binance-coin', 'SOL': 'solana',
-            'XRP': 'ripple', 'ADA': 'cardano', 'AVAX': 'avalanche', 'DOT': 'polkadot',
-            'LINK': 'chainlink', 'MATIC': 'polygon', 'LTC': 'litecoin', 'BCH': 'bitcoin-cash',
-            'ATOM': 'cosmos', 'XLM': 'stellar', 'FIL': 'filecoin', 'HBAR': 'hedera',
-            'NEAR': 'near', 'APT': 'aptos', 'ARB': 'arbitrum', 'ZIL': 'zilliqa',
-            'VET': 'vechain', 'DOGE': 'dogecoin', 'TRX': 'tron', 'UNI': 'uniswap',
-            'ETC': 'ethereum-classic', 'XMR': 'monero', 'ALGO': 'algorand', 'XTZ': 'tezos',
-            'EOS': 'eos', 'AAVE': 'aave', 'MKR': 'maker', 'COMP': 'compound',
-            'YFI': 'yearn-finance', 'SNX': 'synthetix', 'SUSHI': 'sushi', 'CRV': 'curve-dao-token',
-            '1INCH': '1inch', 'REN': 'republic-protocol', 'BAT': 'basic-attention-token',
-            'ZRX': '0x', 'ENJ': 'enjincoin', 'MANA': 'decentraland', 'SAND': 'the-sandbox',
-            'GALA': 'gala', 'APE': 'apecoin', 'GMT': 'stepn', 'AUDIO': 'audius'
+        // حداکثر اختلاف مجاز بسته به تایم‌فریم
+        const maxDiffs = {
+            '1h': 30 * 60, // 30 دقیقه
+            '4h': 2 * 60 * 60, // 2 ساعت
+            '24h': 6 * 60 * 60, // 6 ساعت
+            '7d': 12 * 60 * 60, // 12 ساعت
+            '30d': 24 * 60 * 60, // 1 روز
+            '180d': 3 * 24 * 60 * 60 // 3 روز
         };
 
-        const cleanSymbol = symbol.replace('_usdt', '').toUpperCase();
-        return symbolMap[cleanSymbol] || cleanSymbol.toLowerCase();
+        // پیدا کردن مناسب‌ترین maxDiff
+        let suitableMaxDiff = 24 * 60 * 60; // پیش‌فرض: 1 روز
+        for (const [period, diff] of Object.entries(maxDiffs)) {
+            if (targetTime > (Date.now() / 1000 - this.getPeriodSeconds(period))) {
+                suitableMaxDiff = diff;
+                break;
+            }
+        }
+
+        return (minDiff <= suitableMaxDiff) ? closestPoint : null;
+    }
+
+    getPeriodSeconds(period) {
+        const periods = {
+            '1h': 3600,
+            '4h': 14400,
+            '24h': 86400,
+            '7d': 604800,
+            '30d': 2592000,
+            '180d': 15552000
+        };
+        return periods[period] || 86400;
     }
 }
 // ===================== WebSocket Manager =====================
@@ -691,38 +815,63 @@ class AdvancedCoinStatsAPIClient {
         this.apiKey = process.env.COINSTATS_APL_KEY || "uNb+sQjnjCQmV30dYrChxgh55hRHElmiZLnKJX+5U6g=";
         this.request_count = 0;
         this.last_request_time = Date.now();
+        this.rateLimitDelay = 1000; // افزایش به 1 ثانیه
     }
 
     async _rateLimit() {
         const currentTime = Date.now();
         const timeDiff = currentTime - this.last_request_time;
-        if (timeDiff < 200) {
-            await new Promise(resolve => setTimeout(resolve, 200 - timeDiff));
+        
+        if (timeDiff < this.rateLimitDelay) {
+            const waitTime = this.rateLimitDelay - timeDiff;
+            console.log(`⏳ Rate limiting: waiting ${waitTime}ms`);
+            await new Promise(resolve => setTimeout(resolve, waitTime));
         }
+        
         this.last_request_time = Date.now();
         this.request_count++;
+        
+        if (this.request_count % 10 === 0) {
+            console.log(`📊 Total API requests: ${this.request_count}`);
+        }
     }
 
     async getCoins(limit = 100) {
         await this._rateLimit();
         try {
             const url = `${this.base_url}/coins?limit=${limit}&currency=USD`;
+            console.log(`🔗 Fetching from: ${url}`);
+            
             const response = await fetch(url, {
                 method: 'GET',
                 headers: {
                     'X-API-KEY': this.apiKey,
-                    'Accept': 'application/json'
-                }
+                    'Accept': 'application/json',
+                    'User-Agent': 'VortexAI-Server/1.0'
+                },
+                timeout: 10000
             });
 
+            console.log(`📡 Response status: ${response.status} ${response.statusText}`);
+
+            if (response.status === 429) {
+                console.log('❌ Rate limit exceeded! Increasing delay...');
+                this.rateLimitDelay = 2000; // افزایش به 2 ثانیه
+                return { coins: [], error: 'Rate limit exceeded' };
+            }
+
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                console.log(`❌ HTTP error! status: ${response.status}`);
+                return { coins: [], error: `HTTP ${response.status}` };
             }
 
             const data = await response.json();
+            console.log(`✅ Received ${data.result?.length || data.coins?.length || 0} coins from API`);
+            
             return { coins: data.result || data.coins || data || [] };
+            
         } catch (error) {
-            logger.error("❌ API getCoins error:", error);
+            console.error("❌ API getCoins error:", error.message);
             return { coins: [], error: error.message };
         }
     }
@@ -3352,6 +3501,117 @@ app.get('/health-api', (req, res) => {
     </body>
     </html>
     `);
+});
+
+// اضافه کردن این endpoint برای تشخیص دقیق مشکل
+app.get("/api/debug/api-status", async (req, res) => {
+    try {
+        const testCoinIds = ['bitcoin', 'ethereum', 'solana'];
+        const historicalAPI = new HistoricalDataAPI();
+        
+        console.log('\n=== API STATUS DEBUG ===');
+        
+        // تست API اصلی
+        const apiClient = new AdvancedCoinStatsAPIClient();
+        const apiResult = await apiClient.getCoins(10);
+        
+        // تست API تاریخی
+        const historicalResult = await historicalAPI.getMultipleCoinsHistorical(testCoinIds, '24h');
+        
+        res.json({
+            success: true,
+            main_api: {
+                status: apiResult.coins.length > 0 ? 'working' : 'failing',
+                coins_received: apiResult.coins.length,
+                error: apiResult.error
+            },
+            historical_api: {
+                status: historicalResult.data.length > 0 ? 'working' : 'failing',
+                coins_received: historicalResult.data.length,
+                source: historicalResult.source,
+                error: historicalResult.error,
+                sample: historicalResult.data.length > 0 ? {
+                    coinId: historicalResult.data[0].coinId,
+                    data_points: historicalResult.data[0].chart?.length,
+                    latest_point: historicalResult.data[0].chart ? 
+                        new Date(historicalResult.data[0].chart[historicalResult.data[0].chart.length-1][0] * 1000).toISOString() : null
+                } : null
+            },
+            environment: {
+                node_version: process.version,
+                platform: process.platform,
+                uptime: process.uptime()
+            },
+            timestamp: new Date().toISOString()
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+// ==================== سلامت سرور (Health Checks) ==================== //
+
+// بررسی سلامت پایه (Liveness Probe)
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    service: 'VortexAI Crypto Scanner'
+  });
+});
+
+// بررسی سلامت کامل با وضعیت سرویس‌ها (Readiness Probe)
+app.get('/health/ready', (req, res) => {
+  const wsStatus = wsManager.getConnectionStatus();
+  const gistData = gistManager.getAllData();
+  
+  const healthStatus = {
+    status: 'Healthy',
+    timestamp: new Date().toISOString(),
+    services: {
+      websocket: {
+        connected: wsStatus.connected,
+        activeCoins: wsStatus.active_coins,
+        status: wsStatus.connected ? 'Healthy' : 'Unhealthy'
+      },
+      database: {
+        storedCoins: Object.keys(gistData.prices || {}).length,
+        status: process.env.GITHUB_TOKEN ? 'Healthy' : 'Degraded'
+      },
+      api: {
+        requestCount: apiClient.request_count,
+        status: 'Healthy'
+      }
+    }
+  };
+
+  // بررسی سلامت کلی همه سرویس‌ها
+  const allHealthy = wsStatus.connected && process.env.GITHUB_TOKEN;
+  const statusCode = allHealthy ? 200 : 503;
+  
+  res.status(statusCode).json(healthStatus);
+});
+
+// بررسی سلامت سرویس‌های حیاتی برای کوبرنتیز
+app.get('/health/live', (req, res) => {
+  const wsStatus = wsManager.getConnectionStatus();
+  
+  // اگر WebSocket قطع باشد، سرور زنده نیست
+  if (!wsStatus.connected) {
+    return res.status(503).json({ 
+      status: 'Unhealthy',
+      message: 'WebSocket connection lost',
+      timestamp: new Date().toISOString()
+    });
+  }
+  
+  res.status(200).json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString() 
+  });
 });
 // ===================== راه‌اندازی سرور =====================
 app.listen(PORT, '0.0.0.0', () => {
