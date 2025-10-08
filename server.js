@@ -891,7 +891,7 @@ app.get("/api/scan/vortexai", async (req, res) => {
                     changes: historicalChanges,
                     hasRealHistorical: hasRealHistorical
                 });
-            }
+            
             return {
                 ...coin,
                 // داده‌های تاریخی واقعی
