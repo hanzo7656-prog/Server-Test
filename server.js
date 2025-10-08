@@ -188,14 +188,6 @@ class GistManager {
             existingData.price = currentPrice;
             existingData.timestamp = now;
 
-            // Calculate changes - simplified version
-            existingData.change_1h = this.calculateChangeSimple(symbol, currentPrice, 60);
-            existingData.change_4h = this.calculateChangeSimple(symbol, currentPrice, 240);
-            existingData.change_24h = this.calculateChangeSimple(symbol, currentPrice, 1440);
-            existingData.change_7d = this.calculateChangeSimple(symbol, currentPrice, 10080);
-            existingData.change_30d = this.calculateChangeSimple(symbol, currentPrice, 43200);
-            existingData.change_180d = this.calculateChangeSimple(symbol, currentPrice, 259200);
-
             console.log('📈 Changes calculated for', symbol + ':', {
                 '1h': existingData.change_1h,
                 '4h': existingData.change_4h,
@@ -556,6 +548,114 @@ class TechnicalAnalysisEngine {
     }
 }
 
+// ===================== دریافت داده‌های تاریخی از API =================
+
+class HistoricalDataAPI {
+    constructor() {
+        this.base_url = "https://openapiv1.coinstats.app";
+        this.api_key = "uNb+sOjnjCQmV30dYrChxgh55hRHElmiZLnKJX+5U6g=";
+    }
+
+    async getHistoricalChart(coinId, period = '1y') {
+        try {
+            const url = `${this.base_url}/coins/charts?period=${period}&coinIds=${coinId}`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'X-API-KEY': this.api_key
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            return data[0];
+        } catch (error) {
+            console.error(`❌ خطا در دریافت داده تاریخی برای ${coinId}:`, error);
+            return null;
+        }
+    }
+
+    calculatePriceChangesFromChart(coinData, currentPrice) {
+        if (!coinData || !coinData.chart || coinData.chart.length === 0) {
+            return null;
+        }
+
+        const chart = coinData.chart;
+        const now = Math.floor(Date.now() / 1000);
+
+        const periods = {
+            '1h': 1 * 60 * 60,
+            '4h': 4 * 60 * 60, 
+            '24h': 24 * 60 * 60,
+            '7d': 7 * 24 * 60 * 60,
+            '30d': 30 * 24 * 60 * 60,
+            '180d': 180 * 24 * 60 * 60
+        };
+
+        const changes = {};
+
+        for (const [periodName, seconds] of Object.entries(periods)) {
+            const targetTime = now - seconds;
+            const historicalPoint = this.findClosestHistoricalPoint(chart, targetTime);
+            
+            if (historicalPoint) {
+                const historicalPrice = historicalPoint[1];
+                changes[periodName] = ((currentPrice - historicalPrice) / historicalPrice) * 100;
+            } else {
+                changes[periodName] = 0;
+            }
+        }
+
+        return changes;
+    }
+
+    findClosestHistoricalPoint(chart, targetTime) {
+        let closestPoint = null;
+        let minDiff = Infinity;
+
+        for (const point of chart) {
+            const timeDiff = Math.abs(point[0] - targetTime);
+            if (timeDiff < minDiff) {
+                minDiff = timeDiff;
+                closestPoint = point;
+            }
+        }
+
+        return (minDiff <= 24 * 60 * 60) ? closestPoint : null;
+    }
+
+    async getHistoricalChanges(symbol, currentPrice) {
+        try {
+            const coinId = this.symbolToCoinId(symbol);
+            const historicalData = await this.getHistoricalChart(coinId, '1y');
+            
+            if (!historicalData) {
+                return null;
+            }
+
+            return this.calculatePriceChangesFromChart(historicalData, currentPrice);
+        } catch (error) {
+            console.error(`❌ خطا در محاسبه تغییرات تاریخی برای ${symbol}:`, error);
+            return null;
+        }
+    }
+
+    symbolToCoinId(symbol) {
+        const symbolMap = {
+            'BTC': 'bitcoin', 'ETH': 'ethereum', 'BNB': 'binance-coin', 'SOL': 'solana',
+            'XRP': 'ripple', 'ADA': 'cardano', 'AVAX': 'avalanche', 'DOT': 'polkadot',
+            'LINK': 'chainlink', 'MATIC': 'polygon', 'LTC': 'litecoin', 'BCH': 'bitcoin-cash',
+            'ATOM': 'cosmos', 'XLM': 'stellar', 'FIL': 'filecoin', 'HBAR': 'hedera',
+            'NEAR': 'near', 'APT': 'aptos', 'ARB': 'arbitrum', 'ZIL': 'zilliqa',
+            'VET': 'vechain', 'DOGE': 'dogecoin', 'TRX': 'tron', 'UNI': 'uniswap'
+        };
+        return symbolMap[symbol] || symbol.toLowerCase();
+    }
+}
+
 // ===================== WebSocket Manager =====================
 class WebSocketManager {
     constructor() {
@@ -756,35 +856,48 @@ app.get("/api/scan/vortexai", async (req, res) => {
         }
 
         // ترکیب داده‌ها
-        const enhancedCoins = coins.map(coin => {
-            const symbol = `${coin.symbol.toLowerCase()}_usdt`;
-            const historical = gistManager.getPriceData(symbol);
-            const realtime = realtimeData[symbol];
+        // خطوط ۲۷-۵۰ رو با این جایگزین کن:
 
-            return {
-                ...coin,
-                // داده تاریخی از Gist
-                change_1h: historical?.change_1h || 0,
-                change_4h: historical?.change_4h || 0,
-                change_24h: historical?.change_24h || 0,
-                change_7d: historical?.change_7d || 0,
-                change_30d: historical?.change_30d || 0,
-                change_180d: historical?.change_180d || 0,
-                historical_timestamp: historical?.timestamp,
-                // داده لحظه‌ای از WebSocket
-                realtime_price: realtime?.price,
-                realtime_volume: realtime?.volume,
-                realtime_change: realtime?.change,
-                // تحلیل VortexAI
-                vortexai_analysis: {
-                    signal_strength: TechnicalAnalysisEngine.calculateSignalStrength(coin),
-                    trend: (coin.priceChange24h || 0) > 0 ? "up" : "down",
-                    volatility_score: TechnicalAnalysisEngine.calculateVolatility(coin),
-                    volume_anomaly: TechnicalAnalysisEngine.detectVolumeAnomaly(coin),
-                    market_sentiment: (coin.priceChange1h || 0) > 0 && (coin.priceChange24h || 0) > 0 ? 'bullish' : 'bearish'
-                }
-            };
-        });
+        const enhancedCoins = await Promise.all(
+            coins.map(async (coin) => {
+                const symbol = `${coin.symbol.toLowerCase()}_usdt`;
+                const realtime = realtimeData[symbol];
+                const historical = gistManager.getPriceData(symbol);
+        
+                // 🔥 دریافت داده‌های تاریخی
+                const historicalAPI = new HistoricalDataAPI();
+                const historicalChanges = await historicalAPI.getHistoricalChanges(
+                    coin.symbol, 
+                    realtime?.price || coin.price
+                );
+
+                return {
+                    ...coin,
+            // داده تاریخی از Gist (فعلاً نگه دار)
+                    change_1h: historicalChanges?.['1h'] || historical?.change_1h || 0,
+                    change_4h: historicalChanges?.['4h'] || historical?.change_4h || 0,
+                    change_24h: historicalChanges?.['24h'] || historical?.change_24h || 0,
+                    change_7d: historicalChanges?.['7d'] || historical?.change_7d || 0,
+                    change_30d: historicalChanges?.['30d'] || historical?.change_30d || 0,
+                    change_180d: historicalChanges?.['180d'] || historical?.change_180d || 0,
+
+                    historical_timestamp: historical?.timestamp,
+            
+                    // داده لحظه‌ای از WebSocket
+                    realtime_price: realtime?.price,
+                    realtime_volume: realtime?.volume,
+                    realtime_change: realtime?.change,
+            
+                    VortexAI_analysis: {
+                        signal_strength: TechnicalAnalysisEngine.calculateSignalStrength(coin),
+                        trend: (historicalChanges?.['24h'] || 0) > 0 ? "up" : "down",
+                        volatility_score: TechnicalAnalysisEngine.calculateVolatility(coin),
+                        volume_anomaly: TechnicalAnalysisEngine.detectVolumeAnomaly(coin),
+                        market_sentiment: (historicalChanges?.['1h'] || 0) > 0 && (historicalChanges?.['24h'] || 0) > 0 ? 'bullish' : 'bearish'
+                    }
+                };
+            })
+        );
 
         // اعمال فیلتر
         let filteredCoins = [...enhancedCoins];
