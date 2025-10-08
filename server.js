@@ -339,7 +339,7 @@ class GistManager {
 
     getPriceData(symbol, timeframe = null) {
         if (timeframe) {
-            const data = this.priceHistory.prices && this.priceHistory.prices.[symbol];
+            const data = this.priceHistory.prices && this.priceHistory.prices[symbol];
             return data ? {
                 current_price: data.price,
                 timestamp: data.timestamp,
