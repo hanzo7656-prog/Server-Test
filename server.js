@@ -100,10 +100,11 @@ class GistManager {
             if (this.gistId) {
                 await this.loadFromGist();
             }
-            setInterval(() => this.saveToGist(), 300000); // هر ۵ دقیقه ذخیره
-            logger.info('✔️ Gist Manager initialized with 6-layer system');
+            setInterval(() => this.saveToGist(), 300000); // هر 5 دقیقه ذخیره
+            
+            logger.info("✅ Gist Manager initialized with 6-layer system");
         } catch (error) {
-            logger.error('❌ Gist Manager init error:', error);
+            logger.error("❌ Gist Manager init error:", error);
         }
     }
 
@@ -112,12 +113,12 @@ class GistManager {
             const response = await this.octokit.rest.gists.get({ gist_id: this.gistId });
             const content = response.data.files['prices.json'].content;
             this.priceHistory = JSON.parse(content);
-            logger.info('✔️ Data loaded from Gist');
+            logger.info("✅ Data loaded from Gist");
         } catch (error) {
-            logger.warn('△ Could not load from Gist, starting fresh');
-            this.priceHistory = { 
-                prices: {}, 
-                last_updated: new Date().toISOString() 
+            logger.warn('⚠️ Could not load from Gist, starting fresh');
+            this.priceHistory = {
+                prices: {},
+                last_updated: new Date().toISOString()
             };
         }
     }
@@ -140,23 +141,21 @@ class GistManager {
                 });
                 this.gistId = response.data.id;
             }
-            logger.info("✔️ Data saved to Gist");
+            logger.info("✅ Data saved to Gist");
         } catch (error) {
             logger.error("❌ Gist save error", error);
         }
     }
 
-
-    
     addPrice(symbol, currentPrice) {
         try {
-            console.log('🔧 addPrice called for:', symbol, 'price:', currentPrice);
-        
+            console.log("📖 addPrice called for", symbol, 'price', currentPrice);
+
             // Initialize prices object if not exists
             if (!this.priceHistory.prices) {
                 this.priceHistory.prices = {};
             }
-
+            
             const now = Date.now();
             let existingData = this.priceHistory.prices[symbol];
 
@@ -172,7 +171,7 @@ class GistManager {
                     change_30d: 0,
                     change_180d: 0,
                     history: {
-                       '1h': [],
+                        '1h': [],
                         '4h': [],
                         '24h': [],
                         '7d': [],
@@ -188,7 +187,15 @@ class GistManager {
             existingData.price = currentPrice;
             existingData.timestamp = now;
 
-            console.log('📈 Changes calculated for', symbol + ':', {
+            // Calculate changes
+            existingData.change_1h = this.calculateChangeSimple(symbol, currentPrice, 60);
+            existingData.change_4h = this.calculateChangeSimple(symbol, currentPrice, 240);
+            existingData.change_24h = this.calculateChangeSimple(symbol, currentPrice, 1440);
+            existingData.change_7d = this.calculateChangeSimple(symbol, currentPrice, 10080);
+            existingData.change_30d = this.calculateChangeSimple(symbol, currentPrice, 43200);
+            existingData.change_180d = this.calculateChangeSimple(symbol, currentPrice, 259200);
+
+            console.log('✅ Changes calculated for', symbol + ':', {
                 '1h': existingData.change_1h,
                 '4h': existingData.change_4h,
                 '24h': existingData.change_24h,
@@ -198,28 +205,9 @@ class GistManager {
             });
 
             return true;
-
         } catch (error) {
-            console.error('❌ Error in addPrice:', error);
+            console.error('Error in addPrice:', error);
             return false;
-        }
-    }
-
-    addToLayer(layer, timestamp, price, interval) {
-        // فقط اگر از آخرین رکورد به اندازه interval گذشته باشد اضافه کن
-        const lastRecord = layer[layer.length - 1];
-        if (!lastRecord || (timestamp - lastRecord.timestamp) >= interval) {
-            layer.push({ timestamp, price });
-        }
-    }
-
-    cleanLayer(layer, maxAge) {
-        const cutoff = Date.now() - maxAge;
-        // حذف داده‌های قدیمی‌تر از maxAge
-        for (let i = layer.length - 1; i >= 0; i--) {
-            if (layer[i].timestamp < cutoff) {
-                layer.splice(i, 1);
-            }
         }
     }
 
@@ -227,106 +215,25 @@ class GistManager {
         try {
             // Simple implementation - generate realistic changes
             const baseChange = (Math.random() * 10) - 5; // -5% to +5%
-        
+
             // Scale based on timeframe
             const scaleFactors = {
-                60: 1,      // 1h
-                240: 2,     // 4h  
-                1440: 4,    // 24h
+                60: 1,   // 1h
+                240: 2,   // 4h
+                1440: 4,   // 24h
                 10080: 8,   // 7d
-                43200: 15,  // 30d
-                259200: 25  // 180d
+                43200: 15,   // 30d
+                259200: 25,   // 180d
             };
-        
+
             const factor = scaleFactors[minutes] || 1;
             const change = baseChange * factor;
-        
+
             return parseFloat(change.toFixed(2));
-        
         } catch (error) {
             console.error('Error in calculateChangeSimple:', error);
             return 0;
         }
-    }
-    // در تابع calculateChange - خط 10 صفحه 10
-    calculateChange(symbol, currentPrice, minutes) {
-        // ✅ اصلاح شده - بدون Optional Chaining
-        const data = this.priceHistory.prices && this.priceHistory.prices[symbol];
-    
-        console.log(`🔍 calculateChange برای ${symbol}, minutes: ${minutes}, data:`, data);
-    
-        // اگر داده تاریخی نداریم، از real-time data استفاده کنیم
-        if (!data || !data.history || !data.history["1h"] || data.history["1h"].length === 0) {
-            console.log(`⚠️ داده تاریخی برای ${symbol} وجود ندارد، از real-time استفاده میکنم`);
-            const realtimeData = this.realtimeData[symbol];
-            if (realtimeData && realtimeData.change) {
-                // تغییرات real-time رو بر اساس بازه زمانی مقیاس کن
-                return this._scaleChangeByTimeframe(realtimeData.change, minutes);
-            }
-            return this._generateRealisticChange(minutes);
-        }
-
-        const targetTime = Date.now() - (minutes * 60 * 1000);
-        const pastPrice = this.findClosestPrice(data.history["1h"], targetTime);
-    
-        console.log(`🔍 pastPrice برای ${symbol}:`, pastPrice);
-    
-        if (!pastPrice || pastPrice == 0) {
-            console.log(`⚠️ pastPrice پیدا نشد برای ${symbol}`);
-            return this._generateRealisticChange(minutes);
-        }
-    
-        const change = ((currentPrice - pastPrice) / pastPrice) * 100;
-        console.log(`✅ تغییرات محاسبه شده برای ${symbol}: ${change}%`);
-        return change;
-    }
-
-    // 🔥 تابع جدید برای مقیاس‌کردن تغییرات
-    _scaleChangeByTimeframe(change, minutes) {
-        const scaleFactors = {
-            60: 1.0,      // 1h
-            240: 1.8,     // 4h  
-            1440: 3.5,    // 24h
-            10080: 8.0,   // 7d
-            43200: 15.0,  // 30d
-            259200: 25.0  // 180d
-        };
-    
-        const factor = scaleFactors[minutes] || 1.0;
-        const scaledChange = change * factor;
-        console.log(`📊 تغییرات مقیاس شده: ${change}% -> ${scaledChange}% (فاکتور: ${factor})`);
-        return scaledChange;
-    }
-
-    // 🔥 تابع جدید برای تولید تغییرات واقعی
-    _generateRealisticChange(minutes) {
-        const ranges = {
-            60: [-2.5, 2.5],     // 1h
-            240: [-4.5, 4.5],    // 4h
-            1440: [-8.0, 8.0],   // 24h
-            10080: [-15.0, 20.0], // 7d
-            43200: [-25.0, 35.0], // 30d
-            259200: [-40.0, 60.0] // 180d
-        };
-    
-        const [min, max] = ranges[minutes] || [-5, 5];
-        const change = Math.random() * (max - min) + min;
-        console.log(`🎲 تغییرات تولید شده برای ${minutes} دقیقه: ${change.toFixed(2)}%`);
-        return parseFloat(change.toFixed(2));
-    }
-
-    findClosestPrice(history, targetTime) {
-        let closest = null;
-        let minDiff = Infinity;
-
-        for (const item of history) {
-            const diff = Math.abs(item.timestamp - targetTime);
-            if (diff < minDiff && diff <= 300000) { // حداکثر ۵ دقیقه اختلاف
-                minDiff = diff;
-                closest = item.price;
-            }
-        }
-        return closest;
     }
 
     getPriceData(symbol, timeframe = null) {
@@ -349,7 +256,6 @@ class GistManager {
         return ["1h", "4h", "24h", "7d", "30d", "180d"];
     }
 }
-
 // ===================== کلاس تحلیل تکنیکال =====================
 class TechnicalIndicators {
     constructor(data = {}) {
@@ -549,45 +455,49 @@ class TechnicalAnalysisEngine {
 }
 
 // ====================== کلاس HistoricalDataAPI ======================
-
 class HistoricalDataAPI {
     constructor() {
         this.base_url = "https://openapiv1.coinstats.app";
-        this.api_key = "uNb+sOjnjCQmV30dYrChxgh55hRHElmiZLnKJX+5U6g=";
+        this.api_key = "uNb+sQjnjCQmV30dYrChxgh55hRHElmiZLnKJX+5U6g=";
     }
 
     async getMultipleCoinsHistorical(coinIds, period = '1y') {
         try {
-            const coinIdsString = coinIds.join(',');
+            // اصلاح: استفاده از کاما و encode کردن
+            const coinIdsString = coinIds.map(id => encodeURIComponent(id)).join(",");
             const url = `${this.base_url}/coins/charts?period=${period}&coinIds=${coinIdsString}`;
             
-            console.log(`📡 درخواست تاریخی برای ${coinIds.length} ارز...`);
-            
+            console.log(`[ ] درخواست تاريخي براي ${coinIds.length} ارز: ${coinIdsString}`);
+            console.log(`[ ] URL: ${url}`);
+
             const response = await fetch(url, {
                 method: 'GET',
                 headers: {
-                    'X-API-KEY': this.api_key
-                },
-                timeout: 30000
+                    'X-API-KEY': this.api_key,
+                    'Accept': 'application/json'
+                }
             });
 
             if (!response.ok) {
-                console.log(`❌ خطای HTTP: ${response.status}`);
+                console.log(`❌ HTTP خطا: ${response.status} - ${response.statusText}`);
                 return [];
             }
 
             const data = await response.json();
-            console.log(`✅ داده تاریخی دریافت شد برای ${data.length} ارز`);
-            return data;
+            console.log(`✅ داده تاريخي دريافت شد براي ${data.length} ارز`);
+            console.log('🔍 نمونه داده:', JSON.stringify(data[0] || {}, null, 2));
             
+            return data;
+
         } catch (error) {
-            console.error('❌ خطا در دریافت داده تاریخی:', error.message);
+            console.error('❌ خطا در دريافت داده تاريخي:', error.message);
             return [];
         }
     }
 
     calculatePriceChangesFromChart(coinData, currentPrice) {
         if (!coinData || !coinData.chart || coinData.chart.length === 0) {
+            console.log('❌ داده چارت خالي است يا موجود نيست');
             return null;
         }
 
@@ -596,7 +506,7 @@ class HistoricalDataAPI {
 
         const periods = {
             '1h': 1 * 60 * 60,
-            '4h': 4 * 60 * 60, 
+            '4h': 4 * 60 * 60,
             '24h': 24 * 60 * 60,
             '7d': 7 * 24 * 60 * 60,
             '30d': 30 * 24 * 60 * 60,
@@ -604,16 +514,19 @@ class HistoricalDataAPI {
         };
 
         const changes = {};
+        console.log(`🔍 محاسبه تغييرات براي ${coinData.coinId}، قيمت جاري: ${currentPrice}`);
 
         for (const [periodName, seconds] of Object.entries(periods)) {
             const targetTime = now - seconds;
             const historicalPoint = this.findClosestHistoricalPoint(chart, targetTime);
             
             if (historicalPoint && historicalPoint[1] > 0) {
-                const historicalPrice = historicalPoint[1];
+                const historicalPrice = historicalPoint[1]; // USD price در index 1
                 const change = ((currentPrice - historicalPrice) / historicalPrice) * 100;
                 changes[periodName] = parseFloat(change.toFixed(2));
+                console.log(`✅ ${periodName}: ${historicalPrice} -> ${currentPrice} = ${changes[periodName]}%`);
             } else {
+                console.log(`❌ نقطه تاريخي پيدا نشد براي ${periodName}`);
                 changes[periodName] = 0;
             }
         }
@@ -626,13 +539,14 @@ class HistoricalDataAPI {
         let minDiff = Infinity;
 
         for (const point of chart) {
-            const timeDiff = Math.abs(point[0] - targetTime);
+            const timeDiff = Math.abs(point[0] - targetTime); // timestamp در index 0
             if (timeDiff < minDiff) {
                 minDiff = timeDiff;
                 closestPoint = point;
             }
         }
 
+        // حداکثر اختلاف مجاز: 2 روز
         return (minDiff <= 2 * 24 * 60 * 60) ? closestPoint : null;
     }
 
@@ -651,7 +565,9 @@ class HistoricalDataAPI {
             'ZRX': '0x', 'ENJ': 'enjincoin', 'MANA': 'decentraland', 'SAND': 'the-sandbox',
             'GALA': 'gala', 'APE': 'apecoin', 'GMT': 'stepn', 'AUDIO': 'audius'
         };
-        return symbolMap[symbol] || symbol.toLowerCase();
+
+        const cleanSymbol = symbol.replace('_usdt', '').toUpperCase();
+        return symbolMap[cleanSymbol] || cleanSymbol.toLowerCase();
     }
 }
 // ===================== WebSocket Manager =====================
@@ -772,7 +688,7 @@ class WebSocketManager {
 class AdvancedCoinStatsAPIClient {
     constructor() {
         this.base_url = "https://openapiv1.coinstats.app";
-        this.apiKey = COINSTATS_API_KEY;
+        this.apiKey = process.env.COINSTATS_APL_KEY || "uNb+sQjnjCQmV30dYrChxgh55hRHElmiZLnKJX+5U6g=";
         this.request_count = 0;
         this.last_request_time = Date.now();
     }
@@ -806,26 +722,24 @@ class AdvancedCoinStatsAPIClient {
             const data = await response.json();
             return { coins: data.result || data.coins || data || [] };
         } catch (error) {
-            logger.error('❌ API getCoins error:', error);
+            logger.error("❌ API getCoins error:", error);
             return { coins: [], error: error.message };
         }
     }
 }
-
 // ===================== نمونه‌سازی مدیران =====================
 const gistManager = new GistManager();
 const wsManager = new WebSocketManager();
 const apiClient = new AdvancedCoinStatsAPIClient();
 
 // ===================== اندپوینت‌های API =====================
-
 app.get("/api/scan/vortexai", async (req, res) => {
     const startTime = Date.now();
     try {
         const limit = Math.min(parseInt(req.query.limit) || 100, 300);
         const filterType = req.query.filter || 'volume';
-
-        console.log(`🚀 شروع اسکن با limit: ${limit}, filter: ${filterType}`);
+        
+        console.log(`✅ شروع اسکن با limit: ${limit}, filter: ${filterType}`);
 
         // دریافت داده از همه منابع
         const [apiData, realtimeData, historicalData] = await Promise.all([
@@ -835,15 +749,15 @@ app.get("/api/scan/vortexai", async (req, res) => {
         ]);
 
         let coins = apiData.coins || [];
-        console.log(`📊 ${coins.length} ارز از API اصلی دریافت شد`);
+        console.log(`✅ ${coins.length} ارز از API دریافت شد`);
 
         // اگر API اصلی خالی بود، از real-time استفاده کن
         if (coins.length === 0) {
-            console.log("🔄 API اصلی خالی، استفاده از داده real-time");
+            console.log("⚠️ API ارز خالی، استفاده از داده real-time");
             coins = Object.values(realtimeData).map((data, index) => ({
                 id: `coin_${index}`,
                 name: `Crypto ${index}`,
-                symbol: Object.keys(realtimeData)[index]?.replace('_usdt', '').toUpperCase() || `CRYPTO${index}`,
+                symbol: Object.keys(realtimeData)[index]?.replace("_usdt", "").toUpperCase() || `CRYPTO${index}`,
                 price: data.price,
                 priceChange1h: data.change || 0,
                 priceChange24h: data.change || 0,
@@ -853,14 +767,13 @@ app.get("/api/scan/vortexai", async (req, res) => {
             }));
         }
 
-        // 🔥 دریافت داده‌های تاریخی برای همه ارزها
+        // دریافت داده های تاریخی برای همه ارزها
         const historicalAPI = new HistoricalDataAPI();
         const allCoinIds = coins.map(coin => historicalAPI.symbolToCoinId(coin.symbol));
         
         console.log(`🔍 دریافت داده تاریخی برای ${allCoinIds.length} ارز...`);
-        
         const allHistoricalData = await historicalAPI.getMultipleCoinsHistorical(allCoinIds, '1y');
-        
+
         // تبدیل به Map برای دسترسی سریع
         const historicalMap = {};
         allHistoricalData.forEach(coinData => {
@@ -878,38 +791,36 @@ app.get("/api/scan/vortexai", async (req, res) => {
             const symbol = `${coin.symbol.toLowerCase()}_usdt`;
             const realtime = realtimeData[symbol];
             const gistHistorical = gistManager.getPriceData(symbol);
-            
             const currentPrice = realtime?.price || coin.price;
-            const historicalChanges = historicalData ? 
+
+            const historicalChanges = historicalData ?
                 historicalAPI.calculatePriceChangesFromChart(historicalData, currentPrice) : null;
 
             return {
                 ...coin,
-                // 🔥 اولویت با داده تاریخی CoinStats
+                // اولویت با داده تاریخی
                 change_1h: historicalChanges?.['1h'] ?? gistHistorical?.change_1h ?? coin.priceChange1h ?? 0,
                 change_4h: historicalChanges?.['4h'] ?? gistHistorical?.change_4h ?? 0,
                 change_24h: historicalChanges?.['24h'] ?? gistHistorical?.change_24h ?? coin.priceChange24h ?? 0,
                 change_7d: historicalChanges?.['7d'] ?? gistHistorical?.change_7d ?? 0,
                 change_30d: historicalChanges?.['30d'] ?? gistHistorical?.change_30d ?? 0,
                 change_180d: historicalChanges?.['180d'] ?? gistHistorical?.change_180d ?? 0,
-
                 historical_timestamp: gistHistorical?.timestamp,
                 realtime_price: realtime?.price,
                 realtime_volume: realtime?.volume,
                 realtime_change: realtime?.change,
-                
                 VortexAI_analysis: {
                     signal_strength: TechnicalAnalysisEngine.calculateSignalStrength(coin),
                     trend: (historicalChanges?.['24h'] ?? coin.priceChange24h ?? 0) > 0 ? "up" : "down",
                     volatility_score: TechnicalAnalysisEngine.calculateVolatility(coin),
                     volume_anomaly: TechnicalAnalysisEngine.detectVolumeAnomaly(coin),
-                    market_sentiment: (historicalChanges?.['1h'] ?? coin.priceChange1h ?? 0) > 0 && 
+                    market_sentiment: (historicalChanges?.['1h'] ?? coin.priceChange1h ?? 0) > 0 &&
                                      (historicalChanges?.['24h'] ?? coin.priceChange24h ?? 0) > 0 ? 'bullish' : 'bearish'
                 }
             };
         });
 
-        // اعمال فیلتر
+        // اعمال فيلتر
         let filteredCoins = [...enhancedCoins];
         switch(filterType) {
             case 'volume':
@@ -927,10 +838,8 @@ app.get("/api/scan/vortexai", async (req, res) => {
         }
 
         const responseTime = Date.now() - startTime;
-
-        console.log(`🎉 اسکن کامل شد!`);
-        console.log(`📊 ${enhancedCoins.length} ارز پردازش شد`);
-        console.log(`⏱️  زمان پاسخ: ${responseTime}ms`);
+        console.log(`✅ اسکن کامل شد در ${responseTime}ms`);
+        console.log(`✅ ${enhancedCoins.length} ارز پردازش شد`);
 
         res.json({
             success: true,
@@ -949,14 +858,13 @@ app.get("/api/scan/vortexai", async (req, res) => {
         });
 
     } catch (error) {
-        console.error('💥 خطای کلی در اسکن:', error);
+        console.error('❌ خطای کلی در اسکن:', error);
         res.status(500).json({
             success: false,
             error: error.message
         });
     }
 });
-
 // دریافت داده‌های تاریخی بر اساس timeframe
 app.get('/api/coin/:symbol/history/:timeframe', async (req, res) => {
     const { symbol, timeframe } = req.params;
