@@ -885,13 +885,13 @@ app.get("/api/scan/vortexai", async (req, res) => {
                 hasRealHistorical = Object.keys(historicalChanges).length > 0;
             }
 
-            consol.log(`Historical data for ${coin.symbol}:`, {
-                hasData: !! HistoricalData,
-                chartLength: historicalData.chart?.length,
-                changes: historicalChanges,
-                hasRealHistorical: hasRealHistorical
-            });
-        }
+                consol.log(`Historical data for ${coin.symbol}:`, {
+                    hasData: !! HistoricalData,
+                    chartLength: historicalData.chart?.length,
+                    changes: historicalChanges,
+                    hasRealHistorical: hasRealHistorical
+                });
+            }
             return {
                 ...coin,
                 // داده‌های تاریخی واقعی
