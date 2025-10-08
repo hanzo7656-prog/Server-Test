@@ -346,7 +346,7 @@ class GistManager {
                 history: data.history && data.history[timeframe] || []
             } : null;
         }
-        return (this.priceHistory.prices && this.priceHistory.prices[symbol] || null;
+        return (this.priceHistory.prices && this.priceHistory.prices[symbol]) || null;
     }
 
     getAllData() {
