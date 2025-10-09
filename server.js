@@ -1383,7 +1383,7 @@ app.get("/api/scan/vortexai", async (req, res) => {
                         <div class="stat-label">Healthy Coins</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-value">${data.health_metrics?.original_count || apiData.coins?.length || 0}</div>
+                        <div class="stat-value">${apiData.coins?.length || 0}</div>
                         <div class="stat-label">Total Scanned</div>
                     </div>
                     <div class="stat-card">
@@ -1395,7 +1395,6 @@ app.get("/api/scan/vortexai", async (req, res) => {
                         <div class="stat-label">Active Filter</div>
                     </div>
                 </div>
-
                 <div class="coins-grid">
                     ${filteredCoins.slice(0, limit).map(coin => `
                         <div class="coin-card">
