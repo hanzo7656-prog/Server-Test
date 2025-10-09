@@ -353,9 +353,39 @@ class TechnicalAnalysisEngine {
 
     // ====================== VortexAI Functions ==========================
     static calculateSignalStrength(coin) {
-        const volumeStrength = Math.min((coin.volume || 0) / 1000000, 10);
-        const priceStrength = Math.min(Math.abs(coin.priceChange24h || 0) / 10, 5);
-        return Math.min(volumeStrength + priceStrength, 10);
+        // ۱. قدرت حجم (با لگاریتم برای جلوگیری از اعداد خیلی بزرگ)
+        const volume = coin.volume || 0;
+        const volumeStrength = Math.min(Math.log10(volume + 1) / 2, 5); // 0-5
+    
+        // ۲. قدرت قیمت (ترکیب چند تایم‌فریم)
+        const priceChanges = [
+            Math.abs(coin.priceChange1h || 0),
+            Math.abs(coin.priceChange24h || 0),
+            Math.abs(coin.priceChange1w || 0)
+        ].filter(change => change > 0);
+    
+        const avgPriceChange = priceChanges.length > 0 
+            ? priceChanges.reduce((a, b) => a + b, 0) / priceChanges.length 
+            : 0;
+    
+        const priceStrength = Math.min(avgPriceChange / 2, 3); // 0-3
+    
+        // ۳. قدرت نوسان
+        const volatilityStrength = Math.min((this.calculateVolatility(coin) || 0) / 2, 2); // 0-2
+    
+        const totalStrength = volumeStrength + priceStrength + volatilityStrength;
+        const result = Math.min(totalStrength, 10);
+    
+        console.log("🔍 Signal Strength Debug:", {
+            symbol: coin.symbol,
+            volumeStrength: volumeStrength.toFixed(2),
+            priceStrength: priceStrength.toFixed(2),
+            volatilityStrength: volatilityStrength.toFixed(2),
+            total: totalStrength.toFixed(2),
+            final: result.toFixed(2)
+        });
+    
+        return result;
     }
 
     static calculateVolatility(coin) {
