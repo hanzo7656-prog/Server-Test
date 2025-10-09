@@ -434,13 +434,13 @@ class TechnicalAnalysisEngine {
         // آستانه پویا بر اساس سایز مارکت‌کپ
         let anomalyThreshold;
         if (marketCap > 50000000000) { // بزرگ‌تر از 50 میلیارد
-            anomalyThreshold = 0.015; // 1.5%
+            anomalyThreshold = 0.08;
         } else if (marketCap > 10000000000) { // 10-50 میلیارد
-            anomalyThreshold = 0.025; // 2.5%
+            anomalyThreshold = 0.12;
         } else if (marketCap > 1000000000) { // 1-10 میلیارد
-            anomalyThreshold = 0.04; // 4%
+            anomalyThreshold = 0.20;
         } else { // کوچک‌تر از 1 میلیارد
-            anomalyThreshold = 0.08; // 8%
+            anomalyThreshold = 0.35;
         }
     
         const isAnomaly = volumeToMarketCapRatio > anomalyThreshold;
