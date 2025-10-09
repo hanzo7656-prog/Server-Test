@@ -221,7 +221,7 @@ console.log("Volume Anomaly Input", {
             marketCap: marketCap  
         });
 
-        if (!volume  !marketCap  marketCap == 1) {
+        if (!volume || !marketCap || marketCap == 1) {
             return false;
         }
 
