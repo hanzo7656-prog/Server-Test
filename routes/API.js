@@ -13,7 +13,7 @@ module.exports = ({ gistManager, wsManager, apiClient, exchangeAPI }) => {
         try {
             const limit = Math.min(parseInt(req.query.limit) || 100, 300);
             const filterType = req.query.filter || 'volume';
-            console.log(Starting scan with limit: ${limit}, filter: ${filterType});
+            console.log(`Starting scan with limit: ${limit}, filter: ${filterType}`);
 
             const [apiData, realtimeData] = await Promise.all([
                 apiClient.getCoins(limit),
@@ -21,7 +21,7 @@ module.exports = ({ gistManager, wsManager, apiClient, exchangeAPI }) => {
             ]);
 
             let coins = apiData.coins || [];
-            console.log(API coins: ${coins.length}, Realtime: ${Object.keys(realtimeData || {}).length});
+            console.log(`API coins: ${coins.length}, Realtime: ${Object.keys(realtimeData || {}).length}`);
 
             if (coins.length === 0) {
                 console.log('No API coins, using realtime data fallback');
@@ -44,15 +44,15 @@ module.exports = ({ gistManager, wsManager, apiClient, exchangeAPI }) => {
                     const coinId = historicalAPI.symbolToCoinId(coin.symbol);
                     return coinId;
                 } catch (error) {
-                    console.log(Error converting symbol ${coin.symbol}:, error);
+                    console.log(`Error converting symbol ${coin.symbol}:`, error);
                     return 'bitcoin';
                 }
             });
 
-            console.log(Fetching historical for ${allCoinIds.length} coins...);
+            console.log(`Fetching historical for ${allCoinIds.length} coins...`);
             const historicalResponse = await historicalAPI.getMultipleCoinsHistorical(allCoinIds, '1y');
             const allHistoricalData = historicalResponse.data || [];
-            console.log(Historical data received: ${allHistoricalData.length} records);
+            console.log(`Historical data received: ${allHistoricalData.length} records`);
 
             const historicalMap = {};
             allHistoricalData.forEach(coinData => {
@@ -66,7 +66,7 @@ module.exports = ({ gistManager, wsManager, apiClient, exchangeAPI }) => {
             const enhancedCoins = coins.map((coin) => {
                 const coinId = historicalAPI.symbolToCoinId(coin.symbol);
                 const historicalData = historicalMap[coinId];
-                const symbol = ${coin.symbol.toLowerCase()}_usdt;
+                const symbol = `${coin.symbol.toLowerCase()}_usdt`;
                 const realtime = realtimeData[symbol];
                 const gistHistorical = gistManager.getPriceData(symbol);
                 const currentPrice = realtime?.price || coin.price;
@@ -83,8 +83,7 @@ module.exports = ({ gistManager, wsManager, apiClient, exchangeAPI }) => {
                     ...coin,
                     change_1h: historicalChanges['1h'],
                     change_4h: historicalChanges['4h'],
-
-change_24h: historicalChanges['24h'],
+                    change_24h: historicalChanges['24h'],
                     change_7d: historicalChanges['7d'],
                     change_30d: historicalChanges['30d'],
                     change_180d: historicalChanges['180d'],
@@ -107,13 +106,13 @@ change_24h: historicalChanges['24h'],
             let filteredCoins = [...enhancedCoins];
             switch(filterType) {
                 case 'volume':
-                    filteredCoins.sort((a, b) => (b.volume  0) - (a.volume  0));
+                    filteredCoins.sort((a, b) => (b.volume || 0) - (a.volume || 0));
                     break;
                 case 'momentum_1h':
-                    filteredCoins.sort((a, b) => Math.abs(b.change_1h  0) - Math.abs(a.change_1h  0));
+                    filteredCoins.sort((a, b) => Math.abs(b.change_1h || 0) - Math.abs(a.change_1h || 0));
                     break;
                 case 'momentum_4h':
-                    filteredCoins.sort((a, b) => Math.abs(b.change_4h  0) - Math.abs(a.change_4h  0));
+                    filteredCoins.sort((a, b) => Math.abs(b.change_4h || 0) - Math.abs(a.change_4h || 0));
                     break;
                 case 'ai_signal':
                     filteredCoins.sort((a, b) => (b.VortexAI_analysis?.signal_strength || 0) - 
@@ -133,7 +132,7 @@ change_24h: historicalChanges['24h'],
                     api: coins.length,
                     realtime: Object.keys(realtimeData || {}).length,
                     historical_api: Object.keys(historicalMap || {}).length,
-                    gist: Object.keys((gistData  {}).prices  {}).length
+                    gist: Object.keys((gistData || {}).prices || {}).length
                 },
                 processing_time: responseTime + 'ms',
                 timestamp: new Date().toISOString()
@@ -171,8 +170,7 @@ change_24h: historicalChanges['24h'],
     });
 
     // API جدید: تیکرهای صرافی
-
-router.get("/tickers/:exchange", async (req, res) => {
+    router.get("/tickers/:exchange", async (req, res) => {
         try {
             const { exchange } = req.params;
             const data = await exchangeAPI.getTickers(exchange);
@@ -208,7 +206,7 @@ router.get("/tickers/:exchange", async (req, res) => {
         }
     });
 
-    // بقیه اندپوینت‌ها مانند فایل اصلی...
+    // دریافت داده‌های تاریخی بر اساس timeframe
     router.get('/coin/:symbol/history/:timeframe', async (req, res) => {
         const { symbol, timeframe } = req.params;
         const validTimeframes = gistManager.getAvailableTimeframes();
@@ -216,7 +214,7 @@ router.get("/tickers/:exchange", async (req, res) => {
         if (!validTimeframes.includes(timeframe)) {
             return res.status(400).json({
                 success: false,
-                error: Invalid timeframe. Valid timeframes: ${validTimeframes.join(', ')}
+                error: `Invalid timeframe. Valid timeframes: ${validTimeframes.join(', ')}`
             });
         }
 
@@ -241,7 +239,7 @@ router.get("/tickers/:exchange", async (req, res) => {
                 timestamp: new Date().toISOString()
             });
         } catch (error) {
-            console.error(History API error for ${symbol}:, error);
+            console.error(`History API error for ${symbol}:`, error);
             res.status(500).json({
                 success: false,
                 error: error.message
@@ -249,6 +247,7 @@ router.get("/tickers/:exchange", async (req, res) => {
         }
     });
 
+    // تحلیل تکنیکال پیشرفته برای یک ارز
     router.get('/coin/:symbol/technical', async (req, res) => {
         const startTime = Date.now();
         const symbol = req.params.symbol;
@@ -287,7 +286,7 @@ router.get("/tickers/:exchange", async (req, res) => {
                 { prices: { [symbol]: historicalData } }
             );
 
-res.json({
+            res.json({
                 success: true,
                 symbol: symbol,
                 current_price: realtimeData?.price || historicalData?.current_price,
@@ -295,11 +294,11 @@ res.json({
                 support_resistance: supportResistance,
                 vortexai_analysis: aiAnalysis,
                 data_points: priceData.length,
-                processing_time: ${Date.now() - startTime}ms,
+                processing_time: `${Date.now() - startTime}ms`,
                 timestamp: new Date().toISOString()
             });
         } catch (error) {
-            console.error(Technical analysis error for ${symbol}:, error);
+            console.error(`Technical analysis error for ${symbol}:`, error);
             res.status(500).json({
                 success: false,
                 error: error.message
@@ -307,6 +306,7 @@ res.json({
         }
     });
 
+    // دریافت لیست available data timeframeها
     router.get('/timeframes', (req, res) => {
         res.json({
             success: true,
@@ -322,6 +322,7 @@ res.json({
         });
     });
 
+    // سلامت سیستم ترکیبی
     router.get('/health-combined', (req, res) => {
         const wsStatus = wsManager.getConnectionStatus();
         const gistData = gistManager.getAllData();
@@ -365,6 +366,7 @@ res.json({
         });
     });
 
+    // اضافه کردن این endpoint برای تشخیص دقیق مشکل
     router.get("/debug/api-status", async (req, res) => {
         try {
             const testCoinIds = ['bitcoin', 'ethereum', 'solana'];
@@ -384,8 +386,7 @@ res.json({
                 historical_api: {
                     status: historicalResult.data.length > 0 ? 'working' : 'failing',
                     coins_received: historicalResult.data.length,
-
-source: historicalResult.source,
+                    source: historicalResult.source,
                     error: historicalResult.error,
                     sample: historicalResult.data.length > 0 ? {
                         coinId: historicalResult.data[0].coinId,
@@ -408,6 +409,180 @@ source: historicalResult.source,
             });
         }
     });
+
+    // (Health Checks) --- سلامت سرور --- //
+
+    // (Liveness Probe) بررسی سلامت پایه
+    router.get('/health', (req, res) => {
+        res.status(200).json({
+            status: 'OK',
+            timestamp: new Date().toISOString(),
+            service: 'VortexAI Crypto Scanner'
+        });
+    });
+
+    // (Readiness Probe) بررسی سلامت کامل با وضعیت سرویس‌ها
+    router.get('/health/ready', (req, res) => {
+        const wsStatus = wsManager.getConnectionStatus();
+        const gistData = gistManager.getAllData();
+
+        const healthStatus = {
+            status: 'Healthy',
+            timestamp: new Date().toISOString(),
+            services: {
+                websocket: {
+                    connected: wsStatus.connected,
+                    activeCoins: wsStatus.active_coins,
+                    status: wsStatus.connected ? 'Healthy' : 'Unhealthy'
+                },
+                database: {
+                    storedCoins: Object.keys(gistData.prices || {}).length,
+                    status: process.env.GITHUB_TOKEN ? 'Healthy' : 'Degraded'
+                },
+                api: {
+                    requestCount: apiClient.request_count,
+                    status: 'Healthy'
+                }
+            }
+        };
+
+        // بررسی سلامت کلی همه سرویس‌ها
+        const allHealthy = wsStatus.connected && process.env.GITHUB_TOKEN;
+        const statusCode = allHealthy ? 200 : 503;
+        res.status(statusCode).json(healthStatus);
+    });
+
+    // بررسی سلامت سرویس‌های حیاتی برای کوبرنتیز
+    router.get('/health/live', (req, res) => {
+        const wsStatus = wsManager.getConnectionStatus();
+
+        // اگر WebSocket قطع باشد، سرور زنده نیست
+        if (!wsStatus.connected) {
+            return res.status(503).json({
+                status: 'Unhealthy',
+                message: 'WebSocket connection lost',
+                timestamp: new Date().toISOString()
+            });
+        }
+
+        res.status(200).json({
+            status: 'OK',
+            timestamp: new Date().toISOString()
+        });
+    });
+
+    // فیلترهای سلامت پیشرفته
+    router.get("/health/filters", async (req, res) => {
+        try {
+            const wsStatus = wsManager.getConnectionStatus();
+            const gistData = gistManager.getAllData();
+            
+            const healthFilters = {
+                websocket_quality: wsStatus.connected ? 'excellent' : 'poor',
+                data_freshness: calculateDataFreshness(gistData),
+                api_performance: calculateAPIPerformance(),
+                storage_health: calculateStorageHealth(gistData),
+                overall_score: calculateOverallHealth(wsStatus, gistData)
+            };
+
+            res.json({
+                success: true,
+                health_filters: healthFilters,
+                recommendations: generateHealthRecommendations(healthFilters),
+                timestamp: new Date().toISOString()
+            });
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // متدهای کمکی برای فیلترهای سلامت
+    function calculateDataFreshness(gistData) {
+        const lastUpdated = new Date(gistData.last_updated);
+        const now = new Date();
+        const diffMinutes = (now - lastUpdated) / (1000 * 60);
+        
+        if (diffMinutes < 5) return 'excellent';
+        if (diffMinutes < 15) return 'good';
+        if (diffMinutes < 30) return 'fair';
+        return 'poor';
+    }
+
+    function calculateAPIPerformance() {
+        const successRate = (apiClient.request_count - (apiClient.error_count || 0)) / apiClient.request_count;
+        return successRate > 0.95 ? 'excellent' : 
+               successRate > 0.85 ? 'good' : 
+               successRate > 0.70 ? 'fair' : 'poor';
+    }
+
+    function calculateStorageHealth(gistData) {
+        const storedCoins = Object.keys(gistData.prices || {}).length;
+        const expectedCoins = constants.ALL_TRADING_PAIRS.length;
+        const coverage = storedCoins / expectedCoins;
+        
+        return coverage > 0.9 ? 'excellent' :
+               coverage > 0.7 ? 'good' :
+               coverage > 0.5 ? 'fair' : 'poor';
+    }
+
+    function calculateOverallHealth(wsStatus, gistData) {
+        const scores = {
+            websocket: wsStatus.connected ? 100 : 0,
+            data_freshness: calculateDataFreshnessScore(gistData),
+            api_performance: calculateAPIPerformanceScore(),
+            storage: calculateStorageScore(gistData)
+        };
+        
+        const totalScore = (scores.websocket + scores.data_freshness + scores.api_performance + scores.storage) / 4;
+        return {
+            score: Math.round(totalScore),
+            breakdown: scores,
+            status: totalScore > 80 ? 'healthy' : totalScore > 60 ? 'degraded' : 'unhealthy'
+        };
+    }
+
+    function calculateDataFreshnessScore(gistData) {
+        const freshness = calculateDataFreshness(gistData);
+        const scores = { 'excellent': 100, 'good': 80, 'fair': 60, 'poor': 30 };
+        return scores[freshness] || 0;
+    }
+
+    function calculateAPIPerformanceScore() {
+        const performance = calculateAPIPerformance();
+        const scores = { 'excellent': 100, 'good': 80, 'fair': 60, 'poor': 30 };
+        return scores[performance] || 0;
+    }
+
+    function calculateStorageScore(gistData) {
+        const storage = calculateStorageHealth(gistData);
+        const scores = { 'excellent': 100, 'good': 80, 'fair': 60, 'poor': 30 };
+        return scores[storage] || 0;
+    }
+
+    function generateHealthRecommendations(healthFilters) {
+        const recommendations = [];
+        
+        if (healthFilters.websocket_quality === 'poor') {
+            recommendations.push("WebSocket connection lost - Check network connectivity");
+        }
+        
+        if (healthFilters.data_freshness === 'poor') {
+            recommendations.push("Data is stale - Check Gist synchronization");
+        }
+        
+        if (healthFilters.api_performance === 'poor') {
+            recommendations.push("API performance degraded - Check rate limits");
+        }
+        
+        if (healthFilters.storage_health === 'poor') {
+            recommendations.push("Storage coverage low - Check historical data collection");
+        }
+        
+        return recommendations.length > 0 ? recommendations : ["All systems operating normally"];
+    }
 
     return router;
 };
