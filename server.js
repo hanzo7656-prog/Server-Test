@@ -575,6 +575,14 @@ class HistoricalDataAPI {
     }
 
     calculatePriceChangesFromChart(coinData, currentPrice) {
+        // قبل از محاسبات اضافه کن
+        console.log("🔍 Chart Data Debug:", {
+            hasChart: !!coinData?.chart,
+            chartLength: coinData?.chart?.length,
+            latestPoint: chart[chart.length - 1],
+            chartSample: chart.slice(0, 3) // نمونه اولیه
+        });
+        
         if (!coinData || !coinData.chart || coinData.chart.length === 0) {
             
             return {
