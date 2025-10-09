@@ -388,7 +388,7 @@ class TechnicalAnalysisEngine {
         const marketCap = coin.marketCap || 1;
     
         // اگر داده ناقص هست، false برگردون
-        if (!volume  !marketCap  marketCap === 1) {
+        if (!volume || !marketCap || marketCap === 1) {
             return false;
         }
     
