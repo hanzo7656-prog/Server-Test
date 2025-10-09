@@ -887,7 +887,7 @@ app.get("/api/scan/vortexai", async (req, res) => {
         console.log(`🔍 Fetching historical for ${allCoinIds.length} coins...`);
 
         // گرفتن داده‌های تاریخی
-        const historicalResponse = await historicalAPI.getMultipleCoinsHistorical(allCoinIds, '24h');
+        const historicalResponse = await historicalAPI.getMultipleCoinsHistorical(allCoinIds, '1y');
         const allHistoricalData = historicalResponse.data || [];
         
         console.log(`✅ Historical data received: ${allHistoricalData.length} records`);
