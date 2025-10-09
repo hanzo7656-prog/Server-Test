@@ -69,7 +69,7 @@ class WebSocketManager {
 
     subscribeToAllPairs() {
         if (this.connected && this.ws) {
-            console.log(Subscribing to ${constants.ALL_TRADING_PAIRS.length} trading pairs);
+            console.log(`Subscribing to ${constants.ALL_TRADING_PAIRS.length} trading pairs`);
             const batchSize = 10;
             for (let i = 0; i < constants.ALL_TRADING_PAIRS.length; i += batchSize) {
                 setTimeout(() => {
@@ -99,14 +99,14 @@ class WebSocketManager {
             this.ws.send(JSON.stringify(subscription));
             this.subscribedPairs.add(pair);
         });
-        console.log(✔ Subscribed to ${pairs.length} pairs);
+        console.log(`✔ Subscribed to ${pairs.length} pairs`);
     }
 
     getRealtimeData() {
         return this.realtimeData;
     }
 
-getConnectionStatus() {
+    getConnectionStatus() {
         return {
             connected: this.connected,
             active_coins: Object.keys(this.realtimeData).length,
