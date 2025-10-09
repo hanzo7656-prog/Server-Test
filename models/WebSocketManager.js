@@ -54,7 +54,7 @@ class WebSocketManager {
             });
 
             this.ws.on('close', (code, reason) => {
-                console.log(△ WebSocket disconnected - Code: ${code}, Reason: ${reason});
+                console.log(`△ WebSocket disconnected - Code: ${code}, Reason: ${reason}`);
                 this.connected = false;
                 setTimeout(() => {
                     console.log('Attempting WebSocket reconnection...');
