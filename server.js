@@ -583,7 +583,9 @@ class HistoricalDataAPI {
         }
 
         const chart = coinData.chart;
-        const now = Math.floor(Date.now() / 1000);
+        const latestDataPoint = chart[chart.lenght -1];
+        const latestTime = latestDataPoint[0];
+        const latestPrice = latestDataPoint[1];
         
         const periods = {
             '1h': 1 * 60 * 60,
@@ -597,7 +599,7 @@ class HistoricalDataAPI {
         const changes = {};
 
         for (const [periodName, seconds] of Object.entries(periods)) {
-            const targetTime = now - seconds;
+            const targetTime = latestTime - seconds;
             const historicalPoint = this.findClosestHistoricalPoint(chart, targetTime);
             
             if (historicalPoint && historicalPoint[1] > 0) {
