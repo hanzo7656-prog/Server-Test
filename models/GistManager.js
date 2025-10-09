@@ -1,11 +1,10 @@
-// models/GistManager.js
 const { Octokit } = require('@octokit/rest');
-const { GITHUB_TOKEN, GIST_ID } = require('../config/api-keys');
+const constants = require('../config/constants');
 
 class GistManager {
     constructor() {
-        this.octokit = new Octokit({ auth: GITHUB_TOKEN });
-        this.gistId = GIST_ID;
+        this.octokit = new Octokit({ auth: constants.GITHUB_TOKEN });
+        this.gistId = constants.GIST_ID;
         this.priceHistory = {
             prices: {},
             last_updated: new Date().toISOString()
@@ -18,22 +17,25 @@ class GistManager {
             if (this.gistId) {
                 await this.loadFromGist();
             }
-            setInterval(() => this.saveToGist(), 300000); // 5 minutes
-            console.log("✅ Gist Manager initialized");
+            setInterval(() => this.saveToGist(), 300000);
+            console.log("✔ Gist Manager initialized");
         } catch (error) {
-            console.error("❌ Gist Manager init error:", error);
+            console.error("✗ Gist Manager init error:", error);
         }
     }
 
     async loadFromGist() {
         try {
-            const response = await this.octokit.rest.gists.get({ gist_id: this.gistId });
+            const response = await this.octokit.gists.get({ gist_id: this.gistId });
             const content = response.data.files['prices.json'].content;
             this.priceHistory = JSON.parse(content);
-            console.log("✅ Data loaded from Gist");
+            console.log("✔ Data loaded from Gist");
         } catch (error) {
-            console.warn("⚠️ Could not load from Gist, starting fresh");
-            this.priceHistory = { prices: {}, last_updated: new Date().toISOString() };
+            console.warn("△ Could not load from Gist, starting fresh");
+            this.priceHistory = {
+                prices: {},
+                last_updated: new Date().toISOString()
+            };
         }
     }
 
@@ -43,21 +45,21 @@ class GistManager {
             const content = JSON.stringify(this.priceHistory, null, 2);
 
             if (this.gistId) {
-                await this.octokit.rest.gists.update({
+                await this.octokit.gists.update({
                     gist_id: this.gistId,
                     files: { 'prices.json': { content: content } }
                 });
             } else {
-                const response = await this.octokit.rest.gists.create({
+                const response = await this.octokit.gists.create({
                     description: 'VortexAI Crypto Price Data',
                     files: { 'prices.json': { content: content } },
                     public: false
                 });
                 this.gistId = response.data.id;
             }
-            console.log("✅ Data saved to Gist");
+            console.log("✔ Data saved to Gist");
         } catch (error) {
-            console.error("❌ Gist save error", error);
+            console.error("✗ Gist save error", error);
         }
     }
 
@@ -66,10 +68,8 @@ class GistManager {
             if (!this.priceHistory.prices) {
                 this.priceHistory.prices = {};
             }
-            
             const now = Date.now();
             let existingData = this.priceHistory.prices[symbol];
-            
             if (!existingData) {
                 existingData = {
                     price: currentPrice,
@@ -80,11 +80,8 @@ class GistManager {
                 };
                 this.priceHistory.prices[symbol] = existingData;
             }
-
-            // فقط قیمت و timestamp آپدیت میشه
             existingData.price = currentPrice;
             existingData.timestamp = now;
-
             return true;
         } catch (error) {
             console.error('Error in addPrice', error);
@@ -109,7 +106,7 @@ class GistManager {
     }
 
     getAvailableTimeframes() {
-        return ["1h", "4h", "24h", "7d", "30d", "180d"];
+        return constants.TIMEFRAMES;
     }
 }
 
