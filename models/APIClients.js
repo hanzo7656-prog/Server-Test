@@ -46,6 +46,8 @@ class AdvancedCoinStatsAPIClient {
 
             clearTimeout(timeoutId);
 
+            console.log(🌟 Response status: ${response.status} ${response.statusText});
+
             if (response.status === 429) {
                 console.log('🔴 Rate limit exceeded! Increasing delay...');
                 this.ratelimitDelay = 2000;
@@ -89,9 +91,9 @@ class HistoricalDataAPI {
             'ETC': 'ethereum-classic', 'XMR': 'monero', 'ALGO': 'algorand', 'XTZ': 'tezos',
             'EOS': 'eos', 'AAVE': 'aave', 'MKR': 'maker', 'COMP': 'compound-governance-token',
             'YFI': 'yearn-finance', 'SNX': 'havven', 'SUSHI': 'sushi', 'CRV': 'curve-dao-token',
-            '1INCH': '1inch', 'REN': 'republic-protocol', 'BAT': 'basic-attention-token',
 
-'ZRX': '0x', 'ENJ': 'enjincoin', 'MANA': 'decentraland', 'SAND': 'the-sandbox',
+'1INCH': '1inch', 'REN': 'republic-protocol', 'BAT': 'basic-attention-token',
+            'ZRX': '0x', 'ENJ': 'enjincoin', 'MANA': 'decentraland', 'SAND': 'the-sandbox',
             'GALA': 'gala', 'APE': 'apecoin', 'GMT': 'stepn', 'AUDIO': 'audius',
             'USDT': 'tether', 'USDC': 'usd-coin', 'DAI': 'dai', 'ZEC': 'zcash', 'DASH': 'dash',
             'WAVES': 'waves', 'KSM': 'kusama', 'EGLD': 'elrond-erd-2', 'THETA': 'theta-token',
@@ -224,6 +226,157 @@ console.log(📄 Total historical records received: ${allResults.length});
             throw error;
         }
     }
+
+    calculatePriceChangesFromChart(coinData, currentPrice) {
+        console.log("CalculatePriceChangesFromChart - Input:", {
+            hasCoinData: !!coinData,
+            coinData: coinData,
+            currentPrice: currentPrice
+        });
+
+        if (!coinData) {
+            console.log("No coinData provided");
+            return { changes: {}, source: 'no_data' };
+        }
+
+        if (!coinData.chart) {
+            console.log("No chart in coinData");
+            return { changes: {}, source: 'no_data' };
+        }
+
+        const chart = coinData.chart;
+        if (!Array.isArray(chart)) {
+            console.log("Chart is not an array");
+            return { changes: {}, source: 'no_data' };
+        }
+
+        if (chart.length === 0) {
+            console.log("✗ Chart array is empty");
+            return { changes: {}, source: 'no_data' };
+        }
+
+        console.log("🔍 Chart Info:", {
+            chartLength: chart.length,
+            firstPoint: chart[0],
+            lastPoint: chart[chart.length - 1],
+            samplePoints: chart.slice(0, 3)
+        });
+
+        const latestDataPoint = chart[chart.length - 1];
+        if (!latestDataPoint || !Array.isArray(latestDataPoint)) {
+            console.log("✗ Latest data point is invalid");
+            return { changes: {}, source: 'no_data' };
+        }
+
+        if (latestDataPoint.length < 2) {
+            console.log("✗ Latest data point doesn't have enough data");
+            return { changes: {}, source: 'no_data' };
+        }
+
+        const latestTime = latestDataPoint[0];
+        const latestPrice = latestDataPoint[1];
+
+        if (!latestTime || typeof latestTime !== 'number') {
+            console.log("✗ Invalid latestTime:", latestTime);
+            return { changes: {}, source: 'no_data' };
+        }
+
+        if (!latestPrice || latestPrice <= 0) {
+            console.log("✗ Invalid latestPrice:", latestPrice);
+            return { changes: {}, source: 'no_data' };
+        }
+
+console.log("✓ Valid chart data - Latest time:", new Date(latestTime * 1000), "Latest price:", latestPrice);
+
+        const periods = {
+            '1h': 1 * 60 * 60,
+            '4h': 4 * 60 * 60,
+            '24h': 24 * 60 * 60,
+            '7d': 7 * 24 * 60 * 60,
+            '30d': 30 * 24 * 60 * 60,
+            '180d': 180 * 24 * 60 * 60
+        };
+
+        console.log("📍 Periods Debug:");
+        for (const [periodName, seconds] of Object.entries(periods)) {
+            const targetTime = latestTime - seconds;
+            const historicalPoint = this.findClosestHistoricalPoint(chart, targetTime);
+            console.log(${periodName}, {
+                targetTime: new Date(targetTime * 1000),
+                foundPoint: historicalPoint ? {
+                    time: new Date(historicalPoint[0] * 1000),
+                    price: historicalPoint[1]
+                } : 'NOT FOUND',
+                timeDiff: historicalPoint ? Math.abs(historicalPoint[0] - targetTime) / (24 * 60 * 60) + ' days' : 'N/A'
+            });
+        }
+
+        const changes = {};
+        for (const [periodName, seconds] of Object.entries(periods)) {
+            const targetTime = latestTime - seconds;
+
+            if (targetTime < 0) {
+                console.log(Target time for ${periodName} is negative, skipping);
+                continue;
+            }
+
+            console.log(Calculating ${periodName}: targetTime = ${targetTime} (${new Date(targetTime * 1000)}));
+            const historicalPoint = this.findClosestHistoricalPoint(chart, targetTime);
+
+            if (historicalPoint &&
+                Array.isArray(historicalPoint) &&
+                historicalPoint.length >= 2 &&
+                historicalPoint[1] > 0) {
+                
+                const historicalPrice = historicalPoint[1];
+                const change = ((latestPrice - historicalPrice) / historicalPrice) * 100;
+                changes[periodName] = parseFloat(change.toFixed(2));
+                console.log(✓ ${periodName}: ${changes[periodName]}% (from ${historicalPrice} to ${latestPrice}));
+            } else {
+                console.log(✗ No valid historical point found for ${periodName});
+            }
+        }
+
+        const result = {
+            changes: changes,
+            source: Object.keys(changes).length > 0 ? 'real' : 'no_data'
+        };
+
+        console.log("🎯 Final result:", result);
+        return result;
+    }
+
+    findClosestHistoricalPoint(chart, targetTime) {
+        if (!chart || chart.length === 0) {
+            console.log("✗ findClosestHistoricalPoint: Empty chart");
+            return null;
+        }
+
+        let closestPoint = null;
+        let minDiff = Infinity;
+
+        console.log(Finding closest point to time: ${targetTime} (${new Date(targetTime * 1000)}));
+
+        for (const point of chart) {
+            if (!point  !Array.isArray(point)  point.length < 2) {
+                continue;
+            }
+
+            const timeDiff = Math.abs(point[0] - targetTime);
+            if (timeDiff < minDiff) {
+                minDiff = timeDiff;
+                closestPoint = point;
+            }
+        }
+
+        console.log("✅ Closest point found:", closestPoint ? {
+            time: closestPoint[0],
+            price: closestPoint[1],
+            timeDiff: minDiff
+        } : "None");
+
+        return closestPoint;
+    }
 }
 
 // API جدید برای تبادل و قیمت‌های متوسط
@@ -243,7 +396,7 @@ class ExchangeAPI {
                 }
             });
 
-            if (!response.ok) throw new Error(HTTP ${response.status});
+if (!response.ok) throw new Error(HTTP ${response.status});
             return await response.json();
         } catch (error) {
             console.error('Exchange API error:', error);
