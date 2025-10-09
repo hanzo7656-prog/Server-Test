@@ -359,7 +359,21 @@ class TechnicalAnalysisEngine {
     }
 
     static calculateVolatility(coin) {
-        return Math.min(Math.abs(coin.priceChange24h || 0) / 5, 10);
+        const changes = [
+            Math.abs(coin.change_1h || 0),
+            Math.abs(coin.change_4h || 0),
+            Math.abs(coin.change_24h || 0),
+            Math.abs(coin.change_7d || 0),
+            Math.abs(coin.priceChange1h || 0),
+            Math.abs(coin.priceChange24h || 0)
+        ].filter(change => change > 0);
+        if (change.length === 0) return 0;
+
+        const avgChange = change.reduce((a, b) => a + b, 0) / changes.length;
+        const maxChange = Math.max(...changes);
+
+        const volatility = (avgChange * 0.7 + maxChange * 0.3) / 3
+            return Math.min(volatility, 10);
     }
 
     static detectVolumeAnomaly(coin) {
