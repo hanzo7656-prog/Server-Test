@@ -5,6 +5,7 @@ require('dotenv').config();
 
 // ایمپورت ماژول‌ها
 const constants = require('./config/constants');
+const logger = require('./config/logger');
 const GistManager = require('./models/GistManager');
 const WebSocketManager = require('./models/WebSocketManager');
 const { AdvancedCoinStatsAPIClient, HistoricalDataAPI, ExchangeAPI } = require('./models/APIClients');
@@ -26,12 +27,13 @@ app.use((req, res, next) => {
   next();
 });
 
-// در فایل app.js بعد از میدلورها
+// کش سرور
 let cache = {
   coinsList: { data: null, timestamp: null },
   historicalData: {},
   realtimePrices: {}
 };
+
 // نمونه‌سازی مدیران
 const gistManager = new GistManager();
 const wsManager = new WebSocketManager();
@@ -82,55 +84,69 @@ app.get('/health/ready', (req, res) => {
 
 // راه‌اندازی سرور
 const server = app.listen(PORT, '0.0.0.0', () => {
-  console.log(✔ VortexAI 6-Layer Server started on port ${PORT});
-  console.log(✔ Dashboard: http://localhost:${PORT}/);
+  logger.info(`✔ VortexAI 6-Layer Server started on port ${PORT}`);
+  logger.info('✔ Features: 6-Timeframe Historical Data + WebSocket Real-time + VortexAI Analysis');
+  logger.info(`✔ Real-time Pairs: ${constants.ALL_TRADING_PAIRS.length}`);
+  logger.info(`✔ Dashboard: http://localhost:${PORT}/`);
+  logger.info(`✔ Health: http://localhost:${PORT}/health`);
+  logger.info(`✔ Scanner: http://localhost:${PORT}/scan`);
+  logger.info(`✔ Analysis: http://localhost:${PORT}/analysis`);
 });
 
-// Graceful Shutdown
+// --- Graceful Shutdown --- //
 async function gracefulShutdown(signal) {
-  console.log(🔄 ${signal} signal received: starting graceful shutdown);
+  logger.info(`🔄 ${signal} signal received: starting graceful shutdown`);
   
   let shutdownTimeout = setTimeout(() => {
-    console.error('🛑 Force shutdown after 15 seconds timeout');
+    logger.error('🛑 Force shutdown after 15 seconds timeout');
     process.exit(1);
   }, 15000);
 
   try {
-    console.log('⏹️ Stopping server from accepting new connections');
+    logger.info('⏹️ Stopping server from accepting new connections');
     server.close(() => {
-      console.log('✔ HTTP server stopped accepting new connections');
+      logger.info('✔ HTTP server stopped accepting new connections');
     });
 
+    // 2. بستن اتصالات WebSocket
     if (wsManager && wsManager.ws) {
-      console.log('🔌 Closing WebSocket connections...');
+      logger.info('🔌 Closing WebSocket connections...');
       wsManager.ws.close();
-      console.log('✔ WebSocket connections closed');
+      logger.info('✔ WebSocket connections closed');
     }
 
-    console.log('💾 Saving final data to Gist...');
-    await gistManager.saveToGist();
-    console.log('✔ Final data saved to Gist');
+    // 3. بستن اتصالات به APIهای خارجی
+    logger.info('🔌 Closing external API connections...');
+    // اینجا می‌توانید اتصالات به دیتابیس یا APIهای دیگر را هم ببندید
 
+    // 4. ذخیره داده‌های نهایی در Gist
+    logger.info('💾 Saving final data to Gist...');
+    await gistManager.saveToGist();
+    logger.info('✔ Final data saved to Gist');
+
+    // 5. تکمیل graceful shutdown
     clearTimeout(shutdownTimeout);
-    console.log('✅ Graceful shutdown completed successfully');
+    logger.info('✅ Graceful shutdown completed successfully');
     process.exit(0);
   } catch (error) {
     clearTimeout(shutdownTimeout);
-    console.error('❌ Error during graceful shutdown:', error);
+    logger.error('❌ Error during graceful shutdown:', error);
     process.exit(1);
   }
 }
 
+// event handlers برای سیگنال‌های مختلف
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
+// مدیریت خطاهای unhandled
 process.on('uncaughtException', (error) => {
-  console.error('⚠️ Uncaught Exception:', error);
+  logger.error('⚠️ Uncaught Exception:', error);
   gracefulShutdown('UNCAUGHT_EXCEPTION');
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('⚠️ Unhandled Rejection at:', promise, 'reason:', reason);
+  logger.error('⚠️ Unhandled Rejection at:', promise, 'reason:', reason);
   gracefulShutdown('UNHANDLED_REJECTION');
 });
 
