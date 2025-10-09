@@ -416,6 +416,12 @@ class TechnicalAnalysisEngine {
     static detectVolumeAnomaly(coin) {
         const volume = coin.volume || 0;
         const marketCap = coin.marketCap || 1;
+
+        console.log("Volume Anomaly Input:", {
+            symbol: coin.symbol,
+            volume: volume,
+            marketCap: marketCap
+        });
     
         // اگر داده ناقص هست، false برگردون
         if (!volume || !marketCap || marketCap === 1) {
