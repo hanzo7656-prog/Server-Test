@@ -576,6 +576,7 @@ class HistoricalDataAPI {
 
     calculatePriceChangesFromChart(coinData, currentPrice) {
         if (!coinData || !coinData.chart || coinData.chart.length === 0) {
+            
             return {
                 changes: {},
                 source: 'no_data'
@@ -583,11 +584,21 @@ class HistoricalDataAPI {
         }
 
         const chart = coinData.chart;
+
+        if (chart.length === 0) {
+            return { changes: {}, source: 'no_data' };
+        }
         const latestDataPoint = chart[chart.lenght -1];
+        if (!latestDataPoint || !Arrey.isArrey(latestDataPoint) || latestDataPoint.length < 2) {
+            return { changes: {}, source: 'no_data' };
+        }
         const latestTime = latestDataPoint[0];
         const latestPrice = latestDataPoint[1];
-        
-        const periods = {
+
+        if (!latestTime || !latestPrice || latestPrice <= 0) {
+            return { changes: {}, source: 'no_data' };
+        }
+        const period ={
             '1h': 1 * 60 * 60,
             '4h': 4 * 60 * 60,
             '24h': 24 * 60 * 60,
@@ -600,9 +611,18 @@ class HistoricalDataAPI {
 
         for (const [periodName, seconds] of Object.entries(periods)) {
             const targetTime = latestTime - seconds;
+
+            if (targetTime < 0) {
+                continue;
+            }
+            
             const historicalPoint = this.findClosestHistoricalPoint(chart, targetTime);
             
-            if (historicalPoint && historicalPoint[1] > 0) {
+            if (historicalPoint && 
+                Arrey.isArrey (historicalPoint) &&
+                historicalPoint.length >= 2 &&
+                historicalPoint[1] > 0) {
+                
                 const historicalPrice = historicalPoint[1]; // index 1 = قیمت USD
                 const change = ((currentPrice - historicalPrice) / historicalPrice) * 100;
                 changes[periodName] = parseFloat(change.toFixed(2));
