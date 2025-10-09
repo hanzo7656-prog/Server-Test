@@ -21,7 +21,7 @@ class AdvancedCoinStatsAPIClient {
         this.last_request_time = Date.now();
         this.request_count++;
         if (this.request_count % 10 === 0) {
-            console.log(📊 Total API requests: ${this.request_count});
+            console.log(`📊 Total API requests: ${this.request_count}`);
         }
     }
 
