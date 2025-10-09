@@ -2341,6 +2341,8 @@ router.get('/health-api', (req, res) => {
     </div>
 </body>
 </html>
-    `);
-});
-module.exports = router;
+        `);
+    });
+    return router;
+};
+
