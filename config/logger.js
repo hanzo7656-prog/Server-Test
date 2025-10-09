@@ -6,7 +6,7 @@ const logger = winston.createLogger({
     format: winston.format.combine(
         winston.format.timestamp(),
         winston.format.printf(({ timestamp, level, message }) => {
-            return ${timestamp} - ${level.toUpperCase()} - ${message};
+            return `${timestamp} - ${level.toUpperCase()} - ${message}`;  // ✅ استفاده از backticks
         })
     ),
     transports: [
