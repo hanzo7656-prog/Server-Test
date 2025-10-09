@@ -384,8 +384,41 @@ class TechnicalAnalysisEngine {
         return result;
     }
     static detectVolumeAnomaly(coin) {
-        const avgVolume = 1000000;
-        return (coin.volume || 0) > avgVolume * 2;
+        const volume = coin.volume || 0;
+        const marketCap = coin.marketCap || 1;
+    
+        // اگر داده ناقص هست، false برگردون
+        if (!volume  !marketCap  marketCap === 1) {
+            return false;
+        }
+    
+        // نسبت حجم به مارکت‌کپ
+        const volumeToMarketCapRatio = volume / marketCap;
+    
+        // آستانه پویا بر اساس سایز مارکت‌کپ
+        let anomalyThreshold;
+        if (marketCap > 50000000000) { // بزرگ‌تر از 50 میلیارد
+            anomalyThreshold = 0.015; // 1.5%
+        } else if (marketCap > 10000000000) { // 10-50 میلیارد
+            anomalyThreshold = 0.025; // 2.5%
+        } else if (marketCap > 1000000000) { // 1-10 میلیارد
+            anomalyThreshold = 0.04; // 4%
+        } else { // کوچک‌تر از 1 میلیارد
+            anomalyThreshold = 0.08; // 8%
+        }
+    
+        const isAnomaly = volumeToMarketCapRatio > anomalyThreshold;
+    
+        console.log("🔍 Volume Anomaly Debug:", {
+            symbol: coin.symbol,
+            volume: (volume / 1000000).toFixed(1) + 'M',
+            marketCap: (marketCap / 1000000).toFixed(1) + 'M',
+            ratio: (volumeToMarketCapRatio * 100).toFixed(2) + '%',
+            threshold: (anomalyThreshold * 100).toFixed(2) + '%',
+            isAnomaly: isAnomaly
+        });
+    
+        return isAnomaly;
     }
 
     static analyzeWithAI(realtimeData, historicalData) {
