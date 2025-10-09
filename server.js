@@ -360,9 +360,9 @@ class TechnicalAnalysisEngine {
 
     static calculateVolatility(coin) {
         const changes = [
-            Math.abs(coin.change_1h || 0),
-            Math.abs(coin.change_24h || 0),
-            Math.abs(coin.change_1w || 0)
+            Math.abs(coin.priceChange_1h || 0),
+            Math.abs(coin.priceChange_24h || 0),
+            Math.abs(coin.priceChange_1w || 0)
         ].filter(change => change > 0);
 
         console.log("volatility Debug - Changes:", changes);
@@ -374,7 +374,7 @@ class TechnicalAnalysisEngine {
         const maxChange = Math.max(...changes);
 
         const volatility = (avgChange * 0.7 + maxChange * 0.3) / 3
-            return Math.min(volatility, 10);
+        const result = Math.min(volatility, 10);
         console.log("volatility calculated:", {
             avgChange,
             maxChange,
