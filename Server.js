@@ -16,16 +16,18 @@ const AdvancedDataAPI = require('./models/DataAPIs/AdvancedDataAPI');
 const AdvancedMarketAnalysis = require('./models/TechnicalAnalysis/AdvancedMarketAnalysis');
 
 // Import Routes
-const scanRoutes = require('./routes/api/scan');
-const coinRoutes = require('./routes/api/coin');
-const healthRoutes = require('./routes/api/health');
-const advancedRoutes = require('./routes/api/advanced');
+const scanRoutes = require('./routes/API/Scan');
+const coinRoutes = require('./routes/API/coin');
+const healthRoutes = require('./routes/API/health');
+const advancedRoutes = require('./routes/API/Advanced');
 
 // Import Pages
-const dashboardPage = require('./routes/pages/dashboard');
-const scannerPage = require('./routes/pages/scanner');
-const analysisPage = require('./routes/pages/analysis');
-const apiDataPage = require('./routes/pages/api-data');
+const dashboardPage = require('./routes/Pages/Dashboard');
+const scannerPage = require('./routes/Pages/Scanner');
+const analysisPage = require('./routes/Pages/Analysis');
+const apiDataPage = require('./routes/pages/API-Data');
+const AdvancedAnalysisPage = require('./routes/Pages/Advanced-Analysis');
+const HealthDashboardPage = require('./routes/Pages/Health-Dashboard');
 
 const app = express();
 
