@@ -80,8 +80,11 @@ class GistManager {
                 };
                 this.priceHistory.prices[symbol] = existingData;
             }
+
+            // فقط قیمت و timestamp آپدیت میشه
             existingData.price = currentPrice;
             existingData.timestamp = now;
+
             return true;
         } catch (error) {
             console.error('Error in addPrice', error);
