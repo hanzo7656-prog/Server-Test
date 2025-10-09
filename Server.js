@@ -26,6 +26,12 @@ app.use((req, res, next) => {
   next();
 });
 
+// در فایل app.js بعد از میدلورها
+let cache = {
+  coinsList: { data: null, timestamp: null },
+  historicalData: {},
+  realtimePrices: {}
+};
 // نمونه‌سازی مدیران
 const gistManager = new GistManager();
 const wsManager = new WebSocketManager();
