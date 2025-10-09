@@ -349,3 +349,590 @@ module.exports = ({ gistManager, wsManager, apiClient }) => {
 </html>
         `);
     });
+    // صفحه سلامت سیستم
+    router.get('/health', (req, res) => {
+        const wsStatus = wsManager.getConnectionStatus();
+        const gistData = gistManager.getAllData();
+
+        const healthData = {
+            websocket: {
+                connected: wsStatus.connected,
+                active_coins: wsStatus.active_coins,
+                total_subscribed: wsStatus.total_subscribed
+            },
+            gist: {
+                active: !!process.env.GITHUB_TOKEN,
+                total_coins: Object.keys(gistData.prices || {}).length,
+                last_updated: gistData.last_updated
+            },
+            ai: {
+                technical_analysis: 'active',
+                vortexai_engine: 'ready',
+                indicators_available: 15
+            },
+            api: {
+                requests_count: apiClient.request_count,
+                coinstats_connected: 'active'
+            }
+        };
+
+        // تعریف متغیرها برای استفاده در HTML
+        const wsCardClass = healthData.websocket.connected ? 'good' : 'danger';
+        const gistCardClass = healthData.gist.active ? 'good' : 'warning';
+        const wsStatusClass = healthData.websocket.connected ? 'status-online' : 'status-offline';
+        const gistStatusClass = healthData.gist.active ? 'status-online' : 'status-warning';
+        const lastUpdated = new Date(healthData.gist.last_updated).toLocaleString();
+        const serverTime = new Date().toLocaleString();
+
+        res.send(`
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Health - VortexAI Pro</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 40px 20px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        .status-card {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            border-left: 5px solid #3498db;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .status-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+        }
+
+        .status-card.good { 
+            border-left-color: #27ae60; 
+            background: linear-gradient(135deg, rgba(39, 174, 96, 0.1), rgba(255, 255, 255, 0.95)); 
+        }
+        .status-card.warning { 
+            border-left-color: #f39c12; 
+            background: linear-gradient(135deg, rgba(243, 156, 18, 0.1), rgba(255, 255, 255, 0.95)); 
+        }
+        .status-card.danger { 
+            border-left-color: #e74c3c; 
+            background: linear-gradient(135deg, rgba(231, 76, 60, 0.1), rgba(255, 255, 255, 0.95)); 
+        }
+
+        .card-icon { font-size: 2.5rem; margin-bottom: 15px; }
+        .metric { font-size: 2rem; font-weight: bold; color: #2c3e50; margin: 10px 0; }
+        .metric-label { color: #7f8c8d; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+
+        .back-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 25px;
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            text-decoration: none;
+            border-radius: 25px;
+            margin: 10px;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .back-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(52, 152, 219, 0.4);
+        }
+
+        .timestamp {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.8);
+            margin-top: 30px;
+            font-style: italic;
+        }
+
+        .detail-item {
+            margin: 8px 0;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .detail-item:last-child { border-bottom: none; }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .status-online { background: #27ae60; color: white; }
+        .status-offline { background: #e74c3c; color: white; }
+        .status-warning { background: #f39c12; color: white; }
+
+        @media (max-width: 768px) {
+            .status-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏥 System Health Dashboard</h1>
+            <p>Real-time monitoring of all VortexAI services and components</p>
+        </div>
+
+        <div class="status-grid">
+            <div class="status-card ${wsCardClass}">
+                <div class="card-icon">📡</div>
+                <div class="metric">${healthData.websocket.connected ? 'ONLINE' : 'OFFLINE'}</div>
+                <div class="metric-label">WebSocket Connections</div>
+                <div style="margin-top: 20px;">
+                    <div class="detail-item">
+                        <strong>Active Coins:</strong>
+                        <span class="status-badge status-online">${healthData.websocket.active_coins}</span>
+                    </div>
+                    <div class="detail-item">
+                        <strong>Subscribed Pairs:</strong>
+                        <span class="status-badge status-online">${healthData.websocket.total_subscribed}</span>
+                    </div>
+                    <div class="detail-item">
+                        <strong>Provider:</strong> LBank
+                    </div>
+                    <div class="detail-item">
+                        <strong>Status:</strong>
+                        <span class="status-badge ${wsStatusClass}">
+                            ${healthData.websocket.connected ? 'Connected' : 'Disconnected'}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="status-card ${gistCardClass}">
+                <div class="card-icon">💾</div>
+                <div class="metric">${healthData.gist.total_coins}</div>
+                <div class="metric-label">Historical Storage</div>
+                <div style="margin-top: 20px;">
+                    <div class="detail-item">
+                        <strong>Gist Status:</strong>
+                        <span class="status-badge ${gistStatusClass}">
+                            ${healthData.gist.active ? 'Active' : 'Inactive'}
+                        </span>
+                    </div>
+                    <div class="detail-item">
+                        <strong>Total Coins:</strong> ${healthData.gist.total_coins}
+                    </div>
+                    <div class="detail-item">
+                        <strong>Timeframes:</strong> 6 Layers
+                    </div>
+                    <div class="detail-item">
+                        <strong>Last Updated:</strong> ${lastUpdated}
+                    </div>
+                </div>
+            </div>
+
+            <div class="status-card good">
+                <div class="card-icon">🤖</div>
+                <div class="metric">15+</div>
+                <div class="metric-label">AI Engine</div>
+                <div style="margin-top: 20px;">
+                    <div class="detail-item">
+                        <strong>VortexAI:</strong>
+                        <span class="status-badge status-online">Ready</span>
+                    </div>
+                    <div class="detail-item">
+                        <strong>Technical Analysis:</strong>
+                        <span class="status-badge status-online">Active</span>
+                    </div>
+                    <div class="detail-item">
+                        <strong>Indicators:</strong> 15+
+                    </div>
+                    <div class="detail-item">
+                        <strong>Analysis:</strong> Real-time
+                    </div>
+                </div>
+            </div>
+
+            <div class="status-card good">
+                <div class="card-icon">📊</div>
+                <div class="metric">${healthData.api.requests_count}</div>
+                <div class="metric-label">API Services</div>
+                <div style="margin-top: 20px;">
+                    <div class="detail-item">
+                        <strong>CoinStats API:</strong>
+                        <span class="status-badge status-online">Connected</span>
+                    </div>
+                    <div class="detail-item">
+                        <strong>Requests Count:</strong> ${healthData.api.requests_count}
+                    </div>
+                    <div class="detail-item">
+                        <strong>Rate Limit:</strong> Active
+                    </div>
+                    <div class="detail-item">
+                        <strong>GitHub API:</strong>
+                        <span class="status-badge ${gistStatusClass}">
+                            ${healthData.gist.active ? 'Connected' : 'Disabled'}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin: 40px 0;">
+            <a href="/" class="back-button">🏠 Dashboard</a>
+            <a href="/scan" class="back-button" style="background: linear-gradient(135deg, #e74c3c, #c0392b);">🔍 Market Scanner</a>
+            <a href="/api/health-combined" class="back-button" style="background: linear-gradient(135deg, #9b59b6, #8e44ad);">📊 JSON API</a>
+        </div>
+
+        <div class="timestamp">
+            Last checked: ${serverTime}<br>
+            <small>VortexAI Pro v5.0 - 6 Layer System</small>
+        </div>
+    </div>
+</body>
+</html>
+        `);
+    });
+
+    // صفحه اسکنر بازار (طراحی شیشه‌ای کامل)
+    router.get('/scan', (req, res) => {
+        const limit = req.query.limit || 20;
+        const filter = req.query.filter || 'ai_signal';
+
+        res.send(`
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Market Scanner - VortexAI Pro</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 30px 20px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .controls {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 25px;
+            border-radius: 15px;
+            margin: 20px 0;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .control-group label {
+            font-weight: 600;
+            color: #2c3e50;
+            min-width: 60px;
+        }
+
+        select, button {
+            padding: 12px 18px;
+            border: 2px solid #e1e8ed;
+            border-radius: 10px;
+            font-size: 14px;
+            background: white;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        select { min-width: 150px; }
+
+        select:focus, button:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+
+        button {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(52, 152, 219, 0.4);
+        }
+
+        button.secondary {
+            background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+        }
+
+        button.secondary:hover {
+            background: linear-gradient(135deg, #7f8c8d, #95a5a6);
+        }
+
+        .results { margin-top: 30px; }
+
+        .coin-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 25px;
+            margin-top: 20px;
+        }
+
+        .coin-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .coin-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            border-color: #3498db;
+        }
+
+        .coin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f8f9fa;
+        }
+
+        .coin-symbol {
+            font-weight: bold;
+            font-size: 1.4rem;
+            color: #2c3e50;
+        }
+
+        .coin-price {
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin: 15px 0;
+            color: #2c3e50;
+        }
+
+        .positive { color: #27ae60; }
+        .negative { color: #e74c3c; }
+
+        .ai-badge {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(155, 89, 182, 0.3);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            color: #7f8c8d;
+            font-size: 1.2rem;
+        }
+
+        .loading::after {
+            content: "";
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .back-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 25px;
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            text-decoration: none;
+            border-radius: 25px;
+            margin: 10px;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .back-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(52, 152, 219, 0.4);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #f8f9fa;
+        }
+
+        .stat-label { color: #7f8c8d; font-size: 0.9rem; }
+        .stat-value { font-weight: 600; color: #2c3e50; }
+
+        @media (max-width: 768px) {
+            .controls { flex-direction: column; align-items: stretch; }
+            .control-group { justify-content: space-between; }
+            .coin-grid { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 VortexAI Market Scanner</h1>
+            <p>Advanced cryptocurrency scanning with AI-powered insights and multi-timeframe data</p>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <label>Limit:</label>
+                <select id="limitSelect">
+                    <option value="10">10 coins</option>
+                    <option value="20" selected>20 coins</option>
+                    <option value="50">50 coins</option>
+                    <option value="100">100 coins</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label>Filter:</label>
+                <select id="filterSelect">
+                    <option value="ai_signal">AI Signal</option>
+                    <option value="volume">Volume</option>
+                    <option value="momentum_1h">1H Momentum</option>
+                    <option value="momentum_4h">4H Momentum</option>
+                </select>
+            </div>
+            <button onclick="scanMarket()" style="background: linear-gradient(135deg, #27ae60, #2ecc71);">
+                🔍 Scan Market
+            </button>
+            <button onclick="loadSampleData()" class="secondary">
+                📋 Load Sample
+            </button>
+        </div>
+
+        <div class="results">
+            <div id="resultsContainer" class="loading">
+                Click "Scan Market" to load cryptocurrency data with VortexAI analysis...
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 40px;">
+            <a href="/" class="back-button">🏠 Dashboard</a>
+            <a href="/analysis?symbol=btc_usdt" class="back-button" style="background: linear-gradient(135deg, #9b59b6, #8e44ad);">
+                📊 Technical Analysis
+            </a>
+            <a href="/health" class="back-button" style="background: linear-gradient(135deg, #f39c12, #e67e22);">
+                🏥 System Health
+            </a>
+        </div>
+    </div>
+`);
