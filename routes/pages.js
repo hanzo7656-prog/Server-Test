@@ -2343,3 +2343,4 @@ router.get('/health-api', (req, res) => {
 </html>
     `);
 });
+module.exports = router;
