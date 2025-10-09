@@ -27,6 +27,9 @@ class WebSocketManager {
                         const tickData = message.tick;
                         const currentPrice = tickData.latest;
 
+                        // اینجا gistManager.addPrice فراخوانی میشد
+                        // gistManager.addPrice(symbol, currentPrice);
+
                         this.realtimeData[symbol] = {
                             price: currentPrice,
                             high_24h: tickData.high,
@@ -36,6 +39,9 @@ class WebSocketManager {
                             timestamp: message.TS,
                             last_updated: new Date().toISOString()
                         };
+
+                        // کش سرور آپدیت میشد
+                        // cache.realtimePrices = { ...this.realtimeData };
                     }
                 } catch (error) {
                     console.error('✗ WebSocket message processing error', error);
@@ -74,6 +80,15 @@ class WebSocketManager {
         }
     }
 
+    get top20Pairs() {
+        return [
+            'btc_usdt', 'eth_usdt', 'bnb_usdt', 'sol_usdt', 'xrp_usdt',
+            'ada_usdt', 'avax_usdt', 'dot_usdt', 'link_usdt', 'matic_usdt',
+            'ltc_usdt', 'bch_usdt', 'atom_usdt', 'etc_usdt', 'xlm_usdt',
+            'fil_usdt', 'hbar_usdt', 'near_usdt', 'apt_usdt', 'arb_usdt'
+        ];
+    }
+
     subscribeBatch(pairs) {
         pairs.forEach(pair => {
             const subscription = {
@@ -91,7 +106,7 @@ class WebSocketManager {
         return this.realtimeData;
     }
 
-    getConnectionStatus() {
+getConnectionStatus() {
         return {
             connected: this.connected,
             active_coins: Object.keys(this.realtimeData).length,
