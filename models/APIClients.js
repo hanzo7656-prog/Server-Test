@@ -15,7 +15,7 @@ class AdvancedCoinStatsAPIClient {
         const timeDiff = currentTime - this.last_request_time;
         if (timeDiff < this.ratelimitDelay) {
             const waitTime = this.ratelimitDelay - timeDiff;
-            console.log(Rate limiting: waiting ${waitTime}ms);
+            console.log(`Rate limiting: waiting ${waitTime}ms`);
             await new Promise(resolve => setTimeout(resolve, waitTime));
         }
         this.last_request_time = Date.now();
