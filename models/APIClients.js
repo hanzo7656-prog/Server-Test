@@ -28,8 +28,8 @@ class AdvancedCoinStatsAPIClient {
     async getCoins(limit = 100) {
         await this._rateLimit();
         try {
-            const url = ${this.base_url}/coins?limit=${limit}&currency=USD;
-            console.log(🔍 Fetching coins from: ${url});
+            const url = `${this.base_url}/coins?limit=${limit}&currency=USD`;
+            console.log(`🔍 Fetching coins from: ${url}`);
             
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -46,7 +46,7 @@ class AdvancedCoinStatsAPIClient {
 
             clearTimeout(timeoutId);
 
-            console.log(🌟 Response status: ${response.status} ${response.statusText});
+            console.log(`🌟 Response status: ${response.status} ${response.statusText}`);
 
             if (response.status === 429) {
                 console.log('🔴 Rate limit exceeded! Increasing delay...');
@@ -55,15 +55,15 @@ class AdvancedCoinStatsAPIClient {
             }
 
             if (!response.ok) {
-                console.log(✗ HTTP error! status: ${response.status});
-                return { coins: [], error: HTTP ${response.status} };
+                console.log(`✗ HTTP error! status: ${response.status}`);
+                return { coins: [], error: `HTTP ${response.status}` };
             }
 
             const data = await response.json();
-            const coinsCount = data.result?.length  data.coins?.length  0;
-            console.log(🌟 Received ${coinsCount} coins from API);
+            const coinsCount = data.result?.length || data.coins?.length || 0;
+            console.log(`🌟 Received ${coinsCount} coins from API`);
             
-            return { coins: data.result  data.coins  data || [] };
+            return { coins: data.result || data.coins || data || [] };
         } catch (error) {
             console.error("✗ API getCoins error:", error.message);
             return { coins: [], error: error.message };
@@ -91,8 +91,7 @@ class HistoricalDataAPI {
             'ETC': 'ethereum-classic', 'XMR': 'monero', 'ALGO': 'algorand', 'XTZ': 'tezos',
             'EOS': 'eos', 'AAVE': 'aave', 'MKR': 'maker', 'COMP': 'compound-governance-token',
             'YFI': 'yearn-finance', 'SNX': 'havven', 'SUSHI': 'sushi', 'CRV': 'curve-dao-token',
-
-'1INCH': '1inch', 'REN': 'republic-protocol', 'BAT': 'basic-attention-token',
+            '1INCH': '1inch', 'REN': 'republic-protocol', 'BAT': 'basic-attention-token',
             'ZRX': '0x', 'ENJ': 'enjincoin', 'MANA': 'decentraland', 'SAND': 'the-sandbox',
             'GALA': 'gala', 'APE': 'apecoin', 'GMT': 'stepn', 'AUDIO': 'audius',
             'USDT': 'tether', 'USDC': 'usd-coin', 'DAI': 'dai', 'ZEC': 'zcash', 'DASH': 'dash',
@@ -124,18 +123,18 @@ class HistoricalDataAPI {
 
         const coinId = symbolMap[cleanSymbol];
         if (!coinId) {
-            console.log(△ Symbol not found in map: ${cleanSymbol}, using lowercase);
+            console.log(`△ Symbol not found in map: ${cleanSymbol}, using lowercase`);
             return cleanSymbol.toLowerCase();
         }
         return coinId;
     }
 
     async getMultipleCoinsHistorical(coinIds, period = '24h') {
-        const cacheKey = ${coinIds.sort().join(',')}.${period};
+        const cacheKey = `${coinIds.sort().join(',')}.${period}`;
         const cached = this.requestCache.get(cacheKey);
         
         if (cached && (Date.now() - cached.timestamp < this.cacheTimeout)) {
-            console.log(● Using cached historical data for ${coinIds.length} coins);
+            console.log(`● Using cached historical data for ${coinIds.length} coins`);
             return cached.data;
         }
 
@@ -149,7 +148,7 @@ class HistoricalDataAPI {
             const allResults = [];
             for (let i = 0; i < batches.length; i++) {
                 const batch = batches[i];
-                console.log(📊 Fetching batch ${i + 1}/${batches.length}: ${batch.join(',')});
+                console.log(`📊 Fetching batch ${i + 1}/${batches.length}: ${batch.join(',')}`);
                 
                 const batchResult = await this.fetchBatchHistorical(batch, period);
                 if (batchResult.data && Array.isArray(batchResult.data)) {
@@ -172,7 +171,7 @@ class HistoricalDataAPI {
                 timestamp: Date.now()
             });
 
-console.log(📄 Total historical records received: ${allResults.length});
+            console.log(`📄 Total historical records received: ${allResults.length}`);
             return result;
         } catch (error) {
             console.error('📄 Error in getMultipleCoinsHistorical:', error);
@@ -182,9 +181,9 @@ console.log(📄 Total historical records received: ${allResults.length});
 
     async fetchBatchHistorical(coinIds, period) {
         const coinIdsString = coinIds.join(",");
-        const url = ${this.base_url}/coins/charts?period=${period}&coinIds=${coinIdsString};
+        const url = `${this.base_url}/coins/charts?period=${period}&coinIds=${coinIdsString}`;
         
-        console.log(🔍 Fetching historical from: ${url});
+        console.log(`🔍 Fetching historical from: ${url}`);
 
         try {
             const controller = new AbortController();
@@ -207,7 +206,7 @@ console.log(📄 Total historical records received: ${allResults.length});
             }
 
             if (!response.ok) {
-                throw new Error(HTTP ${response.status}: ${response.statusText});
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
 
             const data = await response.json();
@@ -219,10 +218,10 @@ console.log(📄 Total historical records received: ${allResults.length});
                 throw new Error('No valid historical data received');
             }
 
-            console.log(☑ Received valid historical data for ${validData.length} coins);
+            console.log(`☑ Received valid historical data for ${validData.length} coins`);
             return { data: validData, source: 'real_api' };
         } catch (error) {
-            console.error(✗ Historical API error for ${coinIds.join(',')}:, error.message);
+            console.error(`✗ Historical API error for ${coinIds.join(',')}:`, error.message);
             throw error;
         }
     }
@@ -286,7 +285,7 @@ console.log(📄 Total historical records received: ${allResults.length});
             return { changes: {}, source: 'no_data' };
         }
 
-console.log("✓ Valid chart data - Latest time:", new Date(latestTime * 1000), "Latest price:", latestPrice);
+        console.log("✓ Valid chart data - Latest time:", new Date(latestTime * 1000), "Latest price:", latestPrice);
 
         const periods = {
             '1h': 1 * 60 * 60,
@@ -301,7 +300,7 @@ console.log("✓ Valid chart data - Latest time:", new Date(latestTime * 1000), 
         for (const [periodName, seconds] of Object.entries(periods)) {
             const targetTime = latestTime - seconds;
             const historicalPoint = this.findClosestHistoricalPoint(chart, targetTime);
-            console.log(${periodName}, {
+            console.log(`${periodName}`, {
                 targetTime: new Date(targetTime * 1000),
                 foundPoint: historicalPoint ? {
                     time: new Date(historicalPoint[0] * 1000),
@@ -316,11 +315,11 @@ console.log("✓ Valid chart data - Latest time:", new Date(latestTime * 1000), 
             const targetTime = latestTime - seconds;
 
             if (targetTime < 0) {
-                console.log(Target time for ${periodName} is negative, skipping);
+                console.log(`Target time for ${periodName} is negative, skipping`);
                 continue;
             }
 
-            console.log(Calculating ${periodName}: targetTime = ${targetTime} (${new Date(targetTime * 1000)}));
+            console.log(`Calculating ${periodName}: targetTime = ${targetTime} (${new Date(targetTime * 1000)})`);
             const historicalPoint = this.findClosestHistoricalPoint(chart, targetTime);
 
             if (historicalPoint &&
@@ -331,9 +330,9 @@ console.log("✓ Valid chart data - Latest time:", new Date(latestTime * 1000), 
                 const historicalPrice = historicalPoint[1];
                 const change = ((latestPrice - historicalPrice) / historicalPrice) * 100;
                 changes[periodName] = parseFloat(change.toFixed(2));
-                console.log(✓ ${periodName}: ${changes[periodName]}% (from ${historicalPrice} to ${latestPrice}));
+                console.log(`✓ ${periodName}: ${changes[periodName]}% (from ${historicalPrice} to ${latestPrice})`);
             } else {
-                console.log(✗ No valid historical point found for ${periodName});
+                console.log(`✗ No valid historical point found for ${periodName}`);
             }
         }
 
@@ -355,10 +354,10 @@ console.log("✓ Valid chart data - Latest time:", new Date(latestTime * 1000), 
         let closestPoint = null;
         let minDiff = Infinity;
 
-        console.log(Finding closest point to time: ${targetTime} (${new Date(targetTime * 1000)}));
+        console.log(`Finding closest point to time: ${targetTime} (${new Date(targetTime * 1000)})`);
 
         for (const point of chart) {
-            if (!point  !Array.isArray(point)  point.length < 2) {
+            if (!point || !Array.isArray(point) || point.length < 2) {
                 continue;
             }
 
@@ -387,7 +386,7 @@ class ExchangeAPI {
 
     async getExchangePrice(exchange, from, to, timestamp) {
         try {
-            const url = ${constants.API_URLS.exchange}?exchange=${exchange}&from=${from}&to=${to}&timestamp=${timestamp};
+            const url = `${constants.API_URLS.exchange}?exchange=${exchange}&from=${from}&to=${to}&timestamp=${timestamp}`;
             const response = await fetch(url, {
                 method: 'GET',
                 headers: {
@@ -396,7 +395,7 @@ class ExchangeAPI {
                 }
             });
 
-if (!response.ok) throw new Error(HTTP ${response.status});
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
             return await response.json();
         } catch (error) {
             console.error('Exchange API error:', error);
@@ -406,7 +405,7 @@ if (!response.ok) throw new Error(HTTP ${response.status});
 
     async getTickers(exchange) {
         try {
-            const url = ${constants.API_URLS.tickers}?exchange=${exchange};
+            const url = `${constants.API_URLS.tickers}?exchange=${exchange}`;
             const response = await fetch(url, {
                 method: 'GET',
                 headers: {
@@ -415,7 +414,7 @@ if (!response.ok) throw new Error(HTTP ${response.status});
                 }
             });
 
-            if (!response.ok) throw new Error(HTTP ${response.status});
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
             return await response.json();
         } catch (error) {
             console.error('Tickers API error:', error);
@@ -425,7 +424,7 @@ if (!response.ok) throw new Error(HTTP ${response.status});
 
     async getAveragePrice(coinId, timestamp) {
         try {
-            const url = ${constants.API_URLS.avgPrice}?coinId=${coinId}&timestamp=${timestamp};
+            const url = `${constants.API_URLS.avgPrice}?coinId=${coinId}&timestamp=${timestamp}`;
             const response = await fetch(url, {
                 method: 'GET',
                 headers: {
@@ -434,7 +433,7 @@ if (!response.ok) throw new Error(HTTP ${response.status});
                 }
             });
 
-            if (!response.ok) throw new Error(HTTP ${response.status});
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
             return await response.json();
         } catch (error) {
             console.error('Average Price API error:', error);
