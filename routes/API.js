@@ -1,588 +1,449 @@
-const express = require('express');
-const TechnicalAnalysisEngine = require('../models/TechnicalAnalysis');
-const { HistoricalDataAPI } = require('../models/APIClients');
 const constants = require('../config/constants');
 
-const router = express.Router();
+// کلاینت اصلی CoinStats
+class AdvancedCoinStatsAPIClient {
+    constructor() {
+        this.base_url = constants.API_URLS.base;
+        this.api_key = constants.COINSTATS_API_KEY;
+        this.request_count = 0;
+        this.last_request_time = Date.now();
+        this.ratelimitDelay = 1000;
+    }
 
-module.exports = ({ gistManager, wsManager, apiClient, exchangeAPI }) => {
-    
-    // اندپوینت اصلی اسکن
-    router.get("/scan/vortexai", async (req, res) => {
-        const startTime = Date.now();
+    async _rateLimit() {
+        const currentTime = Date.now();
+        const timeDiff = currentTime - this.last_request_time;
+        if (timeDiff < this.ratelimitDelay) {
+            const waitTime = this.ratelimitDelay - timeDiff;
+            console.log(`Rate limiting: waiting ${waitTime}ms`);
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+        }
+        this.last_request_time = Date.now();
+        this.request_count++;
+        if (this.request_count % 10 === 0) {
+            console.log(`📊 Total API requests: ${this.request_count}`);
+        }
+    }
+
+    async getCoins(limit = 100) {
+        await this._rateLimit();
         try {
-            const limit = Math.min(parseInt(req.query.limit) || 100, 300);
-            const filterType = req.query.filter || 'volume';
-            console.log(`Starting scan with limit: ${limit}, filter: ${filterType}`);
+            const url = `${this.base_url}/coins?limit=${limit}&currency=USD`;
+            console.log(`🔍 Fetching coins from: ${url}`);
+            
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-            const [apiData, realtimeData] = await Promise.all([
-                apiClient.getCoins(limit),
-                Promise.resolve(wsManager.getRealtimeData())
-            ]);
-
-            let coins = apiData.coins || [];
-            console.log(`API coins: ${coins.length}, Realtime: ${Object.keys(realtimeData || {}).length}`);
-
-            if (coins.length === 0) {
-                console.log('No API coins, using realtime data fallback');
-                coins = Object.entries(realtimeData || {}).slice(0, limit).map(([symbol, data], index) => ({
-                    id: 'coin_' + index,
-                    name: 'Crypto' + index,
-                    symbol: symbol.replace("_usdt","").toUpperCase(),
-                    price: data.price || 0,
-                    priceChange1h: data.change || 0,
-                    priceChange24h: data.change || 0,
-                    volume: data.volume || 0,
-                    marketCap: (data.price || 0) * 1000000,
-                    rank: index + 1
-                }));
-            }
-
-            const historicalAPI = new HistoricalDataAPI();
-            const allCoinIds = coins.map(coin => {
-                try {
-                    const coinId = historicalAPI.symbolToCoinId(coin.symbol);
-                    return coinId;
-                } catch (error) {
-                    console.log(`Error converting symbol ${coin.symbol}:`, error);
-                    return 'bitcoin';
-                }
-            });
-
-            console.log(`Fetching historical for ${allCoinIds.length} coins...`);
-            const historicalResponse = await historicalAPI.getMultipleCoinsHistorical(allCoinIds, '1y');
-            const allHistoricalData = historicalResponse.data || [];
-            console.log(`Historical data received: ${allHistoricalData.length} records`);
-
-            const historicalMap = {};
-            allHistoricalData.forEach(coinData => {
-                if (coinData && coinData.coinId) {
-                    historicalMap[coinData.coinId] = coinData;
-                }
-            });
-
-            const gistData = gistManager.getAllData();
-
-            const enhancedCoins = coins.map((coin) => {
-                const coinId = historicalAPI.symbolToCoinId(coin.symbol);
-                const historicalData = historicalMap[coinId];
-                const symbol = `${coin.symbol.toLowerCase()}_usdt`;
-                const realtime = realtimeData[symbol];
-                const gistHistorical = gistManager.getPriceData(symbol);
-                const currentPrice = realtime?.price || coin.price;
-                let historicalChanges = {};
-                let dataSource = 'no_historical';
-
-                if (historicalData) {
-                    const changeResult = historicalAPI.calculatePriceChangesFromChart(historicalData, currentPrice);
-                    historicalChanges = changeResult.changes;
-                    dataSource = changeResult.source;
-                }
-
-                return {
-                    ...coin,
-                    change_1h: historicalChanges['1h'],
-                    change_4h: historicalChanges['4h'],
-                    change_24h: historicalChanges['24h'],
-                    change_7d: historicalChanges['7d'],
-                    change_30d: historicalChanges['30d'],
-                    change_180d: historicalChanges['180d'],
-                    historical_timestamp: gistHistorical?.timestamp,
-                    realtime_price: realtime?.price,
-                    realtime_volume: realtime?.volume,
-                    realtime_change: realtime?.change,
-                    data_source: dataSource,
-                    VortexAI_analysis: {
-                        signal_strength: TechnicalAnalysisEngine.calculateSignalStrength(coin),
-                        trend: (historicalChanges['24h'] ?? coin.priceChange24h ?? 0) > 0 ? "up" : "down",
-                        volatility_score: TechnicalAnalysisEngine.calculateVolatility(coin),
-                        volume_anomaly: TechnicalAnalysisEngine.detectVolumeAnomaly(coin),
-                        market_sentiment: (historicalChanges['1h'] ?? coin.priceChange1h ?? 0) > 0 &&
-                                        (historicalChanges['24h'] ?? coin.priceChange24h ?? 0) > 0 ? 'bullish' : 'bearish'
-                    }
-                };
-            });
-
-            let filteredCoins = [...enhancedCoins];
-            switch(filterType) {
-                case 'volume':
-                    filteredCoins.sort((a, b) => (b.volume || 0) - (a.volume || 0));
-                    break;
-                case 'momentum_1h':
-                    filteredCoins.sort((a, b) => Math.abs(b.change_1h || 0) - Math.abs(a.change_1h || 0));
-                    break;
-                case 'momentum_4h':
-                    filteredCoins.sort((a, b) => Math.abs(b.change_4h || 0) - Math.abs(a.change_4h || 0));
-                    break;
-                case 'ai_signal':
-                    filteredCoins.sort((a, b) => (b.VortexAI_analysis?.signal_strength || 0) - 
-                                                (a.VortexAI_analysis?.signal_strength || 0));
-                    break;
-            }
-
-            const responseTime = Date.now() - startTime;
-
-            res.json({
-                success: true,
-                coins: filteredCoins.slice(0, limit),
-                total_coins: filteredCoins.length,
-                scan_mode: 'vortexai_enhanced_with_historical',
-                filter_applied: filterType,
-                data_sources: {
-                    api: coins.length,
-                    realtime: Object.keys(realtimeData || {}).length,
-                    historical_api: Object.keys(historicalMap || {}).length,
-                    gist: Object.keys((gistData || {}).prices || {}).length
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'X-API-KEY': this.api_key,
+                    'Accept': 'application/json',
+                    'User-Agent': 'VortexAI-Server/1.0'
                 },
-                processing_time: responseTime + 'ms',
-                timestamp: new Date().toISOString()
+                signal: controller.signal
             });
 
-        } catch (error) {
-            console.error('Error in scan endpoint:', error);
-            res.status(500).json({
-                success: false,
-                error: error.message,
-                stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-            });
-        }
-    });
+            clearTimeout(timeoutId);
 
-    // API جدید: تبادل ارز
-    router.get("/exchange/price", async (req, res) => {
-        try {
-            const { exchange = 'Binance', from = 'BTC', to = 'ETH', timestamp = Math.floor(Date.now() / 1000) } = req.query;
-            const data = await exchangeAPI.getExchangePrice(exchange, from, to, timestamp);
-            res.json({
-                success: true,
-                exchange,
-                from,
-                to,
-                timestamp,
-                data
-            });
-        } catch (error) {
-            res.status(500).json({
-                success: false,
-                error: error.message
-            });
-        }
-    });
+            console.log(`🌟 Response status: ${response.status} ${response.statusText}`);
 
-    // API جدید: تیکرهای صرافی
-    router.get("/tickers/:exchange", async (req, res) => {
-        try {
-            const { exchange } = req.params;
-            const data = await exchangeAPI.getTickers(exchange);
-            res.json({
-                success: true,
-                exchange,
-                data
-            });
-        } catch (error) {
-            res.status(500).json({
-                success: false,
-                error: error.message
-            });
-        }
-    });
-
-    // API جدید: قیمت متوسط
-    router.get("/price/avg", async (req, res) => {
-        try {
-            const { coinId = 'bitcoin', timestamp = Math.floor(Date.now() / 1000) } = req.query;
-            const data = await exchangeAPI.getAveragePrice(coinId, timestamp);
-            res.json({
-                success: true,
-                coinId,
-                timestamp,
-                data
-            });
-        } catch (error) {
-            res.status(500).json({
-                success: false,
-                error: error.message
-            });
-        }
-    });
-
-    // دریافت داده‌های تاریخی بر اساس timeframe
-    router.get('/coin/:symbol/history/:timeframe', async (req, res) => {
-        const { symbol, timeframe } = req.params;
-        const validTimeframes = gistManager.getAvailableTimeframes();
-
-        if (!validTimeframes.includes(timeframe)) {
-            return res.status(400).json({
-                success: false,
-                error: `Invalid timeframe. Valid timeframes: ${validTimeframes.join(', ')}`
-            });
-        }
-
-        try {
-            const historicalData = gistManager.getPriceData(symbol, timeframe);
-            const realtimeData = wsManager.getRealtimeData()[symbol];
-
-            if (!historicalData && !realtimeData) {
-                return res.status(404).json({
-                    success: false,
-                    error: 'No data available for this symbol'
-                });
+            if (response.status === 429) {
+                console.log('🔴 Rate limit exceeded! Increasing delay...');
+                this.ratelimitDelay = 2000;
+                return { coins: [], error: 'Rate limit exceeded' };
             }
 
-            res.json({
-                success: true,
-                symbol,
-                timeframe,
-                current_price: realtimeData?.price || historicalData?.current_price,
-                history: historicalData?.history || [],
-                data_points: historicalData?.history?.length || 0,
-                timestamp: new Date().toISOString()
-            });
+            if (!response.ok) {
+                console.log(`✗ HTTP error! status: ${response.status}`);
+                return { coins: [], error: `HTTP ${response.status}` };
+            }
+
+            const data = await response.json();
+            const coinsCount = data.result?.length || data.coins?.length || 0;
+            console.log(`🌟 Received ${coinsCount} coins from API`);
+            
+            return { coins: data.result || data.coins || data || [] };
         } catch (error) {
-            console.error(`History API error for ${symbol}:`, error);
-            res.status(500).json({
-                success: false,
-                error: error.message
-            });
+            console.error("✗ API getCoins error:", error.message);
+            return { coins: [], error: error.message };
         }
-    });
+    }
+}
 
-    // تحلیل تکنیکال پیشرفته برای یک ارز
-    router.get('/coin/:symbol/technical', async (req, res) => {
-        const startTime = Date.now();
-        const symbol = req.params.symbol;
+// API داده‌های تاریخی
+class HistoricalDataAPI {
+    constructor() {
+        this.base_url = constants.API_URLS.base;
+        this.api_key = constants.COINSTATS_API_KEY;
+        this.requestCache = new Map();
+        this.cacheTimeout = constants.CACHE_CONFIG.timeout;
+    }
 
-        try {
-            const historicalData = gistManager.getPriceData(symbol, "24h");
-            const realtimeData = wsManager.getRealtimeData()[symbol];
-
-            if (!historicalData && !realtimeData) {
-                return res.status(404).json({
-                    success: false,
-                    error: 'No data available for this symbol'
-                });
-            }
-
-            const priceData = historicalData?.history?.map(item => ({
-                price: item.price,
-                timestamp: item.timestamp,
-                high: item.price * 1.02,
-                low: item.price * 0.98
-            })) || [];
-
-            if (realtimeData) {
-                priceData.push({
-                    price: realtimeData.price,
-                    timestamp: Date.now(),
-                    high: realtimeData.high_24h,
-                    low: realtimeData.low_24h
-                });
-            }
-
-            const indicators = TechnicalAnalysisEngine.calculateAllIndicators(priceData);
-            const supportResistance = TechnicalAnalysisEngine.calculateSupportResistance(priceData);
-            const aiAnalysis = TechnicalAnalysisEngine.analyzeWithAI(
-                { [symbol]: realtimeData },
-                { prices: { [symbol]: historicalData } }
-            );
-
-            res.json({
-                success: true,
-                symbol: symbol,
-                current_price: realtimeData?.price || historicalData?.current_price,
-                technical_indicators: indicators,
-                support_resistance: supportResistance,
-                vortexai_analysis: aiAnalysis,
-                data_points: priceData.length,
-                processing_time: `${Date.now() - startTime}ms`,
-                timestamp: new Date().toISOString()
-            });
-        } catch (error) {
-            console.error(`Technical analysis error for ${symbol}:`, error);
-            res.status(500).json({
-                success: false,
-                error: error.message
-            });
-        }
-    });
-
-    // دریافت لیست available data timeframeها
-    router.get('/timeframes', (req, res) => {
-        res.json({
-            success: true,
-            timeframes: gistManager.getAvailableTimeframes(),
-            description: {
-                "1h": "1 hour history - 1 minute intervals",
-                "4h": "4 hours history - 5 minute intervals",
-                "24h": "24 hours history - 15 minute intervals",
-                "7d": "7 days history - 1 hour intervals",
-                "30d": "30 days history - 4 hour intervals",
-                "180d": "180 days history - 1 day intervals"
-            }
-        });
-    });
-
-    // سلامت سیستم ترکیبی
-    router.get('/health-combined', (req, res) => {
-        const wsStatus = wsManager.getConnectionStatus();
-        const gistData = gistManager.getAllData();
-
-        res.json({
-            status: 'healthy',
-            service: 'VortexAI Combined Crypto Scanner',
-            version: '5.0 - 6 Layer System',
-            timestamp: new Date().toISOString(),
-            websocket_status: {
-                connected: wsStatus.connected,
-                active_coins: wsStatus.active_coins,
-                total_subscribed: wsStatus.total_subscribed,
-                provider: "LBank"
-            },
-            gist_status: {
-                active: !!process.env.GITHUB_TOKEN,
-                total_coins: Object.keys(gistData.prices || {}).length,
-                last_updated: gistData.last_updated,
-                timeframes_available: gistManager.getAvailableTimeframes()
-            },
-            ai_status: {
-                technical_analysis: 'active',
-                vortexai_engine: 'ready',
-                indicators_available: 15
-            },
-            api_status: {
-                requests_count: apiClient.request_count,
-                coinstats_connected: 'active'
-            },
-            features: [
-                'realtime_websocket_data',
-                '6_layer_historical_data',
-                'vortexai_analysis',
-                'technical_indicators',
-                'multi_source_data',
-                'advanced_filtering',
-                'market_predictions',
-                'multi_timeframe_support'
-            ]
-        });
-    });
-
-    // اضافه کردن این endpoint برای تشخیص دقیق مشکل
-    router.get("/debug/api-status", async (req, res) => {
-        try {
-            const testCoinIds = ['bitcoin', 'ethereum', 'solana'];
-            const historicalAPI = new HistoricalDataAPI();
-
-            console.log("\n== API STATUS DEBUG ==");
-            const apiResult = await apiClient.getCoins(10);
-            const historicalResult = await historicalAPI.getMultipleCoinsHistorical(testCoinIds, '24h');
-
-            res.json({
-                success: true,
-                main_api: {
-                    status: apiResult.coins.length > 0 ? 'working' : 'failing',
-                    coins_received: apiResult.coins.length,
-                    error: apiResult.error
-                },
-                historical_api: {
-                    status: historicalResult.data.length > 0 ? 'working' : 'failing',
-                    coins_received: historicalResult.data.length,
-                    source: historicalResult.source,
-                    error: historicalResult.error,
-                    sample: historicalResult.data.length > 0 ? {
-                        coinId: historicalResult.data[0].coinId,
-                        data_points: historicalResult.data[0].chart?.length,
-                        latest_point: historicalResult.data[0].chart ?
-                            new Date(historicalResult.data[0].chart[historicalResult.data[0].chart.length-1][0] * 1000).toISOString() : null
-                    } : null
-                },
-                environment: {
-                    node_version: process.version,
-                    platform: process.platform,
-                    uptime: process.uptime()
-                },
-                timestamp: new Date().toISOString()
-            });
-        } catch (error) {
-            res.status(500).json({
-                success: false,
-                error: error.message
-            });
-        }
-    });
-
-    // (Health Checks) --- سلامت سرور --- //
-
-    // (Liveness Probe) بررسی سلامت پایه
-    router.get('/health', (req, res) => {
-        res.status(200).json({
-            status: 'OK',
-            timestamp: new Date().toISOString(),
-            service: 'VortexAI Crypto Scanner'
-        });
-    });
-
-    // (Readiness Probe) بررسی سلامت کامل با وضعیت سرویس‌ها
-    router.get('/health/ready', (req, res) => {
-        const wsStatus = wsManager.getConnectionStatus();
-        const gistData = gistManager.getAllData();
-
-        const healthStatus = {
-            status: 'Healthy',
-            timestamp: new Date().toISOString(),
-            services: {
-                websocket: {
-                    connected: wsStatus.connected,
-                    activeCoins: wsStatus.active_coins,
-                    status: wsStatus.connected ? 'Healthy' : 'Unhealthy'
-                },
-                database: {
-                    storedCoins: Object.keys(gistData.prices || {}).length,
-                    status: process.env.GITHUB_TOKEN ? 'Healthy' : 'Degraded'
-                },
-                api: {
-                    requestCount: apiClient.request_count,
-                    status: 'Healthy'
-                }
-            }
+    symbolToCoinId(symbol) {
+        const symbolMap = {
+            'BTC': 'bitcoin', 'ETH': 'ethereum', 'BNB': 'bnb', 'SOL': 'solana',
+            'XRP': 'xrp', 'ADA': 'cardano', 'AVAX': 'avalanche-2', 'DOT': 'polkadot',
+            'LINK': 'chainlink', 'MATIC': 'matic-network', 'LTC': 'litecoin', 'BCH': 'bitcoin-cash',
+            'ATOM': 'cosmos', 'XLM': 'stellar', 'FIL': 'filecoin', 'HBAR': 'hedera-hashgraph',
+            'NEAR': 'near', 'APT': 'aptos', 'ARB': 'arbitrum', 'ZIL': 'zilliqa',
+            'VET': 'vechain', 'DOGE': 'dogecoin', 'TRX': 'tron', 'UNI': 'uniswap',
+            'ETC': 'ethereum-classic', 'XMR': 'monero', 'ALGO': 'algorand', 'XTZ': 'tezos',
+            'EOS': 'eos', 'AAVE': 'aave', 'MKR': 'maker', 'COMP': 'compound-governance-token',
+            'YFI': 'yearn-finance', 'SNX': 'havven', 'SUSHI': 'sushi', 'CRV': 'curve-dao-token',
+            '1INCH': '1inch', 'REN': 'republic-protocol', 'BAT': 'basic-attention-token',
+            'ZRX': '0x', 'ENJ': 'enjincoin', 'MANA': 'decentraland', 'SAND': 'the-sandbox',
+            'GALA': 'gala', 'APE': 'apecoin', 'GMT': 'stepn', 'AUDIO': 'audius',
+            'USDT': 'tether', 'USDC': 'usd-coin', 'DAI': 'dai', 'ZEC': 'zcash', 'DASH': 'dash',
+            'WAVES': 'waves', 'KSM': 'kusama', 'EGLD': 'elrond-erd-2', 'THETA': 'theta-token',
+            'FTM': 'fantom', 'ONE': 'harmony', 'ICX': 'icon', 'ONT': 'ontology', 'ZEN': 'horizen',
+            'SC': 'siacoin', 'BTT': 'bittorrent', 'HOT': 'holotoken', 'NANO': 'nano',
+            'IOST': 'iostoken', 'IOTX': 'iotex', 'CELO': 'celo', 'KAVA': 'kava',
+            'RSR': 'reserve-rights-token', 'OCEAN': 'ocean-protocol', 'BAND': 'band-protocol',
+            'NMR': 'numeraire', 'UMA': 'uma', 'API3': 'api3', 'GRT': 'the-graph',
+            'LPT': 'livepeer', 'ANKR': 'ankr', 'STMX': 'stormx', 'CHZ': 'chiliz',
+            'AR': 'arweave', 'STORJ': 'storj', 'DODO': 'dodo', 'PERP': 'perpetual-protocol',
+            'RLC': 'lexec-rlc', 'ALPHA': 'alpha-finance', 'MIR': 'mirror-protocol',
+            'TWT': 'trust-wallet-token', 'SXP': 'swipe', 'WRX': 'wazirx', 'FRONT': 'frontier',
+            'AKRO': 'akropolis', 'REEF': 'reef-finance', 'DUSK': 'dusk-network',
+            'BAL': 'balancer', 'KNC': 'kyber-network', 'SNT': 'status', 'FUN': 'funfair',
+            'CVC': 'civic', 'REQ': 'request-network', 'GNT': 'golem', 'LOOM': 'loom-network',
+            'UFO': 'ufo-gaming', 'PYR': 'vulcan-forged', 'ILV': 'illuvium', 'YGG': 'yield-guild-games',
+            'MBOX': 'mobox', 'C98': 'coin98', 'DYDX': 'dydx', 'IMX': 'immutable-x',
+            'GODS': 'gods-unchained', 'MAGIC': 'magic', 'RARE': 'superrare', 'VRA': 'verasity',
+            'WAXP': 'wax', 'TLM': 'alien-worlds', 'SPS': 'splintershards', 'GHST': 'aavegotchi'
         };
 
-        // بررسی سلامت کلی همه سرویس‌ها
-        const allHealthy = wsStatus.connected && process.env.GITHUB_TOKEN;
-        const statusCode = allHealthy ? 200 : 503;
-        res.status(statusCode).json(healthStatus);
-    });
+        if (!symbol) return 'bitcoin';
 
-    // بررسی سلامت سرویس‌های حیاتی برای کوبرنتیز
-    router.get('/health/live', (req, res) => {
-        const wsStatus = wsManager.getConnectionStatus();
-
-        // اگر WebSocket قطع باشد، سرور زنده نیست
-        if (!wsStatus.connected) {
-            return res.status(503).json({
-                status: 'Unhealthy',
-                message: 'WebSocket connection lost',
-                timestamp: new Date().toISOString()
-            });
+        let cleanSymbol = symbol;
+        if (typeof symbol === 'string') {
+            cleanSymbol = symbol.replace(/[_.\-]usdt/gi, "").toUpperCase();
         }
 
-        res.status(200).json({
-            status: 'OK',
-            timestamp: new Date().toISOString()
-        });
-    });
+        const coinId = symbolMap[cleanSymbol];
+        if (!coinId) {
+            console.log(`△ Symbol not found in map: ${cleanSymbol}, using lowercase`);
+            return cleanSymbol.toLowerCase();
+        }
+        return coinId;
+    }
 
-    // فیلترهای سلامت پیشرفته
-    router.get("/health/filters", async (req, res) => {
+    async getMultipleCoinsHistorical(coinIds, period = '24h') {
+        const cacheKey = `${coinIds.sort().join(',')}.${period}`;
+        const cached = this.requestCache.get(cacheKey);
+        
+        if (cached && (Date.now() - cached.timestamp < this.cacheTimeout)) {
+            console.log(`● Using cached historical data for ${coinIds.length} coins`);
+            return cached.data;
+        }
+
         try {
-            const wsStatus = wsManager.getConnectionStatus();
-            const gistData = gistManager.getAllData();
-            
-            const healthFilters = {
-                websocket_quality: wsStatus.connected ? 'excellent' : 'poor',
-                data_freshness: calculateDataFreshness(gistData),
-                api_performance: calculateAPIPerformance(),
-                storage_health: calculateStorageHealth(gistData),
-                overall_score: calculateOverallHealth(wsStatus, gistData)
+            const batchSize = constants.CACHE_CONFIG.batchSize;
+            const batches = [];
+            for (let i = 0; i < coinIds.length; i += batchSize) {
+                batches.push(coinIds.slice(i, i + batchSize));
+            }
+
+            const allResults = [];
+            for (let i = 0; i < batches.length; i++) {
+                const batch = batches[i];
+                console.log(`📊 Fetching batch ${i + 1}/${batches.length}: ${batch.join(',')}`);
+                
+                const batchResult = await this.fetchBatchHistorical(batch, period);
+                if (batchResult.data && Array.isArray(batchResult.data)) {
+                    allResults.push(...batchResult.data);
+                }
+
+                if (i < batches.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+            }
+
+            const result = {
+                data: allResults,
+                source: 'real_api',
+                timestamp: Date.now()
             };
 
-            res.json({
-                success: true,
-                health_filters: healthFilters,
-                recommendations: generateHealthRecommendations(healthFilters),
-                timestamp: new Date().toISOString()
+            this.requestCache.set(cacheKey, {
+                data: result,
+                timestamp: Date.now()
             });
+
+            console.log(`📄 Total historical records received: ${allResults.length}`);
+            return result;
         } catch (error) {
-            res.status(500).json({
-                success: false,
-                error: error.message
+            console.error('📄 Error in getMultipleCoinsHistorical:', error);
+            return { data: [], source: 'fallback', error: error.message };
+        }
+    }
+
+    async fetchBatchHistorical(coinIds, period) {
+        const coinIdsString = coinIds.join(",");
+        const url = `${this.base_url}/coins/charts?period=${period}&coinIds=${coinIdsString}`;
+        
+        console.log(`🔍 Fetching historical from: ${url}`);
+
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'X-API-KEY': this.api_key,
+                    'Accept': 'application/json',
+                    'User-Agent': 'VortexAI-Server/1.0'
+                },
+                signal: controller.signal
+            });
+
+            clearTimeout(timeoutId);
+
+            if (response.status === 429) {
+                throw new Error('Rate limit exceeded');
+            }
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            const validData = data.filter(item => 
+                item && item.coinId && item.chart && Array.isArray(item.chart) && item.chart.length > 0
+            );
+
+            if (validData.length === 0) {
+                throw new Error('No valid historical data received');
+            }
+
+            console.log(`☑ Received valid historical data for ${validData.length} coins`);
+            return { data: validData, source: 'real_api' };
+        } catch (error) {
+            console.error(`✗ Historical API error for ${coinIds.join(',')}:`, error.message);
+            throw error;
+        }
+    }
+
+    calculatePriceChangesFromChart(coinData, currentPrice) {
+        console.log("CalculatePriceChangesFromChart - Input:", {
+            hasCoinData: !!coinData,
+            coinData: coinData,
+            currentPrice: currentPrice
+        });
+
+        if (!coinData) {
+            console.log("No coinData provided");
+            return { changes: {}, source: 'no_data' };
+        }
+
+        if (!coinData.chart) {
+            console.log("No chart in coinData");
+            return { changes: {}, source: 'no_data' };
+        }
+
+        const chart = coinData.chart;
+        if (!Array.isArray(chart)) {
+            console.log("Chart is not an array");
+            return { changes: {}, source: 'no_data' };
+        }
+
+        if (chart.length === 0) {
+            console.log("✗ Chart array is empty");
+            return { changes: {}, source: 'no_data' };
+        }
+
+        console.log("🔍 Chart Info:", {
+            chartLength: chart.length,
+            firstPoint: chart[0],
+            lastPoint: chart[chart.length - 1],
+            samplePoints: chart.slice(0, 3)
+        });
+
+        const latestDataPoint = chart[chart.length - 1];
+        if (!latestDataPoint || !Array.isArray(latestDataPoint)) {
+            console.log("✗ Latest data point is invalid");
+            return { changes: {}, source: 'no_data' };
+        }
+
+        if (latestDataPoint.length < 2) {
+            console.log("✗ Latest data point doesn't have enough data");
+            return { changes: {}, source: 'no_data' };
+        }
+
+        const latestTime = latestDataPoint[0];
+        const latestPrice = latestDataPoint[1];
+
+        if (!latestTime || typeof latestTime !== 'number') {
+            console.log("✗ Invalid latestTime:", latestTime);
+            return { changes: {}, source: 'no_data' };
+        }
+
+        if (!latestPrice || latestPrice <= 0) {
+            console.log("✗ Invalid latestPrice:", latestPrice);
+            return { changes: {}, source: 'no_data' };
+        }
+
+        console.log("✓ Valid chart data - Latest time:", new Date(latestTime * 1000), "Latest price:", latestPrice);
+
+        const periods = {
+            '1h': 1 * 60 * 60,
+            '4h': 4 * 60 * 60,
+            '24h': 24 * 60 * 60,
+            '7d': 7 * 24 * 60 * 60,
+            '30d': 30 * 24 * 60 * 60,
+            '180d': 180 * 24 * 60 * 60
+        };
+
+        console.log("📍 Periods Debug:");
+        for (const [periodName, seconds] of Object.entries(periods)) {
+            const targetTime = latestTime - seconds;
+            const historicalPoint = this.findClosestHistoricalPoint(chart, targetTime);
+            console.log(`${periodName}`, {
+                targetTime: new Date(targetTime * 1000),
+                foundPoint: historicalPoint ? {
+                    time: new Date(historicalPoint[0] * 1000),
+                    price: historicalPoint[1]
+                } : 'NOT FOUND',
+                timeDiff: historicalPoint ? Math.abs(historicalPoint[0] - targetTime) / (24 * 60 * 60) + ' days' : 'N/A'
             });
         }
-    });
 
-    // متدهای کمکی برای فیلترهای سلامت
-    function calculateDataFreshness(gistData) {
-        const lastUpdated = new Date(gistData.last_updated);
-        const now = new Date();
-        const diffMinutes = (now - lastUpdated) / (1000 * 60);
-        
-        if (diffMinutes < 5) return 'excellent';
-        if (diffMinutes < 15) return 'good';
-        if (diffMinutes < 30) return 'fair';
-        return 'poor';
-    }
+        const changes = {};
+        for (const [periodName, seconds] of Object.entries(periods)) {
+            const targetTime = latestTime - seconds;
 
-    function calculateAPIPerformance() {
-        const successRate = (apiClient.request_count - (apiClient.error_count || 0)) / apiClient.request_count;
-        return successRate > 0.95 ? 'excellent' : 
-               successRate > 0.85 ? 'good' : 
-               successRate > 0.70 ? 'fair' : 'poor';
-    }
+            if (targetTime < 0) {
+                console.log(`Target time for ${periodName} is negative, skipping`);
+                continue;
+            }
 
-    function calculateStorageHealth(gistData) {
-        const storedCoins = Object.keys(gistData.prices || {}).length;
-        const expectedCoins = constants.ALL_TRADING_PAIRS.length;
-        const coverage = storedCoins / expectedCoins;
-        
-        return coverage > 0.9 ? 'excellent' :
-               coverage > 0.7 ? 'good' :
-               coverage > 0.5 ? 'fair' : 'poor';
-    }
+            console.log(`Calculating ${periodName}: targetTime = ${targetTime} (${new Date(targetTime * 1000)})`);
+            const historicalPoint = this.findClosestHistoricalPoint(chart, targetTime);
 
-    function calculateOverallHealth(wsStatus, gistData) {
-        const scores = {
-            websocket: wsStatus.connected ? 100 : 0,
-            data_freshness: calculateDataFreshnessScore(gistData),
-            api_performance: calculateAPIPerformanceScore(),
-            storage: calculateStorageScore(gistData)
+            if (historicalPoint &&
+                Array.isArray(historicalPoint) &&
+                historicalPoint.length >= 2 &&
+                historicalPoint[1] > 0) {
+                
+                const historicalPrice = historicalPoint[1];
+                const change = ((latestPrice - historicalPrice) / historicalPrice) * 100;
+                changes[periodName] = parseFloat(change.toFixed(2));
+                console.log(`✓ ${periodName}: ${changes[periodName]}% (from ${historicalPrice} to ${latestPrice})`);
+            } else {
+                console.log(`✗ No valid historical point found for ${periodName}`);
+            }
+        }
+
+        const result = {
+            changes: changes,
+            source: Object.keys(changes).length > 0 ? 'real' : 'no_data'
         };
-        
-        const totalScore = (scores.websocket + scores.data_freshness + scores.api_performance + scores.storage) / 4;
-        return {
-            score: Math.round(totalScore),
-            breakdown: scores,
-            status: totalScore > 80 ? 'healthy' : totalScore > 60 ? 'degraded' : 'unhealthy'
-        };
+
+        console.log("🎯 Final result:", result);
+        return result;
     }
 
-    function calculateDataFreshnessScore(gistData) {
-        const freshness = calculateDataFreshness(gistData);
-        const scores = { 'excellent': 100, 'good': 80, 'fair': 60, 'poor': 30 };
-        return scores[freshness] || 0;
-    }
-
-    function calculateAPIPerformanceScore() {
-        const performance = calculateAPIPerformance();
-        const scores = { 'excellent': 100, 'good': 80, 'fair': 60, 'poor': 30 };
-        return scores[performance] || 0;
-    }
-
-    function calculateStorageScore(gistData) {
-        const storage = calculateStorageHealth(gistData);
-        const scores = { 'excellent': 100, 'good': 80, 'fair': 60, 'poor': 30 };
-        return scores[storage] || 0;
-    }
-
-    function generateHealthRecommendations(healthFilters) {
-        const recommendations = [];
-        
-        if (healthFilters.websocket_quality === 'poor') {
-            recommendations.push("WebSocket connection lost - Check network connectivity");
+    findClosestHistoricalPoint(chart, targetTime) {
+        if (!chart || chart.length === 0) {
+            console.log("✗ findClosestHistoricalPoint: Empty chart");
+            return null;
         }
-        
-        if (healthFilters.data_freshness === 'poor') {
-            recommendations.push("Data is stale - Check Gist synchronization");
+
+        let closestPoint = null;
+        let minDiff = Infinity;
+
+        console.log(`Finding closest point to time: ${targetTime} (${new Date(targetTime * 1000)})`);
+
+        for (const point of chart) {
+            if (!point || !Array.isArray(point) || point.length < 2) {
+                continue;
+            }
+
+            const timeDiff = Math.abs(point[0] - targetTime);
+            if (timeDiff < minDiff) {
+                minDiff = timeDiff;
+                closestPoint = point;
+            }
         }
-        
-        if (healthFilters.api_performance === 'poor') {
-            recommendations.push("API performance degraded - Check rate limits");
-        }
-        
-        if (healthFilters.storage_health === 'poor') {
-            recommendations.push("Storage coverage low - Check historical data collection");
-        }
-        
-        return recommendations.length > 0 ? recommendations : ["All systems operating normally"];
+
+        console.log("✅ Closest point found:", closestPoint ? {
+            time: closestPoint[0],
+            price: closestPoint[1],
+            timeDiff: minDiff
+        } : "None");
+
+        return closestPoint;
+    }
+}
+
+// API جدید برای تبادل و قیمت‌های متوسط
+class ExchangeAPI {
+    constructor() {
+        this.api_key = constants.COINSTATS_API_KEY;
     }
 
-    return router;
+    async getExchangePrice(exchange, from, to, timestamp) {
+        try {
+            const url = `${constants.API_URLS.exchange}?exchange=${exchange}&from=${from}&to=${to}&timestamp=${timestamp}`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'X-API-KEY': this.api_key,
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return await response.json();
+        } catch (error) {
+            console.error('Exchange API error:', error);
+            throw error;
+        }
+    }
+
+    async getTickers(exchange) {
+        try {
+            const url = `${constants.API_URLS.tickers}?exchange=${exchange}`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'X-API-KEY': this.api_key,
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return await response.json();
+        } catch (error) {
+            console.error('Tickers API error:', error);
+            throw error;
+        }
+    }
+
+    async getAveragePrice(coinId, timestamp) {
+        try {
+            const url = `${constants.API_URLS.avgPrice}?coinId=${coinId}&timestamp=${timestamp}`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'X-API-KEY': this.api_key,
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return await response.json();
+        } catch (error) {
+            console.error('Average Price API error:', error);
+            throw error;
+        }
+    }
+}
+
+module.exports = {
+    AdvancedCoinStatsAPIClient,
+    HistoricalDataAPI,
+    ExchangeAPI
 };
