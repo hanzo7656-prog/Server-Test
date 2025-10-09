@@ -360,20 +360,20 @@ class TechnicalAnalysisEngine {
 
     static calculateVolatility(coin) {
         const changes = [
-            Math.abs(coin.priceChange_1h || 0),
-            Math.abs(coin.priceChange_24h || 0),
-            Math.abs(coin.priceChange_1w || 0)
+            Math.abs(coin.priceChange1h || 0),
+            Math.abs(coin.priceChange24h || 0),
+            Math.abs(coin.priceChange1w || 0)
         ].filter(change => change > 0);
 
         console.log("volatility Debug - Changes:", changes);
-        if (change.length === 0) {
+        if (changes.length === 0) {
             console.log("No valid price changes for volatility calculation");
             return 0;
         }
-        const avgChange = change.reduce((a, b) => a + b, 0) / changes.length;
+        const avgChange = changes.reduce((a, b) => a + b, 0) / changes.length;
         const maxChange = Math.max(...changes);
 
-        const volatility = (avgChange * 0.7 + maxChange * 0.3) / 3
+        const volatility = (avgChange * 0.7 + maxChange * 0.3) / 3;
         const result = Math.min(volatility, 10);
         console.log("volatility calculated:", {
             avgChange,
@@ -382,7 +382,7 @@ class TechnicalAnalysisEngine {
             finalScore: result
         });
         return result;
-
+    }
     static detectVolumeAnomaly(coin) {
         const avgVolume = 1000000;
         return (coin.volume || 0) > avgVolume * 2;
