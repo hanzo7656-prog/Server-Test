@@ -1,149 +1,131 @@
-// server.js
-require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+require('dotenv').config();
 
-// Import Config
-const { PORT } = require('./config/constants');
-
-// Import Models
+// ایمپورت ماژول‌ها
+const constants = require('./config/constants');
 const GistManager = require('./models/GistManager');
 const WebSocketManager = require('./models/WebSocketManager');
-const AdvancedCoinStatsAPIClient = require('./models/DataAPIs/CoinStatsAPIClient');
-const HistoricalDataAPI = require('./models/DataAPIs/HistoricalDataAPI');
-const AdvancedDataAPI = require('./models/DataAPIs/AdvancedDataAPI');
-const AdvancedMarketAnalysis = require('./models/TechnicalAnalysis/AdvancedMarketAnalysis');
-
-// Import Routes
-const scanRoutes = require('./routes/API/Scan');
-const coinRoutes = require('./routes/API/coin');
-const healthRoutes = require('./routes/API/health');
-const advancedRoutes = require('./routes/API/Advanced');
-
-// Import Pages
-const dashboardPage = require('./routes/Pages/Dashboard');
-const scannerPage = require('./routes/Pages/Scanner');
-const analysisPage = require('./routes/Pages/Analysis');
-const apiDataPage = require('./routes/pages/API-Data');
-const AdvancedAnalysisPage = require('./routes/Pages/Advanced-Analysis');
-const HealthDashboardPage = require('./routes/Pages/Health-Dashboard');
+const { AdvancedCoinStatsAPIClient, HistoricalDataAPI, ExchangeAPI } = require('./models/APIClients');
+const apiRoutes = require('./routes/api');
+const pageRoutes = require('./routes/pages');
 
 const app = express();
+const PORT = constants.PORT;
 
-// Middleware
+// میدلورها
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  next();
+});
 
 // نمونه‌سازی مدیران
 const gistManager = new GistManager();
 const wsManager = new WebSocketManager();
 const apiClient = new AdvancedCoinStatsAPIClient();
-const historicalAPI = new HistoricalDataAPI();
-const advancedDataAPI = new AdvancedDataAPI();
-const advancedAnalysis = new AdvancedMarketAnalysis();
+const exchangeAPI = new ExchangeAPI();
 
-// Middleware برای اضافه کردن مدیران به request
-app.use((req, res, next) => {
-    req.gistManager = gistManager;
-    req.wsManager = wsManager;
-    req.apiClient = apiClient;
-    req.historicalAPI = historicalAPI;
-    req.advancedDataAPI = advancedDataAPI;
-    req.advancedAnalysis = advancedAnalysis;
-    next();
-});
+// روت‌ها
+app.use('/api', apiRoutes({ gistManager, wsManager, apiClient, exchangeAPI }));
+app.use('/', pageRoutes({ gistManager, wsManager, apiClient }));
 
-// ==================== Routes ====================
-
-// API Routes
-app.use('/api/scan', scanRoutes);
-app.use('/api/coin', coinRoutes);
-app.use('/api/health', healthRoutes);
-app.use('/api/advanced', advancedRoutes);
-
-// Page Routes
-app.use('/', dashboardPage);
-app.use('/scan', scannerPage);
-app.use('/analysis', analysisPage);
-app.use('/api-data', apiDataPage);
-
-// ==================== Basic Routes ====================
-
-// Health Check
+// هندلرهای سلامت
 app.get('/health', (req, res) => {
-    res.json({
-        status: 'OK',
-        service: 'VortexAI Advanced Server',
-        version: '2.0.0',
-        timestamp: new Date().toISOString()
-    });
+  res.status(200).json({
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    service: 'VortexAI Crypto Scanner'
+  });
 });
 
-// Root Redirect
-app.get('/', (req, res) => {
-    res.redirect('/dashboard');
-});
+app.get('/health/ready', (req, res) => {
+  const wsStatus = wsManager.getConnectionStatus();
+  const gistData = gistManager.getAllData();
 
-// ==================== Error Handling ====================
-
-// 404 Handler
-app.use((req, res) => {
-    res.status(404).json({
-        success: false,
-        error: 'Endpoint not found'
-    });
-});
-
-// Global Error Handler
-app.use((error, req, res, next) => {
-    console.error('🚨 Global error handler:', error);
-    res.status(500).json({
-        success: false,
-        error: process.env.NODE_ENV === 'production' ? 'Internal server error' : error.message
-    });
-});
-
-// ==================== Startup ====================
-
-async function startServer() {
-    try {
-        // راه‌اندازی اولیه
-        console.log('🚀 Starting VortexAI Advanced Server...');
-        
-        // بررسی اتصال به APIها
-        console.log('🔧 Initializing APIs...');
-        
-        // راه‌اندازی سرور
-        app.listen(PORT, '0.0.0.0', () => {
-            console.log(✅ VortexAI Advanced Server running on port ${PORT});
-            console.log(📊 Dashboard: http://localhost:${PORT}/);
-            console.log(🔍 Scanner: http://localhost:${PORT}/scan);
-            console.log(📈 API Data: http://localhost:${PORT}/api-data);
-            console.log(❤️ Health: http://localhost:${PORT}/health);
-            console.log(🔬 Advanced: http://localhost:${PORT}/api/advanced/status);
-            console.log('✨ All systems ready!');
-        });
-
-    } catch (error) {
-        console.error('❌ Failed to start server:', error);
-        process.exit(1);
+  const healthStatus = {
+    status: 'Healthy',
+    timestamp: new Date().toISOString(),
+    services: {
+      websocket: {
+        connected: wsStatus.connected,
+        activeCoins: wsStatus.active_coins,
+        status: wsStatus.connected ? 'Healthy' : 'Unhealthy'
+      },
+      database: {
+        storedCoins: Object.keys(gistData.prices || {}).length,
+        status: process.env.GITHUB_TOKEN ? 'Healthy' : 'Degraded'
+      },
+      api: {
+        requestCount: apiClient.request_count,
+        status: 'Healthy'
+      }
     }
-}
+  };
+
+  const allHealthy = wsStatus.connected && process.env.GITHUB_TOKEN;
+  const statusCode = allHealthy ? 200 : 503;
+  res.status(statusCode).json(healthStatus);
+});
+
+// راه‌اندازی سرور
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(✔ VortexAI 6-Layer Server started on port ${PORT});
+  console.log(✔ Dashboard: http://localhost:${PORT}/);
+});
 
 // Graceful Shutdown
-process.on('SIGTERM', async () => {
-    console.log('🛑 SIGTERM received, starting graceful shutdown...');
+async function gracefulShutdown(signal) {
+  console.log(🔄 ${signal} signal received: starting graceful shutdown);
+  
+  let shutdownTimeout = setTimeout(() => {
+    console.error('🛑 Force shutdown after 15 seconds timeout');
+    process.exit(1);
+  }, 15000);
+
+  try {
+    console.log('⏹️ Stopping server from accepting new connections');
+    server.close(() => {
+      console.log('✔ HTTP server stopped accepting new connections');
+    });
+
+    if (wsManager && wsManager.ws) {
+      console.log('🔌 Closing WebSocket connections...');
+      wsManager.ws.close();
+      console.log('✔ WebSocket connections closed');
+    }
+
+    console.log('💾 Saving final data to Gist...');
+    await gistManager.saveToGist();
+    console.log('✔ Final data saved to Gist');
+
+    clearTimeout(shutdownTimeout);
+    console.log('✅ Graceful shutdown completed successfully');
     process.exit(0);
+  } catch (error) {
+    clearTimeout(shutdownTimeout);
+    console.error('❌ Error during graceful shutdown:', error);
+    process.exit(1);
+  }
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+process.on('uncaughtException', (error) => {
+  console.error('⚠️ Uncaught Exception:', error);
+  gracefulShutdown('UNCAUGHT_EXCEPTION');
 });
 
-process.on('SIGINT', async () => {
-    console.log('🛑 SIGINT received, starting graceful shutdown...');
-    process.exit(0);
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('⚠️ Unhandled Rejection at:', promise, 'reason:', reason);
+  gracefulShutdown('UNHANDLED_REJECTION');
 });
-
-// Start the server
-startServer();
 
 module.exports = app;
