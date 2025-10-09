@@ -365,7 +365,7 @@ class TechnicalAnalysisEngine {
             Math.abs(coin.change_1w || 0)
         ].filter(change => change > 0);
 
-        console.log("volatility Debug - Changes:"), changes);
+        console.log("volatility Debug - Changes:", changes);
         if (change.length === 0) {
             console.log("No valid price changes for volatility calculation");
             return 0;
