@@ -652,6 +652,22 @@ class HistoricalDataAPI {
             '180d': 180 * 24 * 60 * 60
         };
 
+        // این دیباگ رو به تابع اضافه کن
+        console.log("🔍 Periods Debug:");
+        for (const [periodName, seconds] of Object.entries(periods)) {
+            const targetTime = latestTime - seconds;
+            const historicalPoint = this.findClosestHistoricalPoint(chart, targetTime);
+    
+            console.log(`${periodName}:`, {
+                targetTime: new Date(targetTime * 1000),
+                foundPoint: historicalPoint ? {
+                    time: new Date(historicalPoint[0] * 1000), 
+                    price: historicalPoint[1]
+                } : 'NOT FOUND',
+                timeDiff: historicalPoint ? Math.abs(historicalPoint[0] - targetTime) / (24 * 60 * 60) + ' days' : 'N/A'
+            });
+        }
+        
         const changes = {};
 
         for (const [periodName, seconds] of Object.entries(periods)) {
