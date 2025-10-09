@@ -722,6 +722,7 @@ class HistoricalDataAPI {
     
         return closestPoint;
     }
+}
 // ===================== WebSocket Manager =====================
 class WebSocketManager {
     constructor() {
