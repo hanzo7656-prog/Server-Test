@@ -3219,58 +3219,167 @@ app.get('/api-data', (req, res) => {
                 min-height: 100vh;
                 color: #333;
                 line-height: 1.6;
-            }
-
-            .container {
-                max-width: 1000px;
-                margin: 0 auto;
                 padding: 20px;
             }
 
-            .header {
-                text-align: center;
-                margin-bottom: 30px;
-                padding: 30px 20px;
-                background: rgba(255, 255, 255, 0.95);
-                border-radius: 20px;
-                box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-                backdrop-filter: blur(10px);
+            .glass-api-container {
+                background: rgba(255, 255, 255, 0.1);
+                backdrop-filter: blur(20px);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: 24px;
+                padding: 30px;
+                margin: 20px auto;
+                max-width: 1200px;
+                position: relative;
+                overflow: hidden;
+                box-shadow: 
+                    0 8px 32px rgba(0, 0, 0, 0.1),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.2);
             }
 
-            .header h1 {
-                font-size: 2.5rem;
-                background: linear-gradient(135deg, #667eea, #764ba2);
+            .glass-api-container::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 1px;
+                background: linear-gradient(90deg, 
+                    transparent, 
+                    rgba(255, 255, 255, 0.4), 
+                    transparent
+                );
+            }
+
+            .glass-header {
+                display: flex;
+                align-items: center;
+                gap: 15px;
+                margin-bottom: 30px;
+            }
+
+            .glass-icon {
+                font-size: 2rem;
+                filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.3));
+            }
+
+            .glass-title {
+                color: white;
+                font-size: 1.8rem;
+                font-weight: 700;
+                margin: 0;
+                background: linear-gradient(135deg, #fff, #a5b4fc);
                 -webkit-background-clip: text;
                 -webkit-text-fill-color: transparent;
+            }
+
+            .glass-badge {
+                background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+                padding: 6px 12px;
+                border-radius: 12px;
+                font-size: 0.8rem;
+                font-weight: 700;
+                color: white;
+                box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+            }
+
+            .glass-stats-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+                gap: 20px;
+                margin-bottom: 30px;
+            }
+
+            .glass-stat-card {
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 16px;
+                padding: 25px 20px;
+                text-align: center;
+                position: relative;
+                overflow: hidden;
+                transition: all 0.3s ease;
+                cursor: pointer;
+            }
+
+            .glass-stat-card:hover {
+                transform: translateY(-5px);
+                border-color: rgba(255, 255, 255, 0.3);
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            }
+
+            .stat-glow {
+                position: absolute;
+                top: -50%;
+                left: -50%;
+                width: 200%;
+                height: 200%;
+                background: linear-gradient(135deg, #74b9ff, #0984e3);
+                opacity: 0.1;
+                border-radius: 50%;
+                filter: blur(20px);
+            }
+
+            .stat-icon {
+                font-size: 2rem;
                 margin-bottom: 10px;
+                filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.2));
             }
 
-            .api-content {
-                background: rgba(255, 255, 255, 0.95);
-                padding: 30px;
-                border-radius: 15px;
-                margin-bottom: 20px;
-                backdrop-filter: blur(10px);
+            .stat-value {
+                font-size: 2.2rem;
+                font-weight: 800;
+                color: white;
+                margin: 5px 0;
+                background: linear-gradient(135deg, #fff, #dfe6e9);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
             }
 
-            .endpoints-grid {
+            .stat-label {
+                color: rgba(255, 255, 255, 0.7);
+                font-size: 0.9rem;
+                margin-bottom: 5px;
+            }
+
+            .stat-trend {
+                color: #00b894;
+                font-size: 0.8rem;
+                font-weight: 600;
+            }
+
+            .api-endpoints {
+                background: rgba(0, 0, 0, 0.2);
+                border-radius: 16px;
+                padding: 25px;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                margin-top: 20px;
+            }
+
+            .endpoint-grid {
                 display: grid;
                 grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-                gap: 20px;
-                margin: 25px 0;
+                gap: 15px;
+                margin-top: 20px;
             }
 
             .endpoint-card {
-                background: rgba(255, 255, 255, 0.9);
-                padding: 20px;
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(255, 255, 255, 0.1);
                 border-radius: 12px;
-                border-left: 4px solid #e74c3c;
+                padding: 20px;
+                transition: all 0.3s ease;
+            }
+
+            .endpoint-card:hover {
+                border-color: rgba(255, 255, 255, 0.3);
+                transform: translateY(-2px);
             }
 
             .endpoint-method {
                 display: inline-block;
                 padding: 4px 12px;
-                background: #e74c3c;
+                background: #27ae60;
                 color: white;
                 border-radius: 6px;
                 font-size: 0.8rem;
@@ -3283,211 +3392,112 @@ app.get('/api-data', (req, res) => {
 
             .endpoint-path {
                 font-family: 'Courier New', monospace;
-                color: #2c3e50;
+                color: white;
+                font-weight: 600;
                 margin: 10px 0;
-                font-weight: bold;
+                font-size: 0.9rem;
             }
 
             .endpoint-desc {
-                color: #7f8c8d;
-                font-size: 0.9rem;
-            }
-
-            .param {
-                color: #e74c3c;
-                font-weight: bold;
-            }
-
-            .code-block {
-                background: #2c3e50;
-                color: #ecf0f1;
-                padding: 20px;
-                border-radius: 10px;
-                margin: 20px 0;
-                font-family: 'Courier New', monospace;
-                overflow-x: auto;
-            }
-
-            .back-button {
-                display: inline-flex;
-                align-items: center;
-                gap: 8px;
-                padding: 12px 25px;
-                background: linear-gradient(135deg, #3498db, #2980b9);
-                color: white;
-                text-decoration: none;
-                border-radius: 25px;
-                margin: 10px;
-                transition: all 0.3s ease;
-                font-weight: bold;
-                box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
-            }
-
-            .back-button:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 8px 25px rgba(52, 152, 219, 0.4);
-            }
-
-            .try-button {
-                display: inline-flex;
-                align-items: center;
-                gap: 8px;
-                padding: 10px 20px;
-                background: linear-gradient(135deg, #e74c3c, #c0392b);
-                color: white;
-                text-decoration: none;
-                border-radius: 20px;
-                margin: 10px 5px;
-                transition: all 0.3s ease;
-                font-weight: bold;
-                font-size: 0.9rem;
-            }
-
-            .try-button:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 5px 15px rgba(231, 76, 60, 0.4);
-            }
-
-            .filter-options {
-                display: flex;
-                gap: 10px;
-                margin: 15px 0;
-                flex-wrap: wrap;
-            }
-
-            .filter-btn {
-                padding: 8px 16px;
-                background: rgba(52, 152, 219, 0.1);
-                border: 1px solid #3498db;
-                border-radius: 20px;
-                color: #3498db;
-                cursor: pointer;
-                transition: all 0.3s ease;
+                color: rgba(255, 255, 255, 0.7);
                 font-size: 0.8rem;
             }
 
-            .filter-btn:hover {
-                background: #3498db;
+            .nav-buttons {
+                display: flex;
+                gap: 15px;
+                justify-content: center;
+                margin-top: 30px;
+                flex-wrap: wrap;
+            }
+
+            .nav-button {
+                background: rgba(255, 255, 255, 0.1);
+                border: 1px solid rgba(255, 255, 255, 0.2);
                 color: white;
+                padding: 12px 24px;
+                border-radius: 12px;
+                text-decoration: none;
+                font-weight: 600;
+                transition: all 0.3s ease;
+                backdrop-filter: blur(10px);
+            }
+
+            .nav-button:hover {
+                background: rgba(255, 255, 255, 0.2);
+                transform: translateY(-2px);
+                border-color: rgba(255, 255, 255, 0.3);
             }
         </style>
     </head>
     <body>
-        <div class="container">
-            <div class="header">
-                <h1>🔌 API Data</h1>
-                <p>Complete API documentation for VortexAI Crypto Scanner with real-time examples</p>
+        <div class="glass-api-container">
+            <div class="glass-header">
+                <div class="glass-icon">🚀</div>
+                <h2 class="glass-title">VortexAI API Data</h2>
+                <div class="glass-badge">LIVE</div>
+            </div>
+            
+            <div class="glass-stats-grid">
+                <div class="glass-stat-card" onclick="window.open('/api/scan/vortexai?limit=10&filter=ai_signal', '_blank')">
+                    <div class="stat-glow"></div>
+                    <div class="stat-icon">📈</div>
+                    <div class="stat-value">AI Scan</div>
+                    <div class="stat-label">VortexAI Analysis</div>
+                    <div class="stat-trend">10 Coins</div>
+                </div>
+                
+                <div class="glass-stat-card" onclick="window.open('/api/health-combined', '_blank')">
+                    <div class="stat-glow" style="background: linear-gradient(135deg, #ff6b6b, #ee5a24);"></div>
+                    <div class="stat-icon">❤️</div>
+                    <div class="stat-value">Health</div>
+                    <div class="stat-label">System Status</div>
+                    <div class="stat-trend">Live</div>
+                </div>
+                
+                <div class="glass-stat-card" onclick="window.open('/api/timeframes', '_blank')">
+                    <div class="stat-glow" style="background: linear-gradient(135deg, #a29bfe, #6c5ce7);"></div>
+                    <div class="stat-icon">⏰</div>
+                    <div class="stat-value">Timeframes</div>
+                    <div class="stat-label">6 Layers</div>
+                    <div class="stat-trend">Historical</div>
+                </div>
             </div>
 
-            <div class="api-content">
-                <h2>🚀 Main API Endpoint</h2>
-                
-                <div class="code-block">
-                    <span style="color: #27ae60; font-weight: bold;">GET</span> /api/scan/vortexai?limit=<span style="color: #e74c3c;">100</span>&filter=<span style="color: #e74c3c;">ai_signal</span><br>
-                    <span style="color: #95a5a6;"># Returns enhanced cryptocurrency data with VortexAI analysis</span>
-                </div>
-
-                <h3>🎯 Try with Different Filters</h3>
-                <div class="filter-options">
-                    <a href="/api/scan/vortexai?limit=10&filter=ai_signal" class="try-button" target="_blank">
-                        🤖 AI Signal (10)
-                    </a>
-                    <a href="/api/scan/vortexai?limit=20&filter=volume" class="try-button" target="_blank">
-                        📊 Volume (20)
-                    </a>
-                    <a href="/api/scan/vortexai?limit=15&filter=momentum_1h" class="try-button" target="_blank">
-                        ⚡ 1H Momentum (15)
-                    </a>
-                    <a href="/api/scan/vortexai?limit=25&filter=momentum_4h" class="try-button" target="_blank">
-                        🚀 4H Momentum (25)
-                    </a>
-                </div>
-
-                <h3>📋 All Available Endpoints</h3>
-                <div class="endpoints-grid">
+            <div class="api-endpoints">
+                <h3 style="color: white; margin-bottom: 20px;">📡 API Endpoints</h3>
+                <div class="endpoint-grid">
                     <div class="endpoint-card">
                         <span class="endpoint-method get">GET</span>
                         <div class="endpoint-path">/api/scan/vortexai</div>
-                        <div class="endpoint-desc">
-                            Enhanced market scanner with AI analysis<br>
-                            <strong>Params:</strong> limit, filter
-                        </div>
+                        <div class="endpoint-desc">Enhanced market scanner with AI analysis</div>
                     </div>
-
-                    <div class="endpoint-card">
-                        <span class="endpoint-method get">GET</span>
-                        <div class="endpoint-path">/api/coin/<span class="param">:symbol</span>/technical</div>
-                        <div class="endpoint-desc">
-                            Technical analysis with 15+ indicators<br>
-                            <strong>Example:</strong> /api/coin/btc_usdt/technical
-                        </div>
-                    </div>
-
+                    
                     <div class="endpoint-card">
                         <span class="endpoint-method get">GET</span>
                         <div class="endpoint-path">/api/health-combined</div>
-                        <div class="endpoint-desc">
-                            System health and statistics<br>
-                            Includes request counts and service status
-                        </div>
+                        <div class="endpoint-desc">System health and statistics</div>
                     </div>
-
+                    
                     <div class="endpoint-card">
                         <span class="endpoint-method get">GET</span>
                         <div class="endpoint-path">/api/timeframes</div>
-                        <div class="endpoint-desc">
-                            List all available historical timeframes<br>
-                            6 different timeframe options
-                        </div>
+                        <div class="endpoint-desc">Available historical timeframes</div>
                     </div>
-
+                    
                     <div class="endpoint-card">
                         <span class="endpoint-method get">GET</span>
-                        <div class="endpoint-path">/api/coin/<span class="param">:symbol</span>/history/<span class="param">:timeframe</span></div>
-                        <div class="endpoint-desc">
-                            Historical price data<br>
-                            <strong>Example:</strong> /api/coin/btc_usdt/history/7d
-                        </div>
+                        <div class="endpoint-path">/api/coin/:symbol/technical</div>
+                        <div class="endpoint-desc">Technical analysis with 15+ indicators</div>
                     </div>
-                </div>
-
-                <h3>🔧 Query Parameters</h3>
-                <div class="code-block">
-<strong>Main Scanner Endpoint:</strong><br>
-/api/scan/vortexai?<span style="color: #3498db;">limit</span>=100&<span style="color: #3498db;">filter</span>=ai_signal<br><br>
-<strong>Parameters:</strong><br>
-- <span style="color: #3498db;">limit</span>: Number of coins (1-300, default: 100)<br>
-- <span style="color: #3498db;">filter</span>: ai_signal, volume, momentum_1h, momentum_4h
-                </div>
-
-                <h3>📊 Response Structure</h3>
-                <div class="code-block">
-{<br>
-&nbsp;&nbsp;"success": true,<br>
-&nbsp;&nbsp;"coins": [<br>
-&nbsp;&nbsp;&nbsp;&nbsp;{<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"symbol": "BTC",<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"price": 45234.56,<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"vortexai_analysis": {<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"signal_strength": 8.7,<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"market_sentiment": "bullish"<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
-&nbsp;&nbsp;&nbsp;&nbsp;}<br>
-&nbsp;&nbsp;],<br>
-&nbsp;&nbsp;"total_coins": 100,<br>
-&nbsp;&nbsp;"processing_time": "245ms"<br>
-}
                 </div>
             </div>
 
-            <div style="text-align: center; margin-top: 30px;">
-                <a href="/" class="back-button">🏠 Dashboard</a>
-                <a href="/health-api" class="back-button" style="background: linear-gradient(135deg, #27ae60, #2ecc71);">
-                    📊 Health API
-                </a>
-                <a href="/timeframes-api" class="back-button" style="background: linear-gradient(135deg, #f39c12, #e67e22);">
-                    ⏰ Timeframes API
-                </a>
+            <div class="nav-buttons">
+                <a href="/" class="nav-button">🏠 Dashboard</a>
+                <a href="/scan" class="nav-button">🔍 Market Scanner</a>
+                <a href="/health" class="nav-button">❤️ Health</a>
+                <a href="/api/scan/vortexai?limit=10&filter=ai_signal" class="nav-button" target="_blank">📊 Live Data</a>
             </div>
         </div>
     </body>
