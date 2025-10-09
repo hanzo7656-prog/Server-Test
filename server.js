@@ -1235,29 +1235,235 @@ app.get("/api/scan/vortexai", async (req, res) => {
 
         const responseTime = Date.now() - startTime;
 
-        res.json({
-            success: true,
-            coins: filteredCoins.slice(0, limit),
-            total_coins: filteredCoins.length,
-            scan_mode: 'vortexai_enhanced_with_historical',
-            filter_applied: filterType,
-            data_sources: {
-                api: coins.length,
-                realtime: Object.keys(realtimeData || {}).length,
-                historical_api: Object.keys(historicalMap || {}).length,
-                gist: Object.keys((gistData || {}).prices || {}).length
-            },
-            processing_time: responseTime + 'ms',
-            timestamp: new Date().toISOString()
-        });
+        
+        // ========== اینجا طراحی شیشه‌ای رو برگردون ==========
+        res.send(`
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>VortexAI Scanner - Glass Design</title>
+            <style>
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                
+                body {
+                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    min-height: 100vh; color: #333; line-height: 1.6; padding: 20px;
+                }
+
+                .glass-container {
+                    background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(20px);
+                    border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 24px;
+                    padding: 30px; margin: 20px auto; max-width: 1200px;
+                    position: relative; overflow: hidden;
+                    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+                }
+
+                .glass-header {
+                    display: flex; align-items: center; gap: 15px; margin-bottom: 30px;
+                }
+
+                .glass-icon { font-size: 2rem; filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.3)); }
+                
+                .glass-title {
+                    color: white; font-size: 1.8rem; font-weight: 700; margin: 0;
+                    background: linear-gradient(135deg, #fff, #a5b4fc);
+                    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+                }
+
+                .glass-badge {
+                    background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+                    padding: 6px 12px; border-radius: 12px; font-size: 0.8rem;
+                    font-weight: 700; color: white; box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+                }
+
+                .stats-grid {
+                    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                    gap: 15px; margin-bottom: 25px;
+                }
+
+                .stat-card {
+                    background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);
+                    border-radius: 16px; padding: 20px; text-align: center; transition: all 0.3s ease;
+                }
+
+                .stat-card:hover { transform: translateY(-3px); border-color: rgba(255, 255, 255, 0.3); }
+
+                .stat-value {
+                    font-size: 1.8rem; font-weight: 800; color: white; margin: 5px 0;
+                    background: linear-gradient(135deg, #fff, #dfe6e9);
+                    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+                }
+
+                .stat-label { color: rgba(255, 255, 255, 0.7); font-size: 0.9rem; }
+
+                .coins-grid {
+                    display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+                    gap: 20px; margin-top: 25px;
+                }
+
+                .coin-card {
+                    background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);
+                    border-radius: 16px; padding: 20px; transition: all 0.3s ease;
+                    position: relative; overflow: hidden;
+                }
+
+                .coin-card:hover {
+                    transform: translateY(-5px); border-color: rgba(255, 255, 255, 0.3);
+                    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+                }
+
+                .coin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+                .coin-symbol { color: white; font-weight: 700; font-size: 1.3rem; }
+                
+                .coin-badge {
+                    background: linear-gradient(135deg, #74b9ff, #0984e3); color: white;
+                    padding: 4px 10px; border-radius: 8px; font-size: 0.8rem; font-weight: 600;
+                }
+
+                .coin-price { font-size: 1.6rem; font-weight: 700; color: white; margin: 10px 0; }
+
+                .coin-change {
+                    display: inline-block; padding: 6px 12px; border-radius: 8px;
+                    font-weight: 700; font-size: 0.9rem;
+                }
+
+                .positive { background: rgba(0, 184, 148, 0.2); color: #00b894; }
+                .negative { background: rgba(255, 107, 107, 0.2); color: #ff6b6b; }
+
+                .coin-stats {
+                    display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;
+                }
+
+                .stat-item {
+                    display: flex; justify-content: space-between; padding: 8px 0;
+                    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                }
+
+                .stat-name { color: rgba(255, 255, 255, 0.7); font-size: 0.8rem; }
+                .stat-value-small { color: white; font-weight: 600; font-size: 0.8rem; }
+
+                .ai-score {
+                    position: absolute; top: 15px; right: 15px;
+                    background: linear-gradient(135deg, #fd79a8, #e84393); color: white;
+                    width: 40px; height: 40px; border-radius: 50%; display: flex;
+                    align-items: center; justify-content: center; font-weight: 700;
+                    font-size: 0.9rem; box-shadow: 0 4px 15px rgba(253, 121, 168, 0.3);
+                }
+
+                .nav-buttons {
+                    display: flex; gap: 15px; justify-content: center; margin-top: 30px; flex-wrap: wrap;
+                }
+
+                .nav-button {
+                    background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2);
+                    color: white; padding: 12px 24px; border-radius: 12px; text-decoration: none;
+                    font-weight: 600; transition: all 0.3s ease; backdrop-filter: blur(10px);
+                }
+
+                .nav-button:hover {
+                    background: rgba(255, 255, 255, 0.2); transform: translateY(-2px);
+                    border-color: rgba(255, 255, 255, 0.3);
+                }
+            </style>
+        </head>
+        <body>
+            <div class="glass-container">
+                <div class="glass-header">
+                    <div class="glass-icon">🔍</div>
+                    <h2 class="glass-title">VortexAI Scanner</h2>
+                    <div class="glass-badge">HEALTH FILTER</div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value">${filteredCoins.length}</div>
+                        <div class="stat-label">Healthy Coins</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${data.health_metrics?.original_count || apiData.coins?.length || 0}</div>
+                        <div class="stat-label">Total Scanned</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${responseTime}ms</div>
+                        <div class="stat-label">Processing Time</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${filterType}</div>
+                        <div class="stat-label">Active Filter</div>
+                    </div>
+                </div>
+
+                <div class="coins-grid">
+                    ${filteredCoins.slice(0, limit).map(coin => `
+                        <div class="coin-card">
+                            <div class="ai-score">${Math.round(coin.VortexAI_analysis?.signal_strength || 0)}</div>
+                            
+                            <div class="coin-header">
+                                <div class="coin-symbol">${coin.symbol}</div>
+                                <div class="coin-badge">
+                                    ${(coin.health_status?.tier || 'standard').toUpperCase()}
+                                </div>
+                            </div>
+                            
+                            <div class="coin-price">$${(coin.price || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                            
+                            <div class="coin-change ${(coin.priceChange24h || 0) >= 0 ? 'positive' : 'negative'}">
+                                ${(coin.priceChange24h || 0) >= 0 ? '↗' : '↘'} ${Math.abs(coin.priceChange24h || 0).toFixed(2)}%
+                            </div>
+
+                            <div class="coin-stats">
+                                <div class="stat-item">
+                                    <span class="stat-name">Volume:</span>
+                                    <span class="stat-value-small">$${(coin.volume || 0).toLocaleString()}</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-name">Market Cap:</span>
+                                    <span class="stat-value-small">$${(coin.marketCap || 0).toLocaleString()}</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-name">AI Signal:</span>
+                                    <span class="stat-value-small">${(coin.VortexAI_analysis?.signal_strength || 0).toFixed(1)}</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-name">Health Score:</span>
+                                    <span class="stat-value-small">${coin.health_status?.score || 0}</span>
+                                </div>
+                            </div>
+
+                            ${coin.VortexAI_analysis?.volume_anomaly ? 
+                                '<div style="margin-top: 10px; padding: 5px 10px; background: rgba(255, 107, 107, 0.2); color: #ff6b6b; border-radius: 8px; font-size: 0.8rem; text-align: center;">🚨 Volume Anomaly</div>' 
+                                : ''}
+                        </div>
+                    `).join('')}
+                </div>
+
+                <div class="nav-buttons">
+                    <a href="/" class="nav-button">🏠 Dashboard</a>
+                    <a href="/api-data" class="nav-button">🚀 API Data</a>
+                    <a href="/scan" class="nav-button">📊 Classic Scanner</a>
+                </div>
+            </div>
+        </body>
+        </html>
+        `);
 
     } catch (error) {
         console.error('❌ Error in scan endpoint:', error);
-        res.status(500).json({
-            success: false,
-            error: error.message,
-            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-        });
+        res.status(500).send(`
+        <div class="glass-container">
+            <div class="glass-header">
+                <div class="glass-icon">❌</div>
+                <h2 class="glass-title">Scanner Error</h2>
+            </div>
+            <p style="color: white; text-align: center;">${error.message}</p>
+            <div class="nav-buttons">
+                <a href="/" class="nav-button">Return to Dashboard</a>
+            </div>
+        </div>
+        `);
     }
 });
 // دریافت داده‌های تاریخی بر اساس timeframe
