@@ -1040,6 +1040,63 @@ app.get("/api/scan/vortexai", async (req, res) => {
         ]);
 
         let coins = apiData.coins || [];
+
+    static coinStatsHealthCheck(coin) {
+        const health = {
+            is_healthy: false,
+            tier: 'unknown',
+            reasons: [],
+            score: 0
+        };
+    
+        // ۱. فیلترهای سخت‌گیرانه (حذف از نمایش)
+        if (!coin.volume || coin.volume < 100000) { // $100K
+            health.reasons.push('VOLUME_TOO_LOW');
+            return health;
+        }
+    
+        if (!coin.marketCap || coin.marketCap < 1000000) { // $1M
+            health.reasons.push('MARKET_CAP_TOO_LOW');
+            return health;
+        }
+    
+        if (coin.priceChange24h === null || coin.priceChange24h === undefined) {
+            health.reasons.push('NO_TRADING_ACTIVITY');
+            return health;
+        }
+    
+        // ۲. امتیازدهی برای سطوح مختلف
+        let score = 0;
+    
+        // حجم (۰-۳۵ امتیاز)
+        if (coin.volume > 10000000) score += 35;      // > $10M
+        else if (coin.volume > 1000000) score += 25;  // > $1M  
+        else if (coin.volume > 100000) score += 15;   // > $100K
+    
+        // مارکت‌کپ (۰-۳۰ امتیاز)
+        if (coin.marketCap > 100000000) score += 30;  // > $100M
+        else if (coin.marketCap > 10000000) score += 20; // > $10M
+        else if (coin.marketCap > 1000000) score += 10;  // > $1M
+    
+        // رتبه (۰-۲۰ امتیاز)
+        if (coin.rank <= 100) score += 20;
+        else if (coin.rank <= 300) score += 15;
+        else if (coin.rank <= 500) score += 10;
+    
+        // فعالیت قیمت (۰-۱۵ امتیاز)
+        if (Math.abs(coin.priceChange24h) > 0) score += 15;
+    
+        health.score = score;
+        health.is_healthy = score >= 40; // حداقل ۴۰٪
+    
+        // تعیین سطح
+        if (score >= 70) health.tier = 'premium';
+        else if (score >= 50) health.tier = 'standard'; 
+        else if (score >= 40) health.tier = 'basic';
+        else health.tier = 'risky';
+    
+        return health;
+    }
         
         console.log(`📊 API coins: ${coins.length}, Realtime: ${Object.keys(realtimeData || {}).length}`);
 
