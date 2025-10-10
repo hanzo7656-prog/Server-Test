@@ -660,18 +660,37 @@ module.exports = ({ gistManager, wsManager, apiClient }) => {
                 <a href="/health-api" class="back-button" style="background: linear-gradient(135deg, #27ae60, #2ecc71);">💚 Health API</a>
                 <a href="/timeframes-api" class="back-button" style="background: linear-gradient(135deg, #f39c12, #e67e22);">🕐 Timeframes API</a>
             </div>
-
+            
             <script>
                 let currentTimeframe = '1h';
-                
-                const sampleCoins = [
-                    { symbol: 'BTC', name: 'Bitcoin', price: 45234.56, change_1h: 0.56, change_24h: 2.34, change_7d: 5.67, volume: 25467890000, marketCap: 885234567890, icon: '₿' },
-                    { symbol: 'ETH', name: 'Ethereum', price: 2345.67, change_1h: -0.34, change_24h: 1.23, change_7d: -2.45, volume: 14567890000, marketCap: 281234567890, icon: 'Ξ' },
-                    { symbol: 'SOL', name: 'Solana', price: 102.34, change_1h: 2.12, change_24h: 5.67, change_7d: 15.23, volume: 3456789000, marketCap: 41234567890, icon: '◎' },
-                    { symbol: 'ADA', name: 'Cardano', price: 0.45, change_1h: 0.23, change_24h: -1.56, change_7d: 3.45, volume: 567890000, marketCap: 15678900000, icon: 'A' },
-                    { symbol: 'DOT', name: 'Polkadot', price: 6.78, change_1h: -0.67, change_24h: 0.89, change_7d: -4.56, volume: 789000000, marketCap: 7890000000, icon: '●' },
-                    { symbol: 'BNB', name: 'Binance Coin', price: 305.67, change_1h: 0.45, change_24h: 1.78, change_7d: 8.90, volume: 1234567000, marketCap: 46789000000, icon: 'B' }
-                ];
+                // تابع برای دریافت داده‌های واقعی از API
+                async function loadRealCoins() {
+                    try {
+                        document.getElementById('coinsContainer').innerHTML = '<div style="text-align: center; padding: 40px; color: #7f8c8d;">🔄 Loading real-time market data...</div>';
+            
+                        const response = await fetch('/api/scan/vortexai?limit=20');
+                        const data = await response.json();
+            
+                        if (data.success && data.coins && data.coins.length > 0) {
+                            console.log('✅ Real data loaded from API:', data.coins.length + ' coins');
+                            displayCoins(data.coins);
+                        } else {
+                            console.warn('❌ API returned no data');
+                            showError('No market data available from API');
+                        }
+                    } catch (error) {
+                        console.error('❌ Error loading real data:', error);
+                        showError('Failed to connect to market data API');
+                    }
+                }
+
+                function showError(message) {
+                    document.getElementById('coinsContainer').innerHTML = 
+                       '<div style="text-align: center; padding: 60px 20px; color: #e74c3c;">' +
+                       '❌ ' + message + '<br><br>' +
+                       '<button onclick="loadRealCoins()" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer; margin: 10px;">🔄 Retry</button>' +
+                       '</div>';
+                }
 
                 function changeTimeframe(timeframe) {
                     currentTimeframe = timeframe;
@@ -679,39 +698,71 @@ module.exports = ({ gistManager, wsManager, apiClient }) => {
                         btn.classList.remove('active');
                     });
                     event.target.classList.add('active');
-                    displayCoins();
+                    loadRealCoins();
                 }
 
-                function displayCoins() {
-                    const coinsHTML = sampleCoins.map(coin => {
-                        const change = currentTimeframe === '1h' ? coin.change_1h : 
-                                      currentTimeframe === '24h' ? coin.change_24h : 
-                                      currentTimeframe === '7d' ? coin.change_7d : coin.change_24h;
-                        
+                function displayCoins(coins) {
+                    if (!coins || coins.length === 0) {
+                        showError('No coins data available');
+                        return;
+                    }
+
+                    const coinsHTML = coins.map(coin => {
+                        // استفاده از فیلدهای واقعی API - پشتیبانی از نام‌های مختلف فیلدها
+                        const change_1h = coin.change_1h || coin.priceChange1h || 0;
+                        const change_24h = coin.change_24h || coin.priceChange24h || 0;
+                        const change_7d = coin.change_7d || coin.priceChange7d || 0;
+                        const change_30d = coin.change_30d || coin.priceChange30d || 0;
+            
+                        const change = currentTimeframe === '1h' ? change_1h : 
+                                      currentTimeframe === '24h' ? change_24h : 
+                                      currentTimeframe === '7d' ? change_7d : 
+                                      currentTimeframe === '30d' ? change_30d : change_24h;
+            
                         const changeClass = change >= 0 ? 'positive' : 'negative';
                         const changeText = change >= 0 ? '+' + change.toFixed(2) + '%' : change.toFixed(2) + '%';
-
+ 
                         return '<div class="coin-item" onclick="viewCoinDetail(\\'' + coin.symbol + '\\')">' +
-                               '<div class="coin-icon">' + coin.icon + '</div>' +
+                               '<div class="coin-icon">' + getCoinIcon(coin.symbol) + '</div>' +
                                '<div class="coin-symbol">' + coin.symbol + '</div>' +
-                               '<div class="coin-name" style="color: #7f8c8d; font-size: 0.8rem; margin-bottom: 5px;">' + coin.name + '</div>' +
-                               '<div class="coin-price">$' + coin.price.toFixed(2) + '</div>' +
+                               '<div class="coin-name" style="color: #7f8c8d; font-size: 0.8rem; margin-bottom: 5px;">' + (coin.name || coin.symbol) + '</div>' +
+                               '<div class="coin-price">$' + (coin.price?.toFixed(2) || '0.00') + '</div>' +
                                '<div class="coin-change ' + changeClass + '">' + changeText + '</div>' +
                                '<div class="coin-stats">' +
-                               '<div class="stat-row"><span>Market Cap:</span><span>$' + (coin.marketCap / 1000000000).toFixed(1) + 'B</span></div>' +
-                               '<div class="stat-row"><span>Volume:</span><span>$' + (coin.volume / 1000000).toFixed(0) + 'M</span></div>' +
+                               '<div class="stat-row"><span>Market Cap:</span><span>$' + formatNumber(coin.marketCap || 0, 'B') + '</span></div>' +
+                               '<div class="stat-row"><span>Volume:</span><span>$' + formatNumber(coin.volume || 0, 'M') + '</span></div>' +
                                '</div></div>';
                     }).join('');
 
-                    document.getElementById('coinsContainer').innerHTML = coinsHTML;
+                    document.getElementById('coinsContainer').innerHTML = 
+                        '<div style="color: white; text-align: center; margin-bottom: 20px; font-size: 0.9rem;">' +
+                        '📊 Showing ' + coins.length + ' real-time coins' +
+                        '</div>' + coinsHTML;
+                }
+
+                function getCoinIcon(symbol) {
+                    const iconMap = {
+                        'BTC': '₿', 'ETH': 'Ξ', 'SOL': '◎', 'ADA': 'A', 'DOT': '●',
+                        'BNB': 'B', 'XRP': 'X', 'DOGE': 'Ð', 'LTC': 'Ł', 'LINK': '🔗',
+                        'AVAX': '❄️', 'MATIC': '⬢', 'ATOM': '⚛️', 'UNI': '🦄', 'AAVE': '👻'
+                    };
+                    return iconMap[symbol] || symbol.charAt(0);
+                }
+
+                function formatNumber(num, suffix) {
+                    if (suffix === 'B') return (num / 1000000000).toFixed(1) + 'B';
+                    if (suffix === 'M') return (num / 1000000).toFixed(0) + 'M';
+                    return num.toLocaleString();
                 }
 
                 function viewCoinDetail(symbol) {
                     window.location.href = '/analysis?symbol=' + symbol.toLowerCase() + '_usdt';
                 }
 
-                displayCoins();
+                // لود اولیه داده‌های واقعی
+                loadRealCoins();
             </script>
+            
         `;
 
         res.send(generateVortexPage('API Data', bodyContent, apiDataStyles));
