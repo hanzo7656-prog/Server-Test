@@ -1,5 +1,5 @@
 const { Octokit } = require('@octokit/rest');
-const constants = require('./config/constant');
+const constants = require('./config/constants');
 
 class GistManager {
     constructor() {
