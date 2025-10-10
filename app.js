@@ -36,7 +36,7 @@ let cache = {
 
 // نمونه‌سازی مدیران
 const gistManager = new GistManager();
-const wsManager = new WebSocketManager();
+const wsManager = new WebSocketManager(gistManager);
 const apiClient = new AdvancedCoinStatsAPIClient();
 const exchangeAPI = new ExchangeAPI();
 
