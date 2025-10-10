@@ -2,17 +2,19 @@ const WebSocket = require('ws');
 const constants = require('../config/constants');
 
 class WebSocketManager {
-    constructor() {
+    constructor(gistManager) {
         this.ws = null;
         this.connected = false;
         this.realtimeData = {};
         this.subscribedPairs = new Set();
+        this.gistManager = gistManager;  // ✅ دریافت gistManager
         this.connect();
     }
 
     connect() {
         try {
             this.ws = new WebSocket('wss://www.lbkex.net/ws/V2/');
+            
             this.ws.on('open', () => {
                 console.log('✔ WebSocket connected to LBank');
                 this.connected = true;
@@ -25,23 +27,26 @@ class WebSocketManager {
                     if (message.type === 'tick' && message.tick) {
                         const symbol = message.pair;
                         const tickData = message.tick;
-                        const currentPrice = tickData.latest;
+                        const currentPrice = parseFloat(tickData.latest);
 
-                        // اینجا gistManager.addPrice فراخوانی میشد
-                        // gistManager.addPrice(symbol, currentPrice);
+                        // ✅ ذخیره در Gist (آنکامنت شده)
+                        if (this.gistManager) {
+                            this.gistManager.addPrice(symbol, currentPrice);
+                        }
 
+                        // ذخیره در داده real-time
                         this.realtimeData[symbol] = {
+                            symbol: symbol,
                             price: currentPrice,
-                            high_24h: tickData.high,
-                            low_24h: tickData.low,
-                            volume: tickData.vol,
-                            change: tickData.change,
+                            high_24h: parseFloat(tickData.high),
+                            low_24h: parseFloat(tickData.low),
+                            volume: parseFloat(tickData.vol),
+                            change: parseFloat(tickData.change),
                             timestamp: message.TS,
                             last_updated: new Date().toISOString()
                         };
 
-                        // کش سرور آپدیت میشد
-                        // cache.realtimePrices = { ...this.realtimeData };
+                        console.log(`📊 ${symbol}: $${currentPrice}`);
                     }
                 } catch (error) {
                     console.error('✗ WebSocket message processing error', error);
@@ -57,7 +62,7 @@ class WebSocketManager {
                 console.log(`△ WebSocket disconnected - Code: ${code}, Reason: ${reason}`);
                 this.connected = false;
                 setTimeout(() => {
-                    console.log('Attempting WebSocket reconnection...');
+                    console.log('🔄 Attempting WebSocket reconnection...');
                     this.connect();
                 }, 5000);
             });
@@ -69,8 +74,9 @@ class WebSocketManager {
 
     subscribeToAllPairs() {
         if (this.connected && this.ws) {
-            console.log(`Subscribing to ${constants.ALL_TRADING_PAIRS.length} trading pairs`);
+            console.log(`📡 Subscribing to ${constants.ALL_TRADING_PAIRS.length} trading pairs`);
             const batchSize = 10;
+            
             for (let i = 0; i < constants.ALL_TRADING_PAIRS.length; i += batchSize) {
                 setTimeout(() => {
                     const batch = constants.ALL_TRADING_PAIRS.slice(i, i + batchSize);
@@ -80,16 +86,9 @@ class WebSocketManager {
         }
     }
 
-    get top20Pairs() {
-        return [
-            'btc_usdt', 'eth_usdt', 'bnb_usdt', 'sol_usdt', 'xrp_usdt',
-            'ada_usdt', 'avax_usdt', 'dot_usdt', 'link_usdt', 'matic_usdt',
-            'ltc_usdt', 'bch_usdt', 'atom_usdt', 'etc_usdt', 'xlm_usdt',
-            'fil_usdt', 'hbar_usdt', 'near_usdt', 'apt_usdt', 'arb_usdt'
-        ];
-    }
-
     subscribeBatch(pairs) {
+        if (!this.ws) return;
+        
         pairs.forEach(pair => {
             const subscription = {
                 "action": "subscribe",
@@ -99,7 +98,7 @@ class WebSocketManager {
             this.ws.send(JSON.stringify(subscription));
             this.subscribedPairs.add(pair);
         });
-        console.log(`✔ Subscribed to ${pairs.length} pairs`);
+        console.log(`✅ Subscribed to ${pairs.length} pairs`);
     }
 
     getRealtimeData() {
@@ -113,6 +112,16 @@ class WebSocketManager {
             total_subscribed: this.subscribedPairs.size,
             coins: Object.keys(this.realtimeData)
         };
+    }
+
+    // اضافه کردن متد برای تست
+    testGistConnection() {
+        if (this.gistManager) {
+            const status = this.gistManager.getStatus();
+            console.log('🧪 Gist Manager Test:', status);
+            return status;
+        }
+        return { error: 'Gist Manager not available' };
     }
 }
 
