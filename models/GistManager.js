@@ -1,5 +1,5 @@
 const { Octokit } = require('@octokit/rest');
-const constants = require('../config/constants');
+const constants = require('./config/constants');
 
 class GistManager {
     constructor() {
@@ -18,9 +18,9 @@ class GistManager {
                 await this.loadFromGist();
             }
             setInterval(() => this.saveToGist(), 300000); // هر 5 دقیقه ذخیره کن
-            console.log("✔ Gist Manager initialized");
+            console.log("✅ Gist Manager initialized");
         } catch (error) {
-            console.error("✗ Gist Manager init error:", error);
+            console.error("❌ Gist Manager init error:", error);
         }
     }
 
@@ -29,9 +29,9 @@ class GistManager {
             const response = await this.octokit.gists.get({ gist_id: this.gistId });
             const content = response.data.files['prices.json'].content;
             this.priceHistory = JSON.parse(content);
-            console.log("✔ Data loaded from Gist");
+            console.log("✅ Data loaded from Gist");
         } catch (error) {
-            console.warn("△ Could not load from Gist, starting fresh");
+            console.warn("⚠️ Could not load from Gist, starting fresh");
             this.priceHistory = {
                 prices: {},
                 last_updated: new Date().toISOString()
@@ -49,7 +49,7 @@ class GistManager {
                     gist_id: this.gistId,
                     files: { 'prices.json': { content: content } }
                 });
-                console.log("✔ Data saved to Gist");
+                console.log("✅ Data saved to Gist");
             } else {
                 const response = await this.octokit.gists.create({
                     description: 'VortexAI Crypto Price Data',
@@ -57,10 +57,10 @@ class GistManager {
                     public: false
                 });
                 this.gistId = response.data.id;
-                console.log("✔ New Gist created");
+                console.log("✅ New Gist created");
             }
         } catch (error) {
-            console.error("✗ Gist save error", error);
+            console.error("❌ Gist save error", error);
         }
     }
 
@@ -69,10 +69,10 @@ class GistManager {
             if (!this.priceHistory.prices) {
                 this.priceHistory.prices = {};
             }
-            
+
             const now = Date.now();
             let existingData = this.priceHistory.prices[symbol];
-            
+
             if (!existingData) {
                 // ایجاد داده جدید
                 existingData = {
@@ -105,7 +105,7 @@ class GistManager {
             } else {
                 // آپدیت داده موجود
                 const previousPrice = existingData.price;
-                
+
                 // محاسبه تغییرات
                 if (previousPrice && previousPrice > 0) {
                     const priceChange = ((currentPrice - previousPrice) / previousPrice) * 100;
@@ -113,7 +113,7 @@ class GistManager {
                     existingData.changes.change_24h = priceChange;
                 }
 
-                // آپدیت قیمت و timestamp
+                // آپدیت قیمت
                 existingData.price = currentPrice;
                 existingData.timestamp = now;
 
@@ -124,16 +124,16 @@ class GistManager {
                 if (currentPrice < existingData.stats.low_24h) {
                     existingData.stats.low_24h = currentPrice;
                 }
-
-                // اضافه کردن به تاریخچه
-                this.addToHistory(symbol, '1h', { price: currentPrice, timestamp: now });
-                this.addToHistory(symbol, '4h', { price: currentPrice, timestamp: now });
-                this.addToHistory(symbol, '24h', { price: currentPrice, timestamp: now });
             }
+
+            // اضافه کردن به تاریخچه
+            this.addToHistory(symbol, '1h', { price: currentPrice, timestamp: now });
+            this.addToHistory(symbol, '4h', { price: currentPrice, timestamp: now });
+            this.addToHistory(symbol, '24h', { price: currentPrice, timestamp: now });
 
             return true;
         } catch (error) {
-            console.error('Error in addPrice', error);
+            console.error('❌ Error in addPrice', error);
             return false;
         }
     }
@@ -144,10 +144,10 @@ class GistManager {
 
         // اضافه کردن نقطه داده جدید
         coinData.history[timeframe].push(dataPoint);
-        
+
         // مرتب کردن بر اساس timestamp
         coinData.history[timeframe].sort((a, b) => a.timestamp - b.timestamp);
-        
+
         // محدود کردن سایز تاریخچه
         const maxRecords = this.getMaxRecordsForTimeframe(timeframe);
         if (coinData.history[timeframe].length > maxRecords) {
@@ -157,12 +157,12 @@ class GistManager {
 
     getMaxRecordsForTimeframe(timeframe) {
         const limits = {
-            '1h': 60,   // 60 دقیقه
-            '4h': 48,   // 48 * 5 دقیقه
-            '24h': 96,  // 96 * 15 دقیقه
-            '7d': 168,  // 168 ساعت
-            '30d': 180, // 180 * 4 ساعت
-            '180d': 180 // 180 روز
+            '1h': 60,    // 60 دقیقه
+            '4h': 48,    // 48 * 5 دقیقه
+            '24h': 96,   // 96 * 15 دقیقه
+            '7d': 168,   // 168 ساعت
+            '30d': 180,  // 180 * 4 ساعت
+            '180d': 180  // 180 روز
         };
         return limits[timeframe] || 100;
     }
@@ -173,7 +173,6 @@ class GistManager {
         }
 
         const data = this.priceHistory.prices[symbol];
-        
         if (timeframe) {
             return {
                 symbol: data.symbol,
@@ -184,7 +183,6 @@ class GistManager {
                 history: data.history[timeframe] || []
             };
         }
-        
         return data;
     }
 
