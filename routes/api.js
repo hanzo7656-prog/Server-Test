@@ -1,12 +1,11 @@
 const express = require('express');
-const TechnicalAnalysisEngine = require('../models/TechnicalAnalysis');
-const { HistoricalDataAPI } = require('../models/APIClients');
-const constants = require('../config/constants');
-
+const TechnicalAnalysisEngine = require('./models/TechnicalAnalysis');
+const { HistoricalDataAPI } = require('./models/APIClients');
+const constants = require('./config/constants');
 const router = express.Router();
 
 module.exports = ({ gistManager, wsManager, apiClient, exchangeAPI }) => {
-    
+
     // اندپوینت اصلی اسکن
     router.get("/scan/vortexai", async (req, res) => {
         const startTime = Date.now();
@@ -28,7 +27,7 @@ module.exports = ({ gistManager, wsManager, apiClient, exchangeAPI }) => {
                 coins = Object.entries(realtimeData || {}).slice(0, limit).map(([symbol, data], index) => ({
                     id: 'coin_' + index,
                     name: 'Crypto' + index,
-                    symbol: symbol.replace("_usdt","").toUpperCase(),
+                    symbol: symbol.replace("_usdt", "").toUpperCase(),
                     price: data.price || 0,
                     priceChange1h: data.change || 0,
                     priceChange24h: data.change || 0,
@@ -70,6 +69,7 @@ module.exports = ({ gistManager, wsManager, apiClient, exchangeAPI }) => {
                 const realtime = realtimeData[symbol];
                 const gistHistorical = gistManager.getPriceData(symbol);
                 const currentPrice = realtime?.price || coin.price;
+
                 let historicalChanges = {};
                 let dataSource = 'no_historical';
 
@@ -98,13 +98,13 @@ module.exports = ({ gistManager, wsManager, apiClient, exchangeAPI }) => {
                         volatility_score: TechnicalAnalysisEngine.calculateVolatility(coin),
                         volume_anomaly: TechnicalAnalysisEngine.detectVolumeAnomaly(coin),
                         market_sentiment: (historicalChanges['1h'] ?? coin.priceChange1h ?? 0) > 0 &&
-                                        (historicalChanges['24h'] ?? coin.priceChange24h ?? 0) > 0 ? 'bullish' : 'bearish'
+                            (historicalChanges['24h'] ?? coin.priceChange24h ?? 0) > 0 ? 'bullish' : 'bearish'
                     }
                 };
             });
 
             let filteredCoins = [...enhancedCoins];
-            switch(filterType) {
+            switch (filterType) {
                 case 'volume':
                     filteredCoins.sort((a, b) => (b.volume || 0) - (a.volume || 0));
                     break;
@@ -115,13 +115,12 @@ module.exports = ({ gistManager, wsManager, apiClient, exchangeAPI }) => {
                     filteredCoins.sort((a, b) => Math.abs(b.change_4h || 0) - Math.abs(a.change_4h || 0));
                     break;
                 case 'ai_signal':
-                    filteredCoins.sort((a, b) => (b.VortexAI_analysis?.signal_strength || 0) - 
-                                                (a.VortexAI_analysis?.signal_strength || 0));
+                    filteredCoins.sort((a, b) => (b.VortexAI_analysis?.signal_strength || 0) -
+                        (a.VortexAI_analysis?.signal_strength || 0));
                     break;
             }
 
             const responseTime = Date.now() - startTime;
-
             res.json({
                 success: true,
                 coins: filteredCoins.slice(0, limit),
@@ -139,7 +138,7 @@ module.exports = ({ gistManager, wsManager, apiClient, exchangeAPI }) => {
             });
 
         } catch (error) {
-            console.error('Error in scan endpoint:', error);
+            console.error('Error in scan endpoint.', error);
             res.status(500).json({
                 success: false,
                 error: error.message,
@@ -148,7 +147,7 @@ module.exports = ({ gistManager, wsManager, apiClient, exchangeAPI }) => {
         }
     });
 
-    // API جدید: تبادل ارز
+    // API قیمت ارز جدید
     router.get("/exchange/price", async (req, res) => {
         try {
             const { exchange = 'Binance', from = 'BTC', to = 'ETH', timestamp = Math.floor(Date.now() / 1000) } = req.query;
@@ -169,7 +168,7 @@ module.exports = ({ gistManager, wsManager, apiClient, exchangeAPI }) => {
         }
     });
 
-    // API جدید: تیکرهای صرافی
+    // API تیکر صرافی جدید
     router.get("/tickers/:exchange", async (req, res) => {
         try {
             const { exchange } = req.params;
@@ -187,7 +186,7 @@ module.exports = ({ gistManager, wsManager, apiClient, exchangeAPI }) => {
         }
     });
 
-    // API جدید: قیمت متوسط
+    // API قیمت متوسط جدید
     router.get("/price/avg", async (req, res) => {
         try {
             const { coinId = 'bitcoin', timestamp = Math.floor(Date.now() / 1000) } = req.query;
@@ -282,8 +281,7 @@ module.exports = ({ gistManager, wsManager, apiClient, exchangeAPI }) => {
             const indicators = TechnicalAnalysisEngine.calculateAllIndicators(priceData);
             const supportResistance = TechnicalAnalysisEngine.calculateSupportResistance(priceData);
             const aiAnalysis = TechnicalAnalysisEngine.analyzeWithAI(
-                { [symbol]: realtimeData },
-                { prices: { [symbol]: historicalData } }
+                { [symbol]: realtimeData }, { prices: { [symbol]: historicalData } }
             );
 
             res.json({
@@ -297,6 +295,7 @@ module.exports = ({ gistManager, wsManager, apiClient, exchangeAPI }) => {
                 processing_time: `${Date.now() - startTime}ms`,
                 timestamp: new Date().toISOString()
             });
+
         } catch (error) {
             console.error(`Technical analysis error for ${symbol}:`, error);
             res.status(500).json({
@@ -306,7 +305,7 @@ module.exports = ({ gistManager, wsManager, apiClient, exchangeAPI }) => {
         }
     });
 
-    // دریافت لیست available data timeframeها
+    // دریافت لیست available data timeframes
     router.get('/timeframes', (req, res) => {
         res.json({
             success: true,
@@ -371,8 +370,8 @@ module.exports = ({ gistManager, wsManager, apiClient, exchangeAPI }) => {
         try {
             const testCoinIds = ['bitcoin', 'ethereum', 'solana'];
             const historicalAPI = new HistoricalDataAPI();
-
             console.log("\n== API STATUS DEBUG ==");
+
             const apiResult = await apiClient.getCoins(10);
             const historicalResult = await historicalAPI.getMultipleCoinsHistorical(testCoinIds, '24h');
 
@@ -392,7 +391,7 @@ module.exports = ({ gistManager, wsManager, apiClient, exchangeAPI }) => {
                         coinId: historicalResult.data[0].coinId,
                         data_points: historicalResult.data[0].chart?.length,
                         latest_point: historicalResult.data[0].chart ?
-                            new Date(historicalResult.data[0].chart[historicalResult.data[0].chart.length-1][0] * 1000).toISOString() : null
+                            new Date(historicalResult.data[0].chart[historicalResult.data[0].chart.length - 1][0] * 1000).toISOString() : null
                     } : null
                 },
                 environment: {
@@ -410,8 +409,7 @@ module.exports = ({ gistManager, wsManager, apiClient, exchangeAPI }) => {
         }
     });
 
-    // (Health Checks) --- سلامت سرور --- //
-
+    // سلامت سرور (Health Checks)
     // (Liveness Probe) بررسی سلامت پایه
     router.get('/health', (req, res) => {
         res.status(200).json({
@@ -421,7 +419,7 @@ module.exports = ({ gistManager, wsManager, apiClient, exchangeAPI }) => {
         });
     });
 
-    // (Readiness Probe) بررسی سلامت کامل با وضعیت سرویس‌ها
+    // (Readiness Probe) بررسی سلامت کامل با وضعیت سرویس ها
     router.get('/health/ready', (req, res) => {
         const wsStatus = wsManager.getConnectionStatus();
         const gistData = gistManager.getAllData();
@@ -446,14 +444,14 @@ module.exports = ({ gistManager, wsManager, apiClient, exchangeAPI }) => {
             }
         };
 
-        // بررسی سلامت کلی همه سرویس‌ها
+        // بررسی سلامت کلی همه سرویس ها
         const allHealthy = wsStatus.connected && process.env.GITHUB_TOKEN;
         const statusCode = allHealthy ? 200 : 503;
         res.status(statusCode).json(healthStatus);
     });
 
     // بررسی سلامت سرویس‌های حیاتی برای کوبرنتیز
-    router.get('/health/live', (req, res) => {
+    router.get("/health/live", (req, res) => {
         const wsStatus = wsManager.getConnectionStatus();
 
         // اگر WebSocket قطع باشد، سرور زنده نیست
@@ -476,7 +474,7 @@ module.exports = ({ gistManager, wsManager, apiClient, exchangeAPI }) => {
         try {
             const wsStatus = wsManager.getConnectionStatus();
             const gistData = gistManager.getAllData();
-            
+
             const healthFilters = {
                 websocket_quality: wsStatus.connected ? 'excellent' : 'poor',
                 data_freshness: calculateDataFreshness(gistData),
@@ -504,7 +502,7 @@ module.exports = ({ gistManager, wsManager, apiClient, exchangeAPI }) => {
         const lastUpdated = new Date(gistData.last_updated);
         const now = new Date();
         const diffMinutes = (now - lastUpdated) / (1000 * 60);
-        
+
         if (diffMinutes < 5) return 'excellent';
         if (diffMinutes < 15) return 'good';
         if (diffMinutes < 30) return 'fair';
@@ -513,19 +511,19 @@ module.exports = ({ gistManager, wsManager, apiClient, exchangeAPI }) => {
 
     function calculateAPIPerformance() {
         const successRate = (apiClient.request_count - (apiClient.error_count || 0)) / apiClient.request_count;
-        return successRate > 0.95 ? 'excellent' : 
-               successRate > 0.85 ? 'good' : 
-               successRate > 0.70 ? 'fair' : 'poor';
+        return successRate > 0.95 ? 'excellent' :
+            successRate > 0.85 ? 'good' :
+                successRate > 0.70 ? 'fair' : 'poor';
     }
 
     function calculateStorageHealth(gistData) {
         const storedCoins = Object.keys(gistData.prices || {}).length;
         const expectedCoins = constants.ALL_TRADING_PAIRS.length;
         const coverage = storedCoins / expectedCoins;
-        
+
         return coverage > 0.9 ? 'excellent' :
-               coverage > 0.7 ? 'good' :
-               coverage > 0.5 ? 'fair' : 'poor';
+            coverage > 0.7 ? 'good' :
+                coverage > 0.5 ? 'fair' : 'poor';
     }
 
     function calculateOverallHealth(wsStatus, gistData) {
@@ -535,7 +533,7 @@ module.exports = ({ gistManager, wsManager, apiClient, exchangeAPI }) => {
             api_performance: calculateAPIPerformanceScore(),
             storage: calculateStorageScore(gistData)
         };
-        
+
         const totalScore = (scores.websocket + scores.data_freshness + scores.api_performance + scores.storage) / 4;
         return {
             score: Math.round(totalScore),
@@ -564,23 +562,23 @@ module.exports = ({ gistManager, wsManager, apiClient, exchangeAPI }) => {
 
     function generateHealthRecommendations(healthFilters) {
         const recommendations = [];
-        
+
         if (healthFilters.websocket_quality === 'poor') {
             recommendations.push("WebSocket connection lost - Check network connectivity");
         }
-        
+
         if (healthFilters.data_freshness === 'poor') {
             recommendations.push("Data is stale - Check Gist synchronization");
         }
-        
+
         if (healthFilters.api_performance === 'poor') {
             recommendations.push("API performance degraded - Check rate limits");
         }
-        
+
         if (healthFilters.storage_health === 'poor') {
             recommendations.push("Storage coverage low - Check historical data collection");
         }
-        
+
         return recommendations.length > 0 ? recommendations : ["All systems operating normally"];
     }
 
