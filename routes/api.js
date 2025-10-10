@@ -1,6 +1,6 @@
 const express = require('express');
 const TechnicalAnalysisEngine = require('../models/TechnicalAnalysis');
-const { HistoricalDataAPI } = require('./models/APIClients');
+const { HistoricalDataAPI } = require('../models/APIClients');
 const constants = require('../config/constants');
 const router = express.Router();
 
