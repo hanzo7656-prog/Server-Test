@@ -83,7 +83,7 @@ function generateStatusCard(icon, metric, label, details, cardClass = '') {
 // ==================== Routes ====================
 module.exports = ({ gistManager, wsManager, apiClient }) => {
     
-    // صفحه اصلی
+    // ==================== صفحه اصلی ====================
     router.get("/", (req, res) => {
         const wsStatus = wsManager.getConnectionStatus();
         const gistData = gistManager.getAllData();
@@ -179,7 +179,7 @@ module.exports = ({ gistManager, wsManager, apiClient }) => {
         res.send(generateVortexPage('VortexAI Pro Dashboard', bodyContent));
     });
 
-    // صفحه سلامت سیستم
+    // ==================== صفحه سلامت سیستم ====================
     router.get('/health', (req, res) => {
         const wsStatus = wsManager.getConnectionStatus();
         const gistData = gistManager.getAllData();
@@ -272,7 +272,252 @@ module.exports = ({ gistManager, wsManager, apiClient }) => {
         res.send(generateVortexPage('System Health', bodyContent, healthStyles));
     });
 
-    // صفحه API Data با طراحی جدید
+    // ==================== صفحه اسکنر بازار ====================
+    router.get('/scan', (req, res) => {
+        const scanStyles = `
+            .controls { background: rgba(255, 255, 255, 0.95); padding: 25px; border-radius: 15px; margin: 20px 0; display: flex; gap: 20px; align-items: center; flex-wrap: wrap; backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); }
+            .control-group { display: flex; align-items: center; gap: 12px; }
+            .control-group label { font-weight: 600; color: #2c3e50; min-width: 60px; }
+            select, button { padding: 12px 18px; border: 2px solid #e1e8ed; border-radius: 10px; font-size: 14px; background: white; transition: all 0.3s ease; backdrop-filter: blur(10px); }
+            select:focus, button:focus { outline: none; border-color: #3498db; box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1); }
+            button { background: linear-gradient(135deg, #3498db, #2980b9); color: white; border: none; cursor: pointer; font-weight: 600; box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3); }
+            button:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(52, 152, 219, 0.4); }
+            .results { margin-top: 30px; }
+            .coin-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 25px; margin-top: 20px; }
+            .coin-card { background: rgba(255, 255, 255, 0.95); border-radius: 15px; padding: 25px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); transition: all 0.3s ease; border: 2px solid transparent; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); }
+            .coin-card:hover { transform: translateY(-8px); box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15); border-color: #3498db; }
+            .coin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #f8f9fa; }
+            .coin-symbol { font-weight: bold; font-size: 1.4rem; color: #2c3e50; }
+            .coin-price { font-size: 1.8rem; font-weight: bold; margin: 15px 0; color: #2c3e50; }
+            .positive { color: #27ae60; } .negative { color: #e74c3c; }
+            .ai-badge { background: linear-gradient(135deg, #9b59b6, #8e44ad); color: white; padding: 8px 15px; border-radius: 20px; font-size: 0.9rem; font-weight: 600; box-shadow: 0 4px 15px rgba(155, 89, 182, 0.3); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); }
+            .loading { text-align: center; padding: 60px 20px; color: #7f8c8d; font-size: 1.2rem; }
+            .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 15px 0; }
+            .stat-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f8f9fa; }
+            .stat-label { color: #7f8c8d; font-size: 0.9rem; } .stat-value { font-weight: 600; color: #2c3e50; }
+        `;
+
+        const bodyContent = `
+            <div class="header">
+                <h1>🔍 VortexAI Market Scanner</h1>
+                <p>Advanced cryptocurrency scanning with AI-powered insights and multi-timeframe data</p>
+            </div>
+            <div class="controls">
+                <div class="control-group">
+                    <label>Limit:</label>
+                    <select id="limitSelect">
+                        <option value="10">10 coins</option>
+                        <option value="20" selected>20 coins</option>
+                        <option value="50">50 coins</option>
+                        <option value="100">100 coins</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>Filter:</label>
+                    <select id="filterSelect">
+                        <option value="ai_signal">AI Signal</option>
+                        <option value="volume">Volume</option>
+                        <option value="momentum_1h">1H Momentum</option>
+                        <option value="momentum_4h">4H Momentum</option>
+                    </select>
+                </div>
+                <button onclick="scanMarket()" style="background: linear-gradient(135deg, #27ae60, #2ecc71);">🔍 Scan Market</button>
+                <button onclick="loadSampleData()" style="background: linear-gradient(135deg, #95a5a6, #7f8c8d);">📋 Load Sample</button>
+            </div>
+            <div class="results">
+                <div id="resultsContainer" class="loading">Click "Scan Market" to load cryptocurrency data with VortexAI analysis...</div>
+            </div>
+            <div style="text-align: center; margin-top: 40px;">
+                <a href="/" class="back-button">🏠 Dashboard</a>
+                <a href="/analysis?symbol=btc_usdt" class="back-button" style="background: linear-gradient(135deg, #9b59b6, #8e44ad);">📊 Technical Analysis</a>
+                <a href="/health" class="back-button" style="background: linear-gradient(135deg, #f39c12, #e67e22);">🏥 System Health</a>
+            </div>
+            <script>
+                async function scanMarket() {
+                    const limit = document.getElementById('limitSelect').value;
+                    const filter = document.getElementById('filterSelect').value;
+                    document.getElementById('resultsContainer').innerHTML = '<div class="loading">🔍 Scanning market with VortexAI 6-Layer System...</div>';
+                    try {
+                        const response = await fetch('/api/scan/vortexai?limit=' + limit + '&filter=' + filter);
+                        const data = await response.json();
+                        if (data.success) displayResults(data.coins);
+                        else document.getElementById('resultsContainer').innerHTML = '<div class="loading" style="color: #e74c3c;">Error loading data</div>';
+                    } catch (error) {
+                        document.getElementById('resultsContainer').innerHTML = '<div class="loading" style="color: #e74c3c;">Connection error - Please try again</div>';
+                    }
+                }
+                function displayResults(coins) {
+                    if (!coins || coins.length === 0) {
+                        document.getElementById('resultsContainer').innerHTML = '<div class="loading">No coins found matching your criteria</div>';
+                        return;
+                    }
+                    const coinsHTML = coins.map(coin => {
+                        const positiveClass = (coin.priceChange24h || 0) >= 0 ? 'positive' : 'negative';
+                        const positiveClass1h = (coin.change_1h || 0) >= 0 ? 'positive' : 'negative';
+                        const sentimentColor = coin.VortexAI_analysis?.market_sentiment === 'bullish' ? '#27ae60' : '#e74c3c';
+                        return '<div class="coin-card"><div class="coin-header"><span class="coin-symbol">' + coin.symbol + '</span><span class="ai-badge">AI Score: ' + (coin.VortexAI_analysis?.signal_strength?.toFixed(1) || 'N/A') + '</span></div><div class="coin-price">$' + (coin.price?.toFixed(2) || '0.00') + '</div><div class="stats-grid"><div class="stat-item"><span class="stat-label">24h Change:</span><span class="stat-value ' + positiveClass + '">' + (coin.priceChange24h || 0).toFixed(2) + '%</span></div><div class="stat-item"><span class="stat-label">1h Change:</span><span class="stat-value ' + positiveClass1h + '">' + (coin.change_1h || 0).toFixed(2) + '%</span></div><div class="stat-item"><span class="stat-label">Volume:</span><span class="stat-value">$' + (coin.volume || 0).toLocaleString() + '</span></div><div class="stat-item"><span class="stat-label">Market Cap:</span><span class="stat-value">$' + (coin.marketCap || 0).toLocaleString() + '</span></div></div><div style="margin-top: 15px; padding-top: 15px; border-top: 2px solid #f8f9fa;"><div style="display: flex; justify-content: space-between; align-items: center;"><span style="color: #7f8c8d; font-size: 0.9rem;">Sentiment: <strong style="color: ' + sentimentColor + '">' + (coin.VortexAI_analysis?.market_sentiment || 'neutral') + '</strong></span><span style="color: #7f8c8d; font-size: 0.9rem;">Volatility: <strong>' + (coin.VortexAI_analysis?.volatility_score?.toFixed(1) || '0') + '</strong></span></div>' + (coin.VortexAI_analysis?.volume_anomaly ? '<div style="margin-top: 8px; padding: 5px 10px; background: #fff3cd; color: #856404; border-radius: 8px; font-size: 0.8rem; text-align: center; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2);">Volume Anomaly Detected</div>' : '') + '</div></div>';
+                    }).join('');
+                    document.getElementById('resultsContainer').innerHTML = '<h3 style="color: white; text-align: center; margin-bottom: 20px;">📊 Scan Results: ' + coins.length + ' coins found</h3><div class="coin-grid">' + coinsHTML + '</div>';
+                }
+                function loadSampleData() {
+                    const sampleCoins = [{symbol: 'BTC', price: 45234.56, priceChange24h: 2.34, change_1h: 0.56, volume: 25467890000, marketCap: 885234567890, VortexAI_analysis: {signal_strength: 8.7, market_sentiment: 'bullish', volatility_score: 7.2, volume_anomaly: true}},{symbol: 'ETH', price: 2345.67, priceChange24h: 1.23, change_1h: -0.34, volume: 14567890000, marketCap: 281234567890, VortexAI_analysis: {signal_strength: 7.2, market_sentiment: 'bullish', volatility_score: 5.8, volume_anomaly: false}},{symbol: 'SOL', price: 102.34, priceChange24h: 5.67, change_1h: 2.12, volume: 3456789000, marketCap: 41234567890, VortexAI_analysis: {signal_strength: 9.1, market_sentiment: 'very bullish', volatility_score: 8.5, volume_anomaly: true}}];
+                    displayResults(sampleCoins);
+                }
+                setTimeout(loadSampleData, 1000);
+            </script>
+        `;
+
+        res.send(generateVortexPage('Market Scanner', bodyContent, scanStyles));
+    });
+
+    // ==================== صفحه تحلیل تکنیکال ====================
+    router.get('/analysis', (req, res) => {
+        const symbol = req.query.symbol || 'btc_usdt';
+        
+        const analysisStyles = `
+            .analysis-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin: 30px 0; }
+            .indicator-card { background: rgba(255, 255, 255, 0.95); padding: 25px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); text-align: center; transition: all 0.3s ease; border-left: 4px solid #3498db; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); }
+            .indicator-card:hover { transform: translateY(-5px); box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15); }
+            .indicator-value { font-size: 2.2rem; font-weight: bold; margin: 15px 0; color: #2c3e50; }
+            .bullish { color: #27ae60; } .bearish { color: #e74c3c; } .neutral { color: #f39c12; }
+            .loading { text-align: center; padding: 60px 20px; color: #7f8c8d; font-size: 1.2rem; }
+            .timeframe-selector { display: flex; gap: 10px; margin: 20px 0; justify-content: center; flex-wrap: wrap; }
+            .timeframe-btn { padding: 10px 20px; background: rgba(255, 255, 255, 0.9); border: 2px solid #e1e8ed; border-radius: 10px; cursor: pointer; transition: all 0.3s ease; font-weight: 600; color: #2c3e50; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); }
+            .timeframe-btn.active { background: linear-gradient(135deg, #3498db, #2980b9); color: white; border-color: #3498db; }
+            .timeframe-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1); }
+            .info-section { background: rgba(255, 255, 255, 0.95); padding: 25px; border-radius: 15px; margin: 20px 0; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); }
+        `;
+
+        const bodyContent = `
+            <div class="header">
+                <h1>📊 Technical Analysis: ${symbol.toUpperCase()}</h1>
+                <p>Advanced technical indicators powered by VortexAI 6-Layer System</p>
+            </div>
+
+            <div style="text-align: center; margin: 20px 0;">
+                <a href="/scan" class="back-button">🔍 Back to Scanner</a>
+                <a href="/" class="back-button" style="background: linear-gradient(135deg, #95a5a6, #7f8c8d);">🏠 Dashboard</a>
+
+                <div class="timeframe-selector">
+                    <button class="timeframe-btn" onclick="changeTimeframe('1h')">1H</button>
+                    <button class="timeframe-btn" onclick="changeTimeframe('4h')">4H</button>
+                    <button class="timeframe-btn" onclick="changeTimeframe('24h')">24H</button>
+                    <button class="timeframe-btn active" onclick="changeTimeframe('7d')">7D</button>
+                    <button class="timeframe-btn" onclick="changeTimeframe('30d')">30D</button>
+                    <button class="timeframe-btn" onclick="changeTimeframe('180d')">180D</button>
+                </div>
+            </div>
+
+            <div id="analysisContent" class="loading">
+                Loading technical analysis for ${symbol.toUpperCase()}...
+            </div>
+
+            <script>
+                let currentSymbol = '${symbol}';
+                let currentTimeframe = '7d';
+
+                async function loadAnalysis() {
+                    try {
+                        const response = await fetch('/api/coin/' + currentSymbol + '/technical');
+                        const data = await response.json();
+
+                        if (data.success) {
+                            displayAnalysis(data);
+                        } else {
+                            document.getElementById('analysisContent').innerHTML = '<div class="loading" style="color: #e74c3c;">Error loading analysis data</div>';
+                        }
+                    } catch (error) {
+                        document.getElementById('analysisContent').innerHTML = '<div class="loading" style="color: #e74c3c;">Connection error - Please try again</div>';
+                    }
+                }
+
+                async function changeTimeframe(timeframe) {
+                    currentTimeframe = timeframe;
+                    document.querySelectorAll('.timeframe-btn').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    event.target.classList.add('active');
+
+                    try {
+                        const response = await fetch('/api/coin/' + currentSymbol + '/history/' + timeframe);
+                        const data = await response.json();
+
+                        if (data.success) {
+                            document.getElementById('analysisContent').innerHTML = 
+                                '<div class="info-section">' +
+                                '<h3>📈 ' + timeframe.toUpperCase() + ' Historical Data</h3>' +
+                                '<p><strong>Data Points:</strong> ' + data.data_points + '</p>' +
+                                '<p><strong>Current Price:</strong> $' + (data.current_price?.toFixed(2) || 'N/A') + '</p>' +
+                                '<p><strong>Timeframe:</strong> ' + timeframe + '</p>' +
+                                '</div>' +
+                                '<div style="text-align: center; margin: 20px; color: white;">' +
+                                'Loading technical indicators...' +
+                                '</div>';
+
+                            setTimeout(loadAnalysis, 1000);
+                        }
+                    } catch (error) {
+                        console.error('Error loading timeframe data:', error);
+                    }
+                }
+
+                function displayAnalysis(data) {
+                    const rsiColor = getRSIColor(data.technical_indicators?.rsi);
+                    const macdColor = getMACDColor(data.technical_indicators?.macd);
+                    const sentimentColor = data.vortexai_analysis?.market_sentiment === 'BULLISH' ? '#27ae60' : 
+                                         data.vortexai_analysis?.market_sentiment === 'BEARISH' ? '#e74c3c' : '#f39c12';
+
+                    const analysisHTML = 
+                        '<div class="analysis-grid">' +
+                        '<div class="indicator-card">' +
+                        '<div>💰 Current Price</div>' +
+                        '<div class="indicator-value">$' + (data.current_price?.toFixed(2) || 'N/A') + '</div>' +
+                        '<div style="color: #7f8c8d; font-size: 0.9rem;">Live Price</div>' +
+                        '</div>' +
+
+                        '<div class="indicator-card">' +
+                        '<div>📊 RSI</div>' +
+                        '<div class="indicator-value ' + rsiColor + '">' + (data.technical_indicators?.rsi?.toFixed(2) || 'N/A') + '</div>' +
+                        '<div style="color: #7f8c8d; font-size: 0.9rem;">Momentum</div>' +
+                        '</div>' +
+
+                        '<div class="indicator-card">' +
+                        '<div>📈 MACD</div>' +
+                        '<div class="indicator-value ' + macdColor + '">' + (data.technical_indicators?.macd?.toFixed(4) || 'N/A') + '</div>' +
+                        '<div style="color: #7f8c8d; font-size: 0.9rem;">Trend</div>' +
+                        '</div>' +
+
+                        '<div class="info-section">' +
+                        '<h3>🤖 VortexAI Insights</h3>' +
+                        '<p><strong>Market Sentiment:</strong> ' +
+                        '<span style="color:' + sentimentColor + '; font-weight: bold;">' + (data.vortexai_analysis?.market_sentiment || 'NEUTRAL') + '</span>' +
+                        '</p>' +
+                        '<p><strong>Analysis Timeframe:</strong> ' + currentTimeframe.toUpperCase() + '</p>' +
+                        '</div>';
+
+                    document.getElementById('analysisContent').innerHTML = analysisHTML;
+                }
+
+                function getRSIColor(rsi) {
+                    if (!rsi) return 'neutral';
+                    if (rsi > 70) return 'bearish';
+                    if (rsi < 30) return 'bullish';
+                    return 'neutral';
+                }
+
+                function getMACDColor(macd) {
+                    if (!macd) return 'neutral';
+                    return macd > 0 ? 'bullish' : 'bearish';
+                }
+
+                window.addEventListener('load', loadAnalysis);
+            </script>
+        `;
+
+        res.send(generateVortexPage('Technical Analysis', bodyContent, analysisStyles));
+    });
+
+    // ==================== صفحه API Data ====================
     router.get('/api-data', (req, res) => {
         const apiDataStyles = `
             .endpoints-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin: 25px 0; }
@@ -341,17 +586,17 @@ module.exports = ({ gistManager, wsManager, apiClient }) => {
             <div style="background: rgba(255, 255, 255, 0.95); padding: 25px; border-radius: 15px; margin-bottom: 20px; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2);">
                 <h2>🚀 Main API Endpoints</h2>
                 
-                <div class="code-block" style="background: #2c3e50; color: #ecf0f1; padding: 20px; border-radius: 10px; margin: 20px 0; font-family: 'Courier New', monospace;">
+                <div style="background: #2c3e50; color: #ecf0f1; padding: 20px; border-radius: 10px; margin: 20px 0; font-family: 'Courier New', monospace;">
                     <span style="color: #27ae60; font-weight: bold;">GET</span> /api/scan/vortexai?limit=<span style="color: #e74c3c;">100</span>&filter=<span style="color: #e74c3c;">ai_signal</span><br>
                     <span style="color: #95a5a6;"># Returns enhanced cryptocurrency data with VortexAI analysis</span>
                 </div>
 
                 <h3>🎛️ Try with Different Filters</h3>
-                <div class="filter-options" style="display: flex; gap: 10px; margin: 15px 0; flex-wrap: wrap;">
-                    <a href="/api/scan/vortexai?limit=10&filter=ai_signal" class="try-button" target="_blank" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; text-decoration: none; border-radius: 20px; margin: 10px 5px; transition: all 0.3s ease; font-weight: bold; font-size: 0.9rem; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2);">
+                <div style="display: flex; gap: 10px; margin: 15px 0; flex-wrap: wrap;">
+                    <a href="/api/scan/vortexai?limit=10&filter=ai_signal" target="_blank" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; text-decoration: none; border-radius: 20px; margin: 10px 5px; transition: all 0.3s ease; font-weight: bold; font-size: 0.9rem; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2);">
                         <span style="width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(135deg, #f39c12, #e67e22); display: inline-flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: bold; margin-right: 8px;">AI</span> AI Signal (10)
                     </a>
-                    <a href="/api/scan/vortexai?limit=20&filter=volume" class="try-button" target="_blank" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; text-decoration: none; border-radius: 20px; margin: 10px 5px; transition: all 0.3s ease; font-weight: bold; font-size: 0.9rem; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2);">
+                    <a href="/api/scan/vortexai?limit=20&filter=volume" target="_blank" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; text-decoration: none; border-radius: 20px; margin: 10px 5px; transition: all 0.3s ease; font-weight: bold; font-size: 0.9rem; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2);">
                         <span style="width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(135deg, #f39c12, #e67e22); display: inline-flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: bold; margin-right: 8px;">V</span> Volume (20)
                     </a>
                 </div>
@@ -387,6 +632,24 @@ module.exports = ({ gistManager, wsManager, apiClient }) => {
                         <div class="endpoint-desc" style="color: #7f8c8d; font-size: 0.9rem;">
                             Technical analysis with 15+ indicators<br>
                             <strong>Example:</strong> /api/coin/btc_usdt/technical
+                        </div>
+                    </div>
+
+                    <div class="endpoint-card">
+                        <span class="endpoint-method get">GET</span>
+                        <div class="endpoint-path">/api/health-combined</div>
+                        <div class="endpoint-desc" style="color: #7f8c8d; font-size: 0.9rem;">
+                            System health and statistics<br>
+                            Includes request counts and service status
+                        </div>
+                    </div>
+
+                    <div class="endpoint-card">
+                        <span class="endpoint-method get">GET</span>
+                        <div class="endpoint-path">/api/timeframes</div>
+                        <div class="endpoint-desc" style="color: #7f8c8d; font-size: 0.9rem;">
+                            List all available historical timeframes<br>
+                            6 different timeframe options
                         </div>
                     </div>
                 </div>
@@ -454,7 +717,177 @@ module.exports = ({ gistManager, wsManager, apiClient }) => {
         res.send(generateVortexPage('API Data', bodyContent, apiDataStyles));
     });
 
-    // بقیه صفحات (Scan, Analysis, Timeframes API, Health API) رو می‌تونی به همین الگو اضافه کنی
+    // ==================== صفحه Health API ====================
+    router.get('/health-api', (req, res) => {
+        const healthData = {
+            websocket: wsManager.getConnectionStatus(),
+            gist: gistManager.getAllData(),
+            api: { requests_count: apiClient.request_count }
+        };
+
+        const healthApiStyles = `
+            .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin: 25px 0; }
+            .stat-card { background: rgba(255, 255, 255, 0.9); padding: 20px; border-radius: 12px; border-left: 4px solid #3498db; text-align: center; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); transition: all 0.3s ease; }
+            .stat-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15); }
+            .stat-value { font-size: 2rem; font-weight: bold; color: #2c3e50; margin: 10px 0; }
+            .stat-label { color: #7f8c8d; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; }
+            .status-indicator { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; }
+            .status-online { background: #27ae60; } .status-offline { background: #e74c3c; } .status-warning { background: #f39c12; }
+        `;
+
+        const bodyContent = `
+            <div class="header">
+                <h1>💚 Health API</h1>
+                <p>Real-time system health monitoring and API request statistics</p>
+            </div>
+
+            <div style="background: rgba(255, 255, 255, 0.95); padding: 25px; border-radius: 15px; margin-bottom: 20px; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2);">
+                <h2>🔌 API Endpoints</h2>
+                
+                <div style="background: #2c3e50; color: #ecf0f1; padding: 20px; border-radius: 10px; margin: 20px 0; font-family: 'Courier New', monospace;">
+                    <span style="color: #3498db; font-weight: bold;">GET</span> /api/health-combined
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value">${healthData.websocket.connected ? '🟢' : '🔴'}</div>
+                        <div class="stat-label">WebSocket Status</div>
+                        <div style="margin-top: 10px; font-size: 0.9rem;">
+                            Active: ${healthData.websocket.active_coins}<br>
+                            Subscribed: ${healthData.websocket.total_subscribed}
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-value">${Object.keys(healthData.gist.prices || {}).length}</div>
+                        <div class="stat-label">Stored Coins</div>
+                        <div style="margin-top: 10px; font-size: 0.9rem;">
+                            Timeframes: 6<br>
+                            Gist: ${!!process.env.GITHUB_TOKEN ? 'Active' : 'Inactive'}
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-value">${healthData.api.requests_count}</div>
+                        <div class="stat-label">API Requests</div>
+                        <div style="margin-top: 10px; font-size: 0.9rem;">
+                            CoinStats: Active<br>
+                            Rate Limit: Enabled
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-value">15+</div>
+                        <div class="stat-label">AI Indicators</div>
+                        <div style="margin-top: 10px; font-size: 0.9rem;">
+                            Technical: 15+<br>
+                            Analysis: Active
+                        </div>
+                    </div>
+                </div>
+
+                <h3>🚀 Try the API</h3>
+                <a href="/api/health-combined" target="_blank" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: linear-gradient(135deg, #27ae60, #2ecc71); color: white; text-decoration: none; border-radius: 20px; margin: 10px 5px; transition: all 0.3s ease; font-weight: bold; font-size: 0.9rem; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2);">
+                    🧪 Test Health API
+                </a>
+                <a href="/health" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: linear-gradient(135deg, #9b59b6, #8e44ad); color: white; text-decoration: none; border-radius: 20px; margin: 10px 5px; transition: all 0.3s ease; font-weight: bold; font-size: 0.9rem; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2);">
+                    📊 Health Dashboard
+                </a>
+            </div>
+
+            <div style="text-align: center; margin-top: 30px;">
+                <a href="/" class="back-button">🏠 Dashboard</a>
+                <a href="/api-data" class="back-button" style="background: linear-gradient(135deg, #e74c3c, #c0392b);">📡 API Data</a>
+                <a href="/timeframes-api" class="back-button" style="background: linear-gradient(135deg, #f39c12, #e67e22);">🕐 Timeframes API</a>
+            </div>
+        `;
+
+        res.send(generateVortexPage('Health API', bodyContent, healthApiStyles));
+    });
+
+    // ==================== صفحه Timeframes API ====================
+    router.get('/timeframes-api', (req, res) => {
+        const timeframes = ['1h', '4h', '24h', '7d', '30d', '180d'];
+        
+        const timeframesStyles = `
+            .timeframe-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 25px 0; }
+            .timeframe-card { background: rgba(255, 255, 255, 0.9); padding: 20px; border-radius: 12px; text-align: center; border: 2px solid transparent; transition: all 0.3s ease; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); }
+            .timeframe-card:hover { border-color: #3498db; transform: translateY(-5px); }
+            .timeframe-name { font-size: 1.5rem; font-weight: bold; color: #2c3e50; margin-bottom: 5px; }
+            .timeframe-desc { color: #7f8c8d; font-size: 0.8rem; }
+        `;
+
+        const bodyContent = `
+            <div class="header">
+                <h1>🕐 Timeframes API</h1>
+                <p>Access historical data across 6 different timeframes with varying intervals</p>
+            </div>
+
+            <div style="background: rgba(255, 255, 255, 0.95); padding: 25px; border-radius: 15px; margin-bottom: 20px; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2);">
+                <h2>🔌 Available Endpoints</h2>
+                
+                <div style="background: #2c3e50; color: #ecf0f1; padding: 20px; border-radius: 10px; margin: 20px 0; font-family: 'Courier New', monospace;">
+                    <span style="color: #3498db; font-weight: bold;">GET</span> /api/timeframes<br>
+                    <span style="color: #95a5a6;"># Returns all available timeframes</span>
+                </div>
+
+                <div style="background: #2c3e50; color: #ecf0f1; padding: 20px; border-radius: 10px; margin: 20px 0; font-family: 'Courier New', monospace;">
+                    <span style="color: #3498db; font-weight: bold;">GET</span> /api/coin/<span style="color: #e74c3c;">:symbol</span>/history/<span style="color: #e74c3c;">:timeframe</span><br>
+                    <span style="color: #95a5a6;"># Returns historical data for specific symbol and timeframe</span>
+                </div>
+
+                <h3>📊 Available Timeframes</h3>
+                <div class="timeframe-grid">
+                    <div class="timeframe-card">
+                        <div class="timeframe-name">1H</div>
+                        <div class="timeframe-desc">1 minute intervals</div>
+                        <div style="color: #27ae60; font-weight: bold; margin-top: 5px;">60 records</div>
+                    </div>
+                    <div class="timeframe-card">
+                        <div class="timeframe-name">4H</div>
+                        <div class="timeframe-desc">5 minute intervals</div>
+                        <div style="color: #27ae60; font-weight: bold; margin-top: 5px;">48 records</div>
+                    </div>
+                    <div class="timeframe-card">
+                        <div class="timeframe-name">24H</div>
+                        <div class="timeframe-desc">15 minute intervals</div>
+                        <div style="color: #27ae60; font-weight: bold; margin-top: 5px;">96 records</div>
+                    </div>
+                    <div class="timeframe-card">
+                        <div class="timeframe-name">7D</div>
+                        <div class="timeframe-desc">1 hour intervals</div>
+                        <div style="color: #27ae60; font-weight: bold; margin-top: 5px;">168 records</div>
+                    </div>
+                    <div class="timeframe-card">
+                        <div class="timeframe-name">30D</div>
+                        <div class="timeframe-desc">4 hour intervals</div>
+                        <div style="color: #27ae60; font-weight: bold; margin-top: 5px;">180 records</div>
+                    </div>
+                    <div class="timeframe-card">
+                        <div class="timeframe-name">180D</div>
+                        <div class="timeframe-desc">1 day intervals</div>
+                        <div style="color: #27ae60; font-weight: bold; margin-top: 5px;">180 records</div>
+                    </div>
+                </div>
+
+                <h3>🚀 Try the APIs</h3>
+                <a href="/api/timeframes" target="_blank" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: linear-gradient(135deg, #f39c12, #e67e22); color: white; text-decoration: none; border-radius: 20px; margin: 10px 5px; transition: all 0.3s ease; font-weight: bold; font-size: 0.9rem; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2);">
+                    📋 List Timeframes
+                </a>
+                <a href="/api/coin/btc_usdt/history/7d" target="_blank" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: linear-gradient(135deg, #f39c12, #e67e22); color: white; text-decoration: none; border-radius: 20px; margin: 10px 5px; transition: all 0.3s ease; font-weight: bold; font-size: 0.9rem; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2);">
+                    💰 BTC 7D Data
+                </a>
+            </div>
+
+            <div style="text-align: center; margin-top: 30px;">
+                <a href="/" class="back-button">🏠 Dashboard</a>
+                <a href="/health-api" class="back-button" style="background: linear-gradient(135deg, #27ae60, #2ecc71);">💚 Health API</a>
+                <a href="/api-data" class="back-button" style="background: linear-gradient(135deg, #e74c3c, #c0392b);">📡 API Data</a>
+            </div>
+        `;
+
+        res.send(generateVortexPage('Timeframes API', bodyContent, timeframesStyles));
+    });
 
     return router;
 };
