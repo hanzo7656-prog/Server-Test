@@ -4,7 +4,7 @@ const path = require('path');
 require('dotenv').config();
 
 // ایمپورت ماژول‌ها
-const constants = require('./config/constants');
+const constants = require('./config/constant');
 const logger = require('./config/logger');
 const GistManager = require('./models/GistManager');
 const WebSocketManager = require('./models/WebSocketManager');
