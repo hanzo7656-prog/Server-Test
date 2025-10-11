@@ -252,13 +252,14 @@ module.exports = ({ gistManager, wsManager, apiClient, exchangeAPI }) => {
         const symbol = req.params.symbol;
 
         try {
-            const historicalData = gistManager.getPriceData(symbol, "24h");
-            const realtimeData = wsManager.getRealtimeData()[symbol];
+            const formattedSymbol = `${symbol.toLowerCase()}_usdt`;
+            const historicalData = gistManager.getPriceData(formattedSymbol, "24h");
+            const realtimeData = wsManager.getRealtimeData()[formattedSymbol];
 
             if (!historicalData && !realtimeData) {
                 return res.status(404).json({
                     success: false,
-                    error: 'No data available for this symbol'
+                    error: `No data available for this symbol: ${symbol} (searched as: ${formattedSymbol})`
                 });
             }
 
