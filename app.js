@@ -11,6 +11,7 @@ const WebSocketManager = require('./models/WebSocketManager');
 const { AdvancedCoinStatsAPIClient, HistoricalDataAPI, ExchangeAPI, InsightsAPI } = require('./models/APIClients');
 const apiRoutes = require('./routes/api');
 const pageRoutes = require('./routes/pages');
+const modernRoutes = require('./routes/modern-pages');
 
 const app = express();
 const PORT = constants.PORT;
@@ -79,6 +80,7 @@ app.get('/api-data', (req, res) => {
   res.redirect('/api/health-combined');
 });
 
+app.use('/', modernRoutes({ gistManager, wsManager, apiClient }));
 // سپس خط اصلی API
 app.use('/api', apiRoutes({ gistManager, wsManager, apiClient, exchangeAPI }));
 // روت‌ها
