@@ -568,10 +568,154 @@ class NewsAPI {
   }
 }
 
+class InsightsAPI {
+    constructor() {
+        this.base_url = constants.API_URLS.base;
+        this.api_key = constants.COINSTATS_API_KEY;
+    }
+
+    async getBTCDominance(type = 'all') {
+        try {
+            const url = `${constants.API_URLS.btcDominance}?type=${type}`;
+            console.log(`📊 Fetching BTC Dominance from: ${url}`);
+            
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'X-API-KEY': this.api_key,
+                    'Accept': 'application/json',
+                    'User-Agent': 'VortexAI-Server/1.0'
+                },
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            console.log('✅ BTC Dominance data received');
+            return data;
+            
+        } catch (error) {
+            console.error('❌ BTC Dominance API error:', error.message);
+            throw error;
+        }
+    }
+
+    async getFearGreedIndex() {
+        try {
+            const url = `${constants.API_URLS.fearGreed}`;
+            console.log(`😨 Fetching Fear & Greed Index from: ${url}`);
+            
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'X-API-KEY': this.api_key,
+                    'Accept': 'application/json',
+                    'User-Agent': 'VortexAI-Server/1.0'
+                },
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            console.log('✅ Fear & Greed Index data received');
+            return data;
+            
+        } catch (error) {
+            console.error('❌ Fear & Greed API error:', error.message);
+            throw error;
+        }
+    }
+
+    async getFearGreedChart() {
+        try {
+            const url = `${constants.API_URLS.fearGreedChart}`;
+            console.log(`📈 Fetching Fear & Greed Chart from: ${url}`);
+            
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
+            
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'X-API-KEY': this.api_key,
+                    'Accept': 'application/json',
+                    'User-Agent': 'VortexAI-Server/1.0'
+                },
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            console.log('✅ Fear & Greed Chart data received');
+            return data;
+            
+        } catch (error) {
+            console.error('❌ Fear & Greed Chart API error:', error.message);
+            throw error;
+        }
+    }
+
+    async getRainbowChart(coin = 'bitcoin') {
+        try {
+            const url = `${constants.API_URLS.rainbowChart}/${coin}`;
+            console.log(`🌈 Fetching Rainbow Chart for ${coin} from: ${url}`);
+            
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
+            
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'X-API-KEY': this.api_key,
+                    'Accept': 'application/json',
+                    'User-Agent': 'VortexAI-Server/1.0'
+                },
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            console.log(`✅ Rainbow Chart data received for ${coin}`);
+            return data;
+            
+        } catch (error) {
+            console.error('❌ Rainbow Chart API error:', error.message);
+            throw error;
+        }
+    }
+}
+
 module.exports = {
   AdvancedCoinStatsAPIClient,
   HistoricalDataAPI,
   ExchangeAPI,
   MarketDataAPI, // اضافه کردن کلاس جدید
-  NewsAPI // اضافه کردن کلاس جدید
+  NewsAPI, // اضافه کردن کلاس جدید
+  InsightsAPI
 };
