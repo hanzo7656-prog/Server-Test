@@ -850,6 +850,4 @@ static isMonotonicallyDecreasing(arr) {
     }
     return true;
 }
-
-
-  module.exports = TechnicalAnalysisEngine;
+module.exports = TechnicalAnalysisEngine;
