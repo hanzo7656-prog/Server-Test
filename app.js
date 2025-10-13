@@ -40,6 +40,47 @@ const wsManager = new WebSocketManager(gistManager);
 const apiClient = new AdvancedCoinStatsAPIClient();
 const exchangeAPI = new ExchangeAPI();
 
+
+// ========== REDIRECT ROUTES برای Frontend ==========
+
+// Redirect از root به /api
+app.get('/scan', (req, res) => {
+  const limit = req.query.limit;
+  const filter = req.query.filter;
+  let redirectUrl = '/api/scan/vortexai';
+  if (limit || filter) {
+    redirectUrl += '?' + new URLSearchParams(req.query).toString();
+  }
+  res.redirect(redirectUrl);
+});
+
+app.get('/analysis', (req, res) => {
+  const symbol = req.query.symbol;
+  if (symbol) {
+    res.redirect(`/api/coin/${symbol}/technical`);
+  } else {
+    res.status(400).json({ error: "Symbol parameter required" });
+  }
+});
+
+app.get('/timeframes-api', (req, res) => {
+  res.redirect('/api/timeframes');
+});
+
+app.get('/health-api', (req, res) => {
+  res.redirect('/api/health');
+});
+
+app.get('/currencies', (req, res) => {
+  res.redirect('/api/currencies');
+});
+
+app.get('/api-data', (req, res) => {
+  res.redirect('/api/health-combined');
+});
+
+// سپس خط اصلی API
+app.use('/api', apiRoutes({ gistManager, wsManager, apiClient, exchangeAPI }));
 // روت‌ها
 app.use('/api', apiRoutes({ gistManager, wsManager, apiClient, exchangeAPI }));
 app.use('/', pageRoutes({ gistManager, wsManager, apiClient }));
