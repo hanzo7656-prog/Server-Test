@@ -39,7 +39,7 @@ const gistManager = new GistManager();
 const wsManager = new WebSocketManager(gistManager);
 const apiClient = new AdvancedCoinStatsAPIClient();
 const exchangeAPI = new ExchangeAPI();
-
+const InsightsAPI = new InsightsAPI();
 
 // ========== REDIRECT ROUTES برای Frontend ==========
 
