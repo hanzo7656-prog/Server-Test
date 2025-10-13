@@ -41,7 +41,7 @@ const apiClient = new AdvancedCoinStatsAPIClient();
 const exchangeAPI = new ExchangeAPI();
 
 // روت‌ها
-app.use('/api', apiRoutes({ gistManager, wsManager, apiClient, exchangeAPI }));
+app.use('/', apiRoutes({ gistManager, wsManager, apiClient, exchangeAPI }));
 app.use('/', pageRoutes({ gistManager, wsManager, apiClient }));
 
 // هندلرهای سلامت
