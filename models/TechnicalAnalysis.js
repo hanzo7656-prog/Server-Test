@@ -852,4 +852,4 @@ static isMonotonicallyDecreasing(arr) {
 }
 
 
-module.exports = TechnicalAnalysisEngine;
+  module.exports = TechnicalAnalysisEngine;
