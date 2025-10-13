@@ -44,15 +44,15 @@ module.exports = ({ gistManager, wsManager, apiClient, exchangeAPI }) => {
           const coinId = historicalAPI.symbolToCoinId(coin.symbol);
           return coinId;
         } catch (error) {
-          console.log('Error converting symbol ${coin.symbol}', error);
+          console.log(`Error converting symbol ${coin.symbol}`, error);
           return 'bitcoin';
         }
       });
 
-      console.log('Fetching historical for ${allCoinIds.length} coins...');
+      console.log(`Fetching historical for ${allCoinIds.length} coins...`);
       const historicalResponse = await historicalAPI.getMultipleCoinsHistorical(allCoinIds, '1y');
       const allHistoricalData = historicalResponse.data || [];
-      console.log('Historical data received: ${allHistoricalData.length} records');
+      console.log(`Historical data received: ${allHistoricalData.length} records`);
 
       const historicalMap = {};
       allHistoricalData.forEach(coinData => {
@@ -65,7 +65,7 @@ module.exports = ({ gistManager, wsManager, apiClient, exchangeAPI }) => {
       const enhancedCoins = coins.map((coin) => {
         const coinId = historicalAPI.symbolToCoinId(coin.symbol);
         const historicalData = historicalMap[coinId];
-        const symbol = '${coin.symbol.toLowerCase()}_usdt';
+        const symbol = `${coin.symbol.toLowerCase()}_usdt`;
         const realtime = realtimeData[symbol];
         const gistHistorical = gistManager.getPriceData(symbol);
         const currentPrice = realtime?.price || coin.price;
@@ -211,7 +211,7 @@ module.exports = ({ gistManager, wsManager, apiClient, exchangeAPI }) => {
     if (!validTimeframes.includes(timeframe)) {
       return res.status(400).json({
         success: false,
-        error: 'Invalid timeframe. Valid timeframes: ${validTimeframes.join(', ')}'
+        error: `Invalid timeframe. Valid timeframes: ${validTimeframes.join(', ')}`
       });
     }
 
