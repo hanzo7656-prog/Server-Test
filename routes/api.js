@@ -7,6 +7,240 @@ const router = express.Router();
 
 module.exports = ({ gistManager, wsManager, apiClient, exchangeAPI }) => {
   
+  // ========== ENDPOINT های جدید برای Frontend ==========
+  
+  // اندپوینت /scan برای Frontend
+  router.get("/scan", async (req, res) => {
+    const startTime = Date.now();
+    try {
+      const limit = Math.min(parseInt(req.query.limit) || 100, 300);
+      const filterType = req.query.filter || 'volume';
+      
+      const [apiData, realtimeData] = await Promise.all([
+        apiClient.getCoins(limit),
+        Promise.resolve(wsManager.getRealtimeData())
+      ]);
+
+      let coins = apiData.coins || [];
+
+      if (coins.length === 0) {
+        coins = Object.entries(realtimeData || {}).slice(0, limit).map(([symbol, data], index) => ({
+          id: 'coin_' + index,
+          name: 'Crypto' + index,
+          symbol: symbol.replace("_usdt", "").toUpperCase(),
+          price: data.price || 0,
+          priceChange1h: data.change || 0,
+          priceChange24h: data.change || 0,
+          volume: data.volume || 0,
+          marketCap: (data.price || 0) * 1000000,
+          rank: index + 1
+        }));
+      }
+
+      const enhancedCoins = coins.map((coin) => {
+        const symbol = `${coin.symbol.toLowerCase()}_usdt`;
+        const realtime = realtimeData[symbol];
+        
+        return {
+          ...coin,
+          realtime_price: realtime?.price,
+          realtime_volume: realtime?.volume,
+          realtime_change: realtime?.change,
+          VortexAI_analysis: {
+            signal_strength: TechnicalAnalysisEngine.calculateSignalStrength(coin),
+            trend: (coin.priceChange24h || 0) > 0 ? "up" : "down",
+            volatility_score: TechnicalAnalysisEngine.calculateVolatility(coin),
+            volume_anomaly: TechnicalAnalysisEngine.detectVolumeAnomaly(coin)
+          }
+        };
+      });
+
+      let filteredCoins = [...enhancedCoins];
+      switch (filterType) {
+        case 'volume':
+          filteredCoins.sort((a, b) => (b.volume || 0) - (a.volume || 0));
+          break;
+        case 'momentum_1h':
+          filteredCoins.sort((a, b) => Math.abs(b.priceChange1h || 0) - Math.abs(a.priceChange1h || 0));
+          break;
+        case 'ai_signal':
+          filteredCoins.sort((a, b) => (b.VortexAI_analysis?.signal_strength || 0) - (a.VortexAI_analysis?.signal_strength || 0));
+          break;
+      }
+
+      const responseTime = Date.now() - startTime;
+      res.json({
+        success: true,
+        coins: filteredCoins.slice(0, limit),
+        total_coins: filteredCoins.length,
+        filter_applied: filterType,
+        processing_time: responseTime + 'ms',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error in /scan endpoint:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  });
+
+  // اندپوینت /analysis برای Frontend
+  router.get("/analysis", async (req, res) => {
+    const startTime = Date.now();
+    const symbol = req.query.symbol;
+    
+    if (!symbol) {
+      return res.status(400).json({
+        success: false,
+        error: 'Symbol parameter is required'
+      });
+    }
+
+    try {
+      const historicalData = gistManager.getPriceData(symbol, "24h");
+      const realtimeData = wsManager.getRealtimeData()[symbol];
+
+      if (!historicalData && !realtimeData) {
+        return res.status(404).json({
+          success: false,
+          error: 'No data available for this symbol'
+        });
+      }
+
+      const priceData = historicalData?.history?.map(item => ({
+        price: item.price,
+        timestamp: item.timestamp,
+        high: item.high || item.price * 1.02,
+        low: item.low || item.price * 0.98,
+        volume: item.volume || 1000
+      })) || [];
+
+      if (realtimeData) {
+        priceData.push({
+          price: realtimeData.price,
+          timestamp: Date.now(),
+          high: realtimeData.high_24h || realtimeData.price * 1.02,
+          low: realtimeData.low_24h || realtimeData.price * 0.98,
+          volume: realtimeData.volume || 1000
+        });
+      }
+
+      const indicators = TechnicalAnalysisEngine.calculateAllIndicators(priceData);
+      const supportResistance = TechnicalAnalysisEngine.calculateSupportResistance(priceData);
+
+      res.json({
+        success: true,
+        symbol: symbol,
+        current_price: realtimeData?.price || historicalData?.current_price,
+        technical_indicators: indicators,
+        support_resistance: supportResistance,
+        data_points: priceData.length,
+        processing_time: `${Date.now() - startTime}ms`,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error(`Analysis error for ${symbol}:`, error);
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  });
+
+  // اندپوینت /timeframes-api برای Frontend
+  router.get("/timeframes-api", (req, res) => {
+    res.json({
+      success: true,
+      timeframes: gistManager.getAvailableTimeframes(),
+      description: {
+        "1h": "1 hour history - 1 minute intervals",
+        "4h": "4 hours history - 5 minute intervals", 
+        "24h": "24 hours history - 15 minute intervals",
+        "7d": "7 days history - 1 hour intervals",
+        "30d": "30 days history - 4 hour intervals",
+        "180d": "180 days history - 1 day intervals"
+      },
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  // اندپوینت /api-data برای Frontend
+  router.get("/api-data", (req, res) => {
+    const wsStatus = wsManager.getConnectionStatus();
+    const gistData = gistManager.getAllData();
+    
+    res.json({
+      success: true,
+      api_status: {
+        websocket: {
+          connected: wsStatus.connected,
+          active_coins: wsStatus.active_coins
+        },
+        database: {
+          total_coins: Object.keys(gistData.prices || {}).length,
+          last_updated: gistData.last_updated
+        },
+        endpoints_available: [
+          "/scan",
+          "/analysis", 
+          "/timeframes-api",
+          "/api-data",
+          "/health-api",
+          "/currencies"
+        ]
+      },
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  // اندپوینت /health-api برای Frontend
+  router.get("/health-api", (req, res) => {
+    const wsStatus = wsManager.getConnectionStatus();
+    const gistData = gistManager.getAllData();
+    
+    res.json({
+      status: 'OK',
+      service: 'VortexAI Crypto Scanner',
+      version: '5.0.0',
+      timestamp: new Date().toISOString(),
+      components: {
+        websocket: wsStatus.connected ? 'healthy' : 'unhealthy',
+        database: process.env.GITHUB_TOKEN ? 'healthy' : 'degraded',
+        api: 'healthy'
+      },
+      stats: {
+        active_connections: wsStatus.active_coins,
+        stored_coins: Object.keys(gistData.prices || {}).length,
+        uptime: process.uptime()
+      }
+    });
+  });
+
+  // اندپوینت /currencies برای Frontend (مستقیم)
+  router.get("/currencies", async (req, res) => {
+    try {
+      const marketAPI = new MarketDataAPI();
+      const data = await marketAPI.getCurrencies();
+      
+      res.json({
+        success: true,
+        data: data,
+        count: data.length || 0,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error in /currencies endpoint:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  });
+
+  // ========== ENDPOINT های اصلی موجود (دقیقا مثل قبل) ==========
+  
   // اندپوینت اصلی اسکن
   router.get("/scan/vortexai", async (req, res) => {
     const startTime = Date.now();
@@ -406,8 +640,6 @@ module.exports = ({ gistManager, wsManager, apiClient, exchangeAPI }) => {
     }
   });
 
-  // ========== API های جدید ==========
-
   // API جدید: دریافت Market Cap
   router.get("/markets/cap", async (req, res) => {
     try {
@@ -428,8 +660,8 @@ module.exports = ({ gistManager, wsManager, apiClient, exchangeAPI }) => {
     }
   });
 
-  // API جدید: دریافت Currencies
-  router.get("/currencies", async (req, res) => {
+  // API جدید: دریافت Currencies (نسخه اصلی)
+  router.get("/currencies/original", async (req, res) => {
     try {
       const marketAPI = new MarketDataAPI();
       const data = await marketAPI.getCurrencies();
@@ -712,7 +944,7 @@ module.exports = ({ gistManager, wsManager, apiClient, exchangeAPI }) => {
     }
   });
 
-  // Health Checks
+  // Health Checks اصلی
   router.get('/health', (req, res) => {
     res.status(200).json({
       status: 'OK',
