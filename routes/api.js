@@ -659,6 +659,7 @@ router.get("/markets/cap", async (req, res) => {
   }
 });
 
+  
 // API جدید: دریافت Currencies (نسخه اصلی)
 router.get("/currencies/original", async (req, res) => {
   try {
@@ -680,6 +681,128 @@ router.get("/currencies/original", async (req, res) => {
   }
 });
 
+// BTC Dominance API
+router.get("/insights/btc-dominance", async (req, res) => {
+    try {
+        const insightsAPI = new InsightsAPI();
+        const { type = 'all' } = req.query;
+        
+        const data = await insightsAPI.getBTCDominance(type);
+        
+        res.json({
+            success: true,
+            data: data,
+            type: type,
+            timestamp: new Date().toISOString()
+        });
+        
+    } catch (error) {
+        console.error('Error in BTC Dominance endpoint:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Fear & Greed Index API
+router.get("/insights/fear-greed", async (req, res) => {
+    try {
+        const insightsAPI = new InsightsAPI();
+        
+        const data = await insightsAPI.getFearGreedIndex();
+        
+        res.json({
+            success: true,
+            data: data,
+            timestamp: new Date().toISOString()
+        });
+        
+    } catch (error) {
+        console.error('Error in Fear & Greed endpoint:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Fear & Greed Chart API
+router.get("/insights/fear-greed/chart", async (req, res) => {
+    try {
+        const insightsAPI = new InsightsAPI();
+        
+        const data = await insightsAPI.getFearGreedChart();
+        
+        res.json({
+            success: true,
+            data: data,
+            timestamp: new Date().toISOString()
+        });
+        
+    } catch (error) {
+        console.error('Error in Fear & Greed Chart endpoint:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Rainbow Chart API
+router.get("/insights/rainbow-chart/:coin?", async (req, res) => {
+    try {
+        const insightsAPI = new InsightsAPI();
+        const { coin = 'bitcoin' } = req.params;
+        
+        const data = await insightsAPI.getRainbowChart(coin);
+        
+        res.json({
+            success: true,
+            coin: coin,
+            data: data,
+            timestamp: new Date().toISOString()
+        });
+        
+    } catch (error) {
+        console.error('Error in Rainbow Chart endpoint:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Combined Insights Dashboard
+router.get("/insights/dashboard", async (req, res) => {
+    try {
+        const insightsAPI = new InsightsAPI();
+        
+        const [btcDominance, fearGreed, rainbowChart] = await Promise.all([
+            insightsAPI.getBTCDominance(),
+            insightsAPI.getFearGreedIndex(),
+            insightsAPI.getRainbowChart('bitcoin')
+        ]);
+        
+        res.json({
+            success: true,
+            data: {
+                btc_dominance: btcDominance,
+                fear_greed: fearGreed,
+                rainbow_chart: rainbowChart
+            },
+            timestamp: new Date().toISOString()
+        });
+        
+    } catch (error) {
+        console.error('Error in Insights Dashboard endpoint:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+  
 // API جدید: دریافت News Sources
 router.get("/news/sources", async (req, res) => {
   try {
