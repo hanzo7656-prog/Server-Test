@@ -655,5 +655,241 @@ module.exports = ({ gistManager, wsManager, apiClient, exchangeAPI }) => {
     return recommendations.length > 0 ? recommendations : ["All systems operating normally"];
   }
 
+  // ========== اندپوینت‌های جدید برای هوش مصنوعی ==========
+
+  // ۱. تحلیل تک کوین (عمیق)
+  router.get("/ai/single/:symbol", async (req, res) => {
+    try {
+      const { symbol } = req.params;
+      const { timeframe = "24h", limit = 200 } = req.query;
+
+      // دریافت داده‌های تاریخی
+      const historicalData = gistManager.getPriceData(symbol, timeframe);
+      const realtimeData = wsManager.getRealtimeData()[symbol];
+    
+      if (!historicalData && !realtimeData) {
+        return res.status(404).json({
+          success: false,
+          error: 'No data available for this symbol'
+        });
+      }
+
+      // داده‌های خام برای AI
+      const rawData = {
+        symbol,
+        timeframe,
+        prices: historicalData?.history?.map(item => ({
+          timestamp: item.timestamp,
+          open: item.open || item.price * 0.99,
+          high: item.high || item.price * 1.02,
+          low: item.low || item.price * 0.98,
+          close: item.price,
+          volume: item.volume || 1000
+        })) || [],
+        current_price: realtimeData?.price,
+        volume_24h: realtimeData?.volume
+      };
+
+      // محدود کردن داده‌ها
+      rawData.prices = rawData.prices.slice(-parseInt(limit));
+
+      res.json({
+        success: true,
+        analysis_type: "single_deep",
+        symbol,
+        timeframe,
+        data_points: rawData.prices.length,
+        raw_data: rawData,
+        available_analysis: ["trend", "patterns", "momentum", "volume_analysis"],
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error) {
+      console.error('AI Single analysis error:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  });
+
+  // ۲. تحلیل چند کوین (مقایسه‌ای)
+  router.get("/ai/multi", async (req, res) => {
+    try {
+      const { symbols = "btc,eth,sol", timeframe = "24h", limit = 100 } = req.query;
+      const symbolList = symbols.split(',').map(s => s.trim() + '_usdt');
+
+      const multiAnalysis = {};
+    
+      for (const symbol of symbolList) {
+        const historicalData = gistManager.getPriceData(symbol, timeframe);
+        const realtimeData = wsManager.getRealtimeData()[symbol];
+      
+        if (historicalData || realtimeData) {
+          multiAnalysis[symbol] = {
+            current_price: realtimeData?.price,
+            price_change_24h: realtimeData?.change || 0,
+            volume: realtimeData?.volume || 0,
+            data_points: historicalData?.history?.length || 0,
+            last_updated: historicalData?.timestamp
+          };
+        }
+      }
+
+      res.json({
+        success: true,
+        analysis_type: "multi_comparison",
+        symbols: symbolList,
+        timeframe,
+        data: multiAnalysis,
+        comparison_metrics: ["price_change", "volume", "volatility", "momentum"],
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error) {
+      console.error('AI Multi analysis error:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  });
+
+  // ۳. تحلیل تاپ مارکت‌کپ
+  router.get("/ai/top", async (req, res) => {
+    try {
+      const { limit = 20, timeframe = "4h", sort = "volume" } = req.query;
+    
+      // دریافت داده‌های کوین‌ها از API اصلی
+      const apiResult = await apiClient.getCoins(parseInt(limit));
+      const coins = apiResult.coins || [];
+
+      const topAnalysis = coins.map(coin => {
+        const symbol = coin.symbol.toLowerCase() + '_usdt';
+        const realtimeData = wsManager.getRealtimeData()[symbol];
+      
+        return {
+          symbol: coin.symbol,
+          name: coin.name,
+          price: coin.price,
+          price_change_24h: coin.priceChange24h || 0,
+          volume: coin.volume || 0,
+          market_cap: coin.marketCap || 0,
+          realtime_price: realtimeData?.price,
+          realtime_change: realtimeData?.change,
+          signal_strength: TechnicalAnalysisEngine.calculateSignalStrength(coin),
+          volume_anomaly: TechnicalAnalysisEngine.detectVolumeAnomaly(coin)
+        };
+      });
+
+      // مرتب‌سازی بر اساس معیار انتخاب شده
+      if (sort === "volume") {
+        topAnalysis.sort((a, b) => (b.volume || 0) - (a.volume || 0));
+      } else if (sort === "market_cap") {
+        topAnalysis.sort((a, b) => (b.market_cap || 0) - (a.market_cap || 0));
+      } else if (sort === "signal") {
+        topAnalysis.sort((a, b) => (b.signal_strength || 0) - (a.signal_strength || 0));
+      }
+
+      res.json({
+        success: true,
+        analysis_type: "top_market_scan",
+        limit: parseInt(limit),
+        sort_by: sort,
+        timeframe,
+        data: topAnalysis,
+        total_scanned: topAnalysis.length,
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error) {
+      console.error('AI Top analysis error:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  });
+
+  // ۴. تحلیل کل بازار
+  router.get("/ai/market-overview", async (req, res) => {
+    try {
+      const { timeframe = "24h" } = req.query;
+
+      // دریافت داده‌های کلی بازار
+      const marketAPI = new MarketDataAPI();
+      const marketData = await marketAPI.getMarketCap();
+    
+      // دریافت تاپ کوین‌ها
+      const apiResult = await apiClient.getCoins(10);
+      const topCoins = apiResult.coins || [];
+
+      const marketOverview = {
+        total_market_cap: marketData.marketCap || 0,
+        total_volume_24h: marketData.volume || 0,
+        btc_dominance: marketData.btcDominance || 0,
+        market_sentiment: this.calculateMarketSentiment(topCoins),
+        top_performers: topCoins.slice(0, 5).map(coin => ({
+          symbol: coin.symbol,
+          price_change_24h: coin.priceChange24h || 0,
+          volume: coin.volume || 0
+        })),
+        worst_performers: [...topCoins]
+          .sort((a, b) => (a.priceChange24h || 0) - (b.priceChange24h || 0))
+          .slice(0, 5)
+          .map(coin => ({
+            symbol: coin.symbol,
+            price_change_24h: coin.priceChange24h || 0
+          })),
+        sector_analysis: {
+          defi: this.analyzeSector(topCoins, ['UNI', 'AAVE', 'COMP']),
+          layer1: this.analyzeSector(topCoins, ['ETH', 'SOL', 'ADA', 'DOT']),
+          meme: this.analyzeSector(topCoins, ['DOGE', 'SHIB', 'PEPE'])
+        }
+      };
+
+      res.json({
+        success: true,
+        analysis_type: "market_overview",
+        timeframe,
+        data: marketOverview,
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error) {
+      console.error('AI Market overview error:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  });
+
+  // متدهای کمکی برای تحلیل بازار
+  static calculateMarketSentiment(coins) {
+    const changes = coins.map(coin => coin.priceChange24h || 0);
+    const avgChange = changes.reduce((a, b) => a + b, 0) / changes.length;
+  
+    if (avgChange > 3) return "STRONGLY_BULLISH";
+    if (avgChange > 1) return "BULLISH";
+    if (avgChange > -1) return "NEUTRAL";
+    if (avgChange > -3) return "BEARISH";
+    return "STRONGLY_BEARISH";
+  }
+
+  static analyzeSector(coins, sectorSymbols) {
+    const sectorCoins = coins.filter(coin => 
+      sectorSymbols.includes(coin.symbol.toUpperCase())
+    );
+    const avgChange = sectorCoins.length > 0 
+      ? sectorCoins.reduce((sum, coin) => sum + (coin.priceChange24h || 0), 0) / sectorCoins.length
+      : 0;
+  
+    return {
+      average_change: avgChange,
+      top_performer: sectorCoins.sort((a, b) => (b.priceChange24h || 0) - (a.priceChange24h || 0))[0]?.symbol,
+      performance: avgChange > 2 ? "outperforming" : avgChange < -2 ? "underperforming" : "neutral"
+    };
+  }
   return router;
-};
+  };
