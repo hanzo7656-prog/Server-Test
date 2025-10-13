@@ -63,10 +63,13 @@ module.exports = {
     exchange: "https://openapiv1.coinstats.app/coins/price/exchange",
     tickers: "https://openapiv1.coinstats.app/tickers/exchanges",
     avgPrice: "https://openapiv1.coinstats.app/coins/price/avg",
-    // اضافه کردن APIهای جدید
     markets: "https://openapiv1.coinstats.app/markets",
     currencies: "https://openapiv1.coinstats.app/currencies",
     newsSources: "https://openapiv1.coinstats.app/news/sources",
     news: "https://openapiv1.coinstats.app/news"
+    btcDominance: "https://openapiv1.coinstats.app/insights/btc-dominance",
+    fearGreed: "https://openapiv1.coinstats.app/insights/fear-and-greed",
+    fearGreedChart: "https://openapiv1.coinstats.app/insights/fear-and-greed/chart",
+    rainbowChart: "https://openapiv1.coinstats.app/insights/rainbow-chart/bitcoin"
   }
 };
