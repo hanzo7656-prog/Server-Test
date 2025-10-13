@@ -1,4 +1,43 @@
-const constants = require('./config/constants');
+const express = require('express');
+const path = require('path');
+
+// تلاش برای لود constants از مسیرهای مختلف
+let constants;
+try {
+  // مسیر اول: ./config/constants
+  constants = require('./config/constants');
+} catch (error) {
+  try {
+    // مسیر دوم: ../config/constants
+    constants = require('../config/constants');
+  } catch (error2) {
+    try {
+      // مسیر سوم: از app.js
+      constants = require('./constants');
+    } catch (error3) {
+      // fallback: تعریف مستقیم constants
+      console.log('⚠️ Using fallback constants configuration');
+      constants = {
+        COINSTATS_API_KEY: process.env.COINSTATS_API_KEY || "uNb+sQjnjCQmV30dYrChxgh55hRHElmizLnKJX+5U6g=",
+        API_URLS: {
+          base: "https://openapiv1.coinstats.app",
+          exchange: "https://openapiv1.coinstats.app/coins/price/exchange",
+          tickers: "https://openapiv1.coinstats.app/tickers/exchanges",
+          avgPrice: "https://openapiv1.coinstats.app/coins/price/avg",
+          markets: "https://openapiv1.coinstats.app/markets",
+          currencies: "https://openapiv1.coinstats.app/currencies",
+          newsSources: "https://openapiv1.coinstats.app/news/sources",
+          news: "https://openapiv1.coinstats.app/news"
+        },
+        CACHE_CONFIG: {
+          timeout: 5 * 60 * 1000,
+          batchSize: 5
+        }
+      };
+    }
+  }
+}
+
 
 // CoinStats کلاینت اصلی
 class AdvancedCoinStatsAPIClient {
