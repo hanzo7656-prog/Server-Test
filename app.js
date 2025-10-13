@@ -8,7 +8,7 @@ const constants = require('./config/constants');
 const logger = require('./config/logger');
 const GistManager = require('./models/GistManager');
 const WebSocketManager = require('./models/WebSocketManager');
-const { AdvancedCoinStatsAPIClient, HistoricalDataAPI, ExchangeAPI } = require('./models/APIClients');
+const { AdvancedCoinStatsAPIClient, HistoricalDataAPI, ExchangeAPI, InsightsAPI } = require('./models/APIClients');
 const apiRoutes = require('./routes/api');
 const pageRoutes = require('./routes/pages');
 
