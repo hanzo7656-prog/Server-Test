@@ -4,7 +4,7 @@ module.exports = {
   PORT: process.env.PORT || 3000,
 
   // API Keys
-  COINSTATS_API_KEY: "uNb+sQjnjCQmV30dYrChxgh55hRHElmizLnKJX+5U6g=",
+  COINSTATS_API_KEY: "uNb+sOjnjCQmV30dYrChxgh55hRHElmiZLnKJX+5U6g=",
   GITHUB_TOKEN: process.env.GITHUB_TOKEN,
   GIST_ID: process.env.GIST_ID,
 
