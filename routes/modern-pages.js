@@ -293,9 +293,9 @@ function generateModernPage(title, bodyContent, currentPage = 'home') {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            color: #333;
+            color: #2c3e50;
             line-height: 1.6;
-            padding-bottom: 120px; /* فضا برای ناوبری */
+            padding-bottom: 120px;
         }
 
         .container { 
@@ -307,12 +307,10 @@ function generateModernPage(title, bodyContent, currentPage = 'home') {
         .header {
             text-align: center;
             margin-bottom: 30px;
-            padding: 30px 20px;
+            padding: 25px 20px;
             background: rgba(255, 255, 255, 0.95);
             border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
         }
 
         .header h1 {
@@ -320,41 +318,169 @@ function generateModernPage(title, bodyContent, currentPage = 'home') {
             background: linear-gradient(135deg, #667eea, #764ba2);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
 
-        /* کارت‌های شیشه‌ای */
-        .glass-card {
-            background: rgba(255, 255, 255, 0.9);
+        /* شبکه ۲×۲ برای کارت‌ها */
+        .grid-2x2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        /* کارت‌های شیشه‌ای مربعی */
+        .square-card {
+            aspect-ratio: 1;
+            background: rgba(255, 255, 255, 0.92);
             backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.4);
             border-radius: 20px;
-            padding: 25px;
-            margin-bottom: 20px;
-            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.1);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
             transition: all 0.3s ease;
         }
 
-        .glass-card:hover {
+        .square-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 15px 40px rgba(31, 38, 135, 0.2);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+            background: rgba(255, 255, 255, 0.95);
+        }
+
+        .card-icon {
+            font-size: 2.5rem;
+            margin-bottom: 12px;
+            opacity: 0.9;
+        }
+
+        .card-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #5d6d7e;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .card-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #2c3e50;
+            line-height: 1.2;
+        }
+
+        .card-subtitle {
+            font-size: 0.85rem;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+
+        /* کارت آمار سریع */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.92);
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .stat-number {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
     `;
 
-    return `
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>${title} - VortexAI Pro</title>
-            <style>${baseStyles}</style>
-        </head>
-        <body>
-            <div class="container">
-                ${bodyContent}
+// و در بخش bodyContent صفحه اصلی:
+const bodyContent = `
+    <div class="header">
+        <h1>VortexAI Scanner</h1>
+        <p style="color: #7f8c8d;">Advanced Cryptocurrency Analysis</p>
+    </div>
+
+    <!-- سیستم وضعیت در ۲×۲ -->
+    <div class="grid-2x2">
+        <div class="square-card">
+            <div class="card-icon">💾</div>
+            <div class="card-title">Storage</div>
+            <div class="card-value">${Object.keys(gistData.prices || {}).length}</div>
+            <div class="card-subtitle">pairs</div>
+        </div>
+        
+        <div class="square-card">
+            <div class="card-icon">🚀</div>
+            <div class="card-title">AI Engine</div>
+            <div class="card-value">Ready</div>
+            <div class="card-subtitle">Online</div>
+        </div>
+        
+        <div class="square-card">
+            <div class="card-icon">📡</div>
+            <div class="card-title">WebSocket</div>
+            <div class="card-value">${wsStatus.connected ? 'Live' : 'Off'}</div>
+            <div class="card-subtitle">${wsStatus.active_coins} coins</div>
+        </div>
+        
+        <div class="square-card">
+            <div class="card-icon">⚡</div>
+            <div class="card-title">Performance</div>
+            <div class="card-value">97%</div>
+            <div class="card-subtitle">Uptime</div>
+        </div>
+    </div>
+
+    <!-- آمار سریع -->
+    <div style="background: rgba(255, 255, 255, 0.92); border-radius: 20px; padding: 25px; margin-bottom: 20px;">
+        <h2 style="color: #2c3e50; margin-bottom: 20px; text-align: center;">Quick Stats</h2>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number">17</div>
+                <div class="stat-label">Today Scans</div>
             </div>
-            
+            <div class="stat-card">
+                <div class="stat-number">97%</div>
+                <div class="stat-label">Accuracy</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">230</div>
+                <div class="stat-label">Saved Scans</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">24/7</div>
+                <div class="stat-label">Monitoring</div>
+            </div>
+        </div>
+    </div>
+
+    <div style="text-align: center; margin-top: 25px; color: rgba(255, 255, 255, 0.9);">
+        <small>Last scan: ${new Date().toLocaleDateString()}</small>
+    </div>
+`;
+
+// و در ناوبری، نقاط اسکرول رو حذف کن:
+.scroll-indicator {
+    display: none; /* حذف نقاط */
+}
             ${generateGlassNavigation(currentPage)}
         </body>
         </html>
