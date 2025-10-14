@@ -7,7 +7,7 @@ function generateGlassNavigation(currentPage = 'home') {
     const navItems = [
         { id: 'home', label: 'DASH', page: '/' },
         { id: 'scan', label: 'SCAN', page: '/scan' },
-        { id: 'ai', label: 'AI', page: '/ai-dashboard' },
+        { id: 'ai', label: 'AI', page: 'https://ai-test-2nxq.onrender.com/' },
         { id: 'settings', label: 'SET', page: '/settings' },
         { id: 'analysis', label: 'TECH', page: '/analysis' },
         { id: 'market', label: 'MKT', page: '/market' },
@@ -619,5 +619,118 @@ module.exports = ({ gistManager, wsManager, apiClient }) => {
         res.send(generateModernPage('VortexAI Dashboard', bodyContent, 'home'));
     });
 
+
+    // ==================== 🛠️ Route های جدید ====================
+
+    // صفحه Settings
+    router.get("/settings", (req, res) => {
+        const bodyContent = `
+            <div class="header">
+                <h1>System Settings</h1>
+                <p>Configure your VortexAI preferences</p>
+            </div>
+        
+            <div class="stats-section">
+                <h2 class="section-title">Configuration</h2>
+                <div style="text-align: center; padding: 30px;">
+                    <div style="font-size: 4rem; margin-bottom: 20px;">⚙️</div>
+                    <h3 style="color: #f1f5f9; margin-bottom: 15px;">Settings Panel</h3>
+                    <p style="color: #94a3b8;">System configuration options coming soon</p>
+                </div>
+            </div>
+        `;
+        res.send(generateModernPage('Settings', bodyContent, 'settings'));
+    });
+
+    // صفحه Market
+    router.get("/market", (req, res) => {
+        const bodyContent = `
+            <div class="header">
+                <h1>Market Overview</h1>
+                <p>Real-time market data and analytics</p>
+            </div>
+        
+            <div class="stats-section">
+                <h2 class="section-title">Market Data</h2>
+                <div style="text-align: center; padding: 30px;">
+                    <div style="font-size: 4rem; margin-bottom: 20px;">💹</div>
+                    <h3 style="color: #f1f5f9; margin-bottom: 15px;">Market Analytics</h3>
+                    <p style="color: #94a3b8;">Live market data and trading insights</p>
+                </div>
+            </div>
+        `;
+        res.send(generateModernPage('Market', bodyContent, 'market'));
+    });
+
+    // صفحه Timeframes
+    router.get("/timeframes", (req, res) => {
+        const bodyContent = `
+            <div class="header">
+                <h1>Timeframes Analysis</h1>
+                <p>Multi-timeframe technical analysis</p>
+            </div>
+        
+            <div class="stats-section">
+                <h2 class="section-title">Available Timeframes</h2>
+                <div style="text-align: center; padding: 30px;">
+                    <div style="font-size: 4rem; margin-bottom: 20px;">⏱️</div>
+                    <h3 style="color: #f1f5f9; margin-bottom: 15px;">Timeframe Data</h3>
+                    <p style="color: #94a3b8;">1H, 4H, 24H, 7D, 30D, 180D analysis</p>
+                </div>
+            </div>
+        `;
+        res.send(generateModernPage('Timeframes', bodyContent, 'timeframes'));
+    });
+
+    // صفحه Insights
+    router.get("/insights", (req, res) => {
+        const bodyContent = `
+            <div class="header">
+                <h1>Market Insights</h1>
+                <p>Advanced market intelligence and predictions</p>
+            </div>
+        
+            <div class="stats-section">
+                <h2 class="section-title">Insights Dashboard</h2>
+                <div style="text-align: center; padding: 30px;">
+                    <div style="font-size: 4rem; margin-bottom: 20px;">🔮</div>
+                    <h3 style="color: #f1f5f9; margin-bottom: 15px;">Market Intelligence</h3>
+                    <p style="color: #94a3b8;">Advanced analytics and prediction models</p>
+                </div>
+            </div>
+        `;
+        res.send(generateModernPage('Insights', bodyContent, 'insights'));
+    });
+
+    // صفحه Technical Analysis (رفع خطای symbol parameter)
+    router.get("/analysis", (req, res) => {
+        const symbol = req.query.symbol || 'btc_usdt'; // مقدار پیش‌فرض
+        const bodyContent = `
+            <div class="header">
+                <h1>Technical Analysis</h1>
+                <p>Advanced technical indicators for ${symbol.toUpperCase()}</p>
+            </div>
+        
+            <div class="stats-section">
+                <h2 class="section-title">Analysis for ${symbol.toUpperCase()}</h2>
+                <div style="text-align: center; padding: 30px;">
+                    <div style="font-size: 4rem; margin-bottom: 20px;">📈</div>
+                    <h3 style="color: #f1f5f9; margin-bottom: 15px;">Technical Indicators</h3>
+                    <p style="color: #94a3b8;">Analyzing ${symbol.toUpperCase()} with advanced algorithms</p>
+                
+                    <div style="margin-top: 20px;">
+                        <label style="color: #94a3b8; display: block; margin-bottom: 10px;">Change Symbol:</label>
+                        <select onchange="window.location.href='/analysis?symbol=' + this.value" 
+                                style="padding: 10px; border-radius: 10px; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2);">
+                            <option value="btc_usdt" ${symbol === 'btc_usdt' ? 'selected' : ''}>BTC/USDT</option>
+                            <option value="eth_usdt" ${symbol === 'eth_usdt' ? 'selected' : ''}>ETH/USDT</option>
+                            <option value="sol_usdt" ${symbol === 'sol_usdt' ? 'selected' : ''}>SOL/USDT</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        `;
+        res.send(generateModernPage('Technical Analysis', bodyContent, 'analysis'));
+    });
     return router;
 };
