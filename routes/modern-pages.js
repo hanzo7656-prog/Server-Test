@@ -386,6 +386,7 @@ function generateModernPage(title, bodyContent, currentPage = 'home') {
             grid-template-columns: 1fr 1fr;
             gap: 18px;
             margin-bottom: 30px;
+            place-items: center;
         }
 
         /* کارت‌های شیشه‌ای مربعی */
