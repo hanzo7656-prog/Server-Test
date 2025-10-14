@@ -404,7 +404,18 @@ function generateModernPage(title, bodyContent, currentPage = 'home') {
             box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
             transition: all 0.3s ease;
         }
+        .card-title, .card-value, .card-subtitle {
+            text-align: center;
+            width: 100%;
+        }
 
+        .card-icon {
+            font-size: 2.8rem;
+            margin-bottom: 16px;
+            opacity: 0.9;
+            text-align: center;
+            display: black;
+        }
         .square-card:hover {
             transform: translateY(-8px);
             box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
