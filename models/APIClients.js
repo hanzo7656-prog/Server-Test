@@ -18,7 +18,7 @@ try {
       // fallback: تعریف مستقیم constants
       console.log('⚠️ Using fallback constants configuration');
       constants = {
-        COINSTATS_API_KEY: process.env.COINSTATS_API_KEY || "uNb+sQjnjCQmV30dYrChxgh55hRHElmizLnKJX+5U6g=",
+        COINSTATS_API_KEY: process.env.COINSTATS_API_KEY || "uNb+sOjnjCQmV30dYrChxgh55hRHElmiZLnKJX+5U6g=",
         API_URLS: {
           base: "https://server-test-ovta.onrender.com",
           exchange: "https://openapiv1.coinstats.app/coins/price/exchange",
