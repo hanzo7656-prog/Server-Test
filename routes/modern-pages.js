@@ -598,4 +598,14 @@ module.exports = ({ gistManager, wsManager, apiClient }) => {
                 Last system update: ${new Date().toLocaleDateString('en-US', { 
                     month: 'long', 
                     day: 'numeric',
-                    hour:
+                    hour: '2-digit',
+                    minute: '2-digit'
+                })}
+            </div>
+        `;
+        
+        res.send(generateModernPage('VortexAI Dashboard', bodyContent, 'home'));
+    });
+
+    return router;
+};
