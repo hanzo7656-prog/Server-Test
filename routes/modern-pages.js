@@ -8,15 +8,15 @@ function generateGlassNavigation(currentPage = 'home') {
         { id: 'home', label: 'DASH', page: '/' },
         { id: 'scan', label: 'SCAN', page: '/scan' },
         { id: 'ai', label: 'AI', page: 'https://ai-test-2nxq.onrender.com/' },
-        { id: 'settings', label: 'SET', page: '/settings' },
-        { id: 'analysis', label: 'TECH', page: '/analysis' },
-        { id: 'market', label: 'MKT', page: '/market' },
+        { id: 'settings', label: 'SET', page: '/health' },
+        { id: 'analysis', label: 'TECH', page: '/analysis?symbol=btc_usdt' },
+        { id: 'market', label: 'MKT', page: '/markets/cap' },
         { id: 'api', label: 'DATA', page: '/api-data' },
         { id: 'health', label: 'HLTH', page: '/health' },
         { id: 'news', label: 'NEWS', page: '/crypto-news' },
-        { id: 'timeframes', label: 'TIME', page: '/timeframes' },
+        { id: 'timeframes', label: 'TIME', page: '/timeframes-api' },
         { id: 'currencies', label: 'CURR', page: '/currencies' },
-        { id: 'insights', label: 'INSI', page: '/insights' }
+        { id: 'insights', label: 'INSI', page: '/insights/dashboard' }
     ];
 
     return `
