@@ -163,7 +163,22 @@ function generateClassNavigation(currentPage = 'home') {
     
     return navHTML;
 }
-
+    function getContextAwareItems(allItems, currentPages) {
+        const contextMap = {
+            'home': ['all'],
+            'scan': ['analysis', 'market', 'all'],
+            'analyze': ['analysis', 'technical', 'all']
+            'market': ['market', 'overview', 'all']
+            'insights': ['analysis', 'sentiment', 'all']
+            'news': ['news', 'all']
+            'health': ['system', 'all']
+            'settings': ['all']
+        };
+    const currentContext = contextMap[currentPage] || ['all'];
+    return allItems.filter(item =>
+        item.context.some(context => currentContext.includes(context))
+    );
+}
     // فیلتر کردن آیتم‌ها بر اساس context
     const contextAwareItems = getContextAwareItems(navItems, currentPage);
 
