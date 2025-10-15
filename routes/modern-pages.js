@@ -2105,137 +2105,6 @@ module.exports = (dependencies) => {
     }
   });
 
-  // 4. صفحه AI
-  // 4. صفحه AI - Redirect به لینک خارجی
-  router.get('/ai', async (req, res) => {
-    try {
-      // Redirect مستقیم به لینک AI
-      res.redirect('https://ai-test-2nxq.onrender.com/');
-    } catch (error) {
-      console.error('AI redirect error:', error);
-    
-      // Fallback در صورت خطا
-      const bodyContent = `
-        <div class="header">
-          <h1>هوش مصنوعی VortexAI</h1>
-          <p>در حال انتقال به پنل هوش مصنوعی...</p>
-        </div>
-
-        <div class="glass-card">
-          <div style="text-align: center; padding: 50px;">
-            <div style="font-size: 4rem; margin-bottom: 20px;">🚀</div>
-            <h3 style="color: #f115f9; margin-bottom: 15px;">در حال انتقال</h3>
-            <p style="color: #94a3b8; margin-bottom: 30px;">
-              شما به پنل هوش مصنوعی VortexAI هدایت می‌شوید
-            </p>
-            <div style="margin-bottom: 30px;">
-              <div class="skeleton" style="height: 20px; width: 200px; margin: 0 auto;"></div>
-            </div>
-            <p style="color: #64748b; font-size: 0.9rem;">
-              اگر به صورت خودکار انتقال داده نشدید، 
-              <a href="https://ai-test-2nxq.onrender.com/" style="color: #667eea;">
-                اینجا کلیک کنید
-              </a>
-             </p>
-          </div>
-        </div>
-
-        <script>
-          // انتقال خودکار پس از 3 ثانیه
-          setTimeout(() => {
-            window.location.href = 'https://ai-test-2nxq.onrender.com/';
-          }, 3000);
-        </script>
-      `;
-
-      res.send(generateModernPage('هوش مصنوعی', bodyContent, 'ai'));
-    }
-  });
-
-  // برای حالت‌های خاص اگر نیاز به صفحه میانی بود
-  router.get('/ai/portal', async (req, res) => {
-    try {
-      const bodyContent = `
-        <div class="header">
-          <h1>پورتال هوش مصنوعی</h1>
-          <p>دسترسی به قابلیت‌های پیشرفته تحلیل بازار</p>
-        </div>
-
-        <div class="glass-card">
-          <h2 class="section-title">انتقال به سرویس AI</h2>
-          <div style="text-align: center; padding: 40px;">
-            <div style="font-size: 5rem; margin-bottom: 20px;">🤖</div>
-            <h3 style="color: #f115f9; margin-bottom: 15px;">VortexAI Intelligence</h3>
-            <p style="color: #94a3b8; margin-bottom: 30px; line-height: 1.6;">
-              شما در حال انتقال به سرویس مستقل هوش مصنوعی هستید.<br>
-              این سرویس شامل تحلیل‌های پیشرفته، پیش‌بینی قیمت و بینش‌های هوشمند می‌باشد.
-            </p>
-          
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 400px; margin: 0 auto 30px;">
-              <div style="text-align: center;">
-                <div style="font-size: 2rem; margin-bottom: 10px;">📈</div>
-                <div style="color: #e2e8f0; font-size: 0.9rem;">پیش‌بینی قیمت</div>
-              </div>
-              <div style="text-align: center;">
-                <div style="font-size: 2rem; margin-bottom: 10px;">🧠</div>
-                <div style="color: #e2e8f0; font-size: 0.9rem;">تحلیل پیشرفته</div>
-              </div>
-              <div style="text-align: center;">
-                <div style="font-size: 2rem; margin-bottom: 10px;">⚡</div>
-                <div style="color: #e2e8f0; font-size: 0.9rem;">پردازش Real-time</div>
-              </div>
-              <div style="text-align: center;">
-                <div style="font-size: 2rem; margin-bottom: 10px;">🔮</div>
-                <div style="color: #e2e8f0; font-size: 0.9rem;">بینش‌های هوشمند</div>
-              </div>
-            </div>
-  
-            <a href="https://ai-test-2nxq.onrender.com/" target="_blank" 
-               class="btn" style="font-size: 1.1rem; padding: 15px 40px; margin: 10px;">
-              🚀 ورود به پنل هوش مصنوعی
-            </a>
-          
-            <div style="margin-top: 20px;">
-              <a href="/" class="btn" style="background: rgba(255,255,255,0.1); margin: 5px;">
-                بازگشت به خانه
-              </a>
-              <a href="/analysis?symbol=btc_usdt" class="btn" style="background: rgba(255,255,255,0.1); margin: 5px;">
-                تحلیل تکنیکال
-              </a>
-           </div>
-          </div>
-        </div>
-
-        <div class="glass-card">
-          <h2 class="section-title">قابلیت‌های اصلی</h2>
-          <div class="stats-grid">
-            <div class="stat-card">
-              <div class="stat-number">87%</div>
-              <div class="stat-label">دقت پیش‌بینی</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-number">0.2s</div>
-              <div class="stat-label">سرعت تحلیل</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-number">50+</div>
-              <div class="stat-label">الگوریتم‌های ML</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-number">24/7</div>
-              <div class="stat-label">نظارت فعال</div>
-            </div>
-          </div>
-        </div>
-      `;
-
-      res.send(generateModernPage('پورتال هوش مصنوعی', bodyContent, 'ai'));
-    } catch (error) {
-      console.error('AI portal page error:', error);
-      res.status(500).send('خطا در بارگذاری پورتال AI');
-    }
-  });
-
   // 5. صفحه بازار
   router.get('/markets/cap', async (req, res) => {
     try {
