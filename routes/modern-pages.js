@@ -2707,6 +2707,24 @@ function resetSettings() {
         setTimeout(() => location.reload(), 1000);
     }
 }
+
+// این رو به انتهای script اضافه کن:
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded - Navigation should work now');
+    
+    // تست: چک کن elementها وجود دارن
+    const nav = document.getElementById('glassNav');
+    const floater = document.querySelector('.nav-floater');
+    
+    console.log('Nav element:', nav);
+    console.log('Floater element:', floater);
+    
+    // اضافه کردن event handler دستی
+    if (floater) {
+        floater.addEventListener('click', toggleGlassNav);
+        console.log('Event handler attached manually');
+    }
+});
 </script>
             `;
 
