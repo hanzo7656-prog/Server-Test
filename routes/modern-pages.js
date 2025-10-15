@@ -8,7 +8,7 @@ function generateClassNavigation(currentPage = 'home') {
         { id: 'home', label: 'DASH', page: '/', icon: 'D' },
         { id: 'scan', label: 'SCAN', page: '/scan', icon: 'S' },
         { id: 'analyze', label: 'ANALYZE', page: '/analysis?symbol=btc_usdt', icon: 'A' },
-        { id: 'ai', label: 'AI', page: '#', icon: 'AI', ai: true },
+        { id: 'ai', label: 'AI', page: 'https://ai-test-2nxq.onrender.com/', icon: 'AI', ai: true },
         
         // دکمه‌های ردیف دوم (4 تایی)  
         { id: 'market', label: 'MARKET', page: '/markets/cap', icon: 'M' },
