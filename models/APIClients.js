@@ -6,7 +6,7 @@ let constants;
 
 try {
     // مسیر اول: config/constants/
-    constants = require('./config/constants');
+    constants = require('../config/constants');
 } catch (error) {
     try {
         // مسیر دوم: config/constants/
