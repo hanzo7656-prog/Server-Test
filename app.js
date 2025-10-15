@@ -10,7 +10,6 @@ const GistManager = require('./models/GistManager');
 const WebSocketManager = require('./models/WebSocketManager');
 const { AdvancedCoinStatsAPIClient, HistoricalDataAPI, ExchangeAPI, InsightsAPI } = require('./models/APIClients');
 const apiRoutes = require('./routes/api');
-const pageRoutes = require('./routes/modern-pages');
 const modernRoutes = require('./routes/modern-pages');
 
 const app = express();
@@ -80,12 +79,10 @@ app.get('/api-data', (req, res) => {
   res.redirect('/api/health-combined');
 });
 
+// ========== MAIN ROUTES ==========
+// فقط یکبار routeها رو اضافه کن
+app.use('/api', apiRoutes({ gistManager, wsManager, apiClient, exchangeAPI }));
 app.use('/', modernRoutes({ gistManager, wsManager, apiClient }));
-// سپس خط اصلی API
-app.use('/api', apiRoutes({ gistManager, wsManager, apiClient, exchangeAPI }));
-// روت‌ها
-app.use('/api', apiRoutes({ gistManager, wsManager, apiClient, exchangeAPI }));
-app.use('/', pageRoutes({ gistManager, wsManager, apiClient }));
 
 // هندلرهای سلامت
 app.get('/health', (req, res) => {
