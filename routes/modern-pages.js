@@ -1,16 +1,16 @@
 const express = require('express');
 const router = express.Router();
 
-// نويكيشن بار هوشمند پيشرفته ============================== //
+// *******************************
+// نوبکیشن بار هوشمند پیشرفته
 
 function generateClassNavigation(currentPage = 'home') {
-    // تشخيص خودكار صفحه اگر مشخص نشده
+    // تشخیص خودکار صفحه اگر مشخص نشده
     if (currentPage === 'home') {
         currentPage = detectCurrentPage();
     }
 
     const navItems = [
-        // دكمه‌هاي رديف اول
         {
             id: 'home',
             label: 'DASH',
@@ -19,13 +19,13 @@ function generateClassNavigation(currentPage = 'home') {
             context: ['all'],
             quickPeek: 'وضعیت کلی بازار'
         },
-        { 
+        {
             id: 'scan',
             label: 'SCAN',
             page: '/scan',
             icon: 'S',
             context: ['analysis', 'market'],
-            quickPeek: 'ارزهای پریتاسیا.'
+            quickPeek: 'بارزهای پرینامییا'
         },
         {
             id: 'analyze',
@@ -33,7 +33,7 @@ function generateClassNavigation(currentPage = 'home') {
             page: '/analysis?symbol=btc_usdt',
             icon: 'A',
             context: ['analysis', 'technical'],
-            quickPeek: 'شاخص های فنی.'
+            quickPeek: 'مذخص های فنی'
         },
         {
             id: 'ai',
@@ -42,17 +42,16 @@ function generateClassNavigation(currentPage = 'home') {
             icon: 'AI',
             ai: true,
             context: ['all'],
-            quickPeek: 'پیش بینی و تحلیل.'
+            quickPeek: 'بیش بینی و تحلیل'
         },
-
-        // دكمه‌هاي رديف دوم
+        // دکمه‌های ردیف دوم
         {
             id: 'market',
             label: 'MARKET',
             page: '/markets/cap',
             icon: 'M',
             context: ['market', 'overview'],
-            quickPeek: 'محجم و سرمایه - بازار های داده'
+            quickPeek: 'بازار های داده م حجم و سرمایه'
         },
         {
             id: 'insights',
@@ -60,7 +59,7 @@ function generateClassNavigation(currentPage = 'home') {
             page: '/insights/dashboard',
             icon: 'I',
             context: ['analysis', 'sentiment'],
-            quickPeek: 'و روندها احساسات - بازار بینش'
+            quickPeek: 'بازار بینش و روندها احساسات'
         },
         {
             id: 'news',
@@ -68,7 +67,7 @@ function generateClassNavigation(currentPage = 'home') {
             page: '/news',
             icon: 'N',
             context: ['news', 'all'],
-            quickPeek: 'بازار های بهروزرسانی - زنده اخبار'
+            quickPeek: 'زنده اخبار بازار های بهروزرسانی'
         },
         {
             id: 'health',
@@ -84,7 +83,7 @@ function generateClassNavigation(currentPage = 'home') {
             page: '/settings',
             icon: 'G',
             context: ['all'],
-            quickPeek: 'شخصي سازی محيط- تبظيمات'
+            quickPeek: 'تظيمات شخصي سازی محيط'
         }
     ];
 
@@ -110,23 +109,22 @@ async function loadRealNavigationStatus() {
 function updateNavigationDisplay() {
     // آیینت نمایش وضعیت در نویسیدن بار
     Object.keys(realMarketStatus).forEach(itemId => {
-        const statusElement = document.querySelector(\`[data-item="\${itemId}"].market-status\`);
+        const statusElement = document.querySelector('[data-item="${itemId}"] .market-status');
         if (statusElement && realMarketStatus[itemId].change) {
-            statusElement.innerHTML = \`
-                \${realMarketStatus[itemId].trend === 'up' ? '↗' : '↘'}
-                \${realMarketStatus[itemId].change}
-            \`;
-            statusElement.className = \`market-status \${realMarketStatus[itemId].trend}\`;
+            statusElement.innerHTML = 
+                (realMarketStatus[itemId].trend === 'up' ? '↗' : '↘') +
+                realMarketStatus[itemId].change;
+            statusElement.className = 'market-status ' + realMarketStatus[itemId].trend;
         }
 
-        const alertElement = document.querySelector(\`[data-item="\${itemId}"].live-alert-indicator\`);
+        const alertElement = document.querySelector('[data-item="${itemId}"] .live-alert-indicator');
         if (alertElement) {
             alertElement.style.display = realMarketStatus[itemId].alert ? 'block' : 'none';
         }
     });
 }
 
-// بارگذاری اولیه و آیدیت دوره ای
+// بارگذاری اولیه و آیینت دوره ای
 loadRealNavigationStatus();
 setInterval(loadRealNavigationStatus, 30000);
 </script>
@@ -150,11 +148,11 @@ setInterval(loadRealNavigationStatus, 30000);
         );
     }
 
-    // فيلتر كردن آيتها بر اساس context
+    // context فيلتز کردن آنتها بر اساس
     const contextAwareItems = getContextAwareItems(navItems, currentPage);
 
     return `
-<!-- ناوبرى شیشه‌ای هوشمند -->
+<!-- ناويري شیشه‌ای هوشمند -->
 <div id="glassNav" class="glass-navigation">
     <!-- دکمه شناور مایع -->
     <div class="nav-floater" onclick="toggleGlassNav()">
@@ -165,32 +163,28 @@ setInterval(loadRealNavigationStatus, 30000);
         </div>
     </div>
 
-    <!-- کانتینر ناوبرى -->
+    <!-- کانتیتر ناويري -->
     <div class="nav-container">
         <div class="nav-scroll" id="navScroll">
             ${contextAwareItems.map(item => `
                 <div class="nav-item ${item.id === currentPage ? 'active' : ''}"
-                    onclick="navigateTo('${item.page}', ${item.external || false}, ${item.ai || false})"
-                    onmouseenter="showQuickPeek('${item.id}')"
-                    onmouseleave="hideQuickPeek()"
-                    ontouchstart="startPress('${item.id}')"
-                    ontouchend="endPress('${item.id}')">
-                    
-                    <!-- آيكون با گراديان متحرك -->
+                     onclick="navigateTo('${item.page}', ${item.external || false}, ${item.ai || false})"
+                     onmouseenter="showQuickPeek('${item.id}')"
+                     onmouseleave="hideQuickPeek()"
+                     ontouchstart="startPress('${item.id}')"
+                     ontouchend="endPress('${item.id}')">
+                    <!-- متحرك گراديين با آيكون -->
                     <div class="nav-icon animated-gradient">${item.icon}</div>
-                    
                     <!-- متن -->
                     <div class="nav-text">${item.label}</div>
-                    
-                    <!-- وضعيت زنده بازار -->
+                    <!-- بازار زنده وضعيت -->
                     ${item.marketStatus && item.marketStatus.change ? `
                     <div class="market-status ${item.marketStatus.trend}">
                         ${item.marketStatus.trend === 'up' ? '↗' : '↘'}
                         ${item.marketStatus.change}
                     </div>
                     ` : ''}
-                    
-                    <!-- هشدار زنده -->
+                    <!-- زنده هشدار -->
                     ${item.marketStatus && item.marketStatus.alert ? `
                     <div class="live-alert-indicator"></div>
                     ` : ''}
@@ -200,7 +194,7 @@ setInterval(loadRealNavigationStatus, 30000);
 
         <!-- Command Palette -->
         <div class="command-palette" id="commandPalette">
-            <input type="text" placeholder="_ مَد... (حِسْجُوِي سَرِيخ): btc analysis" onkeyup="searchCommands(event)">
+            <input type="text" placeholder="...(ه) btc analysis" onkeyup="searchCommands(event)">
             <div class="command-results" id="commandResults"></div>
         </div>
     </div>
@@ -214,7 +208,7 @@ setInterval(loadRealNavigationStatus, 30000);
 </div>
 
 <style>
-/* استعليل ناويري شيشه‌اي يبشرفته */
+/* استطيل ناويدي شيشه يبشرفته */
 .glass-navigation {
     position: fixed;
     bottom: 20px;
@@ -224,7 +218,7 @@ setInterval(loadRealNavigationStatus, 30000);
     transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
-/* دكه شاور مایع */
+/* كه شاور مایع */
 .nav-floater {
     width: 65px;
     height: 65px;
@@ -249,7 +243,7 @@ setInterval(loadRealNavigationStatus, 30000);
                 inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
-/* نقاط ناويري */
+/* انقاط ناویري */
 .liquid-button {
     position: relative;
     width: 30px;
@@ -278,7 +272,7 @@ setInterval(loadRealNavigationStatus, 30000);
     50% { transform: scale(1.3); opacity: 1; }
 }
 
-/* كاتفيد ناويري اصلي */
+/* اصلي ناويري كاتفيد */
 .nav-container {
     display: none;
     background: rgba(30, 35, 50, 0.95);
@@ -302,7 +296,7 @@ setInterval(loadRealNavigationStatus, 30000);
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.7));
 }
 
-/* براي ناويري 3 × 3 ميكه */
+/* 3 x 3 ميكه */
 .nav-scroll {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -319,7 +313,7 @@ setInterval(loadRealNavigationStatus, 30000);
     display: none;
 }
 
-/* آيتيه‌هاي ناويري */
+/* ناويري نايتيه */
 .nav-item {
     display: flex;
     flex-direction: column;
@@ -336,7 +330,7 @@ setInterval(loadRealNavigationStatus, 30000);
     min-height: 70px;
 }
 
-/* hover فككت موج مايع هنگام */
+/* hover فككت موج مايع هيكم */
 .nav-item::before {
     content: "";
     position: absolute;
@@ -377,7 +371,7 @@ setInterval(loadRealNavigationStatus, 30000);
                 inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
-/* گرادیان متحرک برای آبکون*/
+/* گرادیان متحرک برای آبکون */
 .animated-gradient {
     background: linear-gradient(45deg, #667eea, #764ba2, #f093fb);
     background-size: 200% 200%;
@@ -393,7 +387,7 @@ setInterval(loadRealNavigationStatus, 30000);
     100% { background-position: 0% 50% }
 }
 
-/* متن شیشه‌ای*/
+/* متن شیشه‌ای */
 .nav-text {
     font-size: 0.7rem;
     font-weight: 700;
@@ -553,7 +547,7 @@ setInterval(loadRealNavigationStatus, 30000);
     background: linear-gradient(135deg, rgba(0, 255, 255, 0.7), rgba(0, 100, 255, 0.7));
 }
 
-/* نیمیشن */
+/* نهمش */
 @keyframes slideUp {
     from { opacity: 0; transform: translateY(30px) scale(0.9); }
     to { opacity: 1; transform: translateY(0) scale(1); }
@@ -570,7 +564,7 @@ setInterval(loadRealNavigationStatus, 30000);
     }
 }
 
-/* رسپانسیو */
+/* رسپانسيو */
 @media (max-width: 400px) {
     .nav-container {
         max-width: 320px;
@@ -620,14 +614,13 @@ setInterval(loadRealNavigationStatus, 30000);
 </style>
 
 <script>
-// =============================== توابع اصلی هوشمند ============================== //
-
-// تشخیص خودکار صفحه فعلی
+// ============================== ============================== ============================== //
+// تشخيص خودکار صفحه فعلي
 function detectCurrentPage() {
     const path = window.location.pathname;
     const search = window.location.search;
-    
-    if (path == '/') return 'home';
+
+    if (path === '/') return 'home';
     if (path.includes('/scan')) return 'scan';
     if (path.includes('/analysis')) return 'analyze';
     if (path.includes('/markets')) return 'market';
@@ -635,11 +628,11 @@ function detectCurrentPage() {
     if (path.includes('/news')) return 'news';
     if (path.includes('/health')) return 'health';
     if (path.includes('/settings')) return 'settings';
-    
+
     return 'home';
 }
 
-// فيلتر كردن آيتها بر اساس context
+// context فیلتر کردن آنچها بر اساس
 function getContextAwareItems(allItems, currentPage) {
     const contextMap = {
         'home': ['all'],
@@ -653,7 +646,7 @@ function getContextAwareItems(allItems, currentPage) {
     };
 
     const currentContext = contextMap[currentPage] || ['all'];
-    return allItems.filter(item => 
+    return allItems.filter(item =>
         item.context.some(context => currentContext.includes(context))
     );
 }
@@ -662,15 +655,15 @@ function toggleGlassNav() {
     const nav = document.getElementById('glassNav');
     nav.classList.toggle('expanded');
     playLiquidSound();
-    
-    // اگر منو باز است، Command Palette را مخفى كن
+
+    // را مخفی کن Command Palette اگر منو باز است
     if (nav.classList.contains('expanded')) {
         hideCommandPalette();
     }
 }
 
 function navigateTo(page, isExternal = false, isAI = false) {
-    // ایجاد افکت ذوب قبل از نویگیشن
+    // ایجاد افکت ذوب قبل از نویکیشن
     createMeltEffect();
     playLiquidSound();
 
@@ -682,35 +675,34 @@ function navigateTo(page, isExternal = false, isAI = false) {
     if (isExternal) {
         window.open(page, '_blank');
     } else {
-        // تأخیر برای نمایش افکت ذوب
+        // تأخير براي نمایش افکت ذوب
         setTimeout(() => {
             window.location.href = page;
         }, 400);
     }
 }
 
-// Quick Peek -پیش نمایش صفحات
+// Quick Peek صفحات-پيش نمایش
 function showQuickPeek(itemId) {
     const peekData = {
-        'home': 'داشبورد اصلی - وضعیت کل بازار و عملکرد سیستم',
-        'scan': 'اسکن بازار - شناسایی ارزهای پریتانسیل و فرصت ها',
-        'analyze': 'تحلیل تکنیکال - شاخص های فنی و نمودارهای پیشرفته',
-        'ai': 'هوش مصنوعی - پیش بینی های AI و تحلیل های پیشرفته',
-        'market': 'داده های بازار - سرمایه، حجم و dominance',
-        'insights': 'بینش بازار - احساسات، روندها و تحلیل های حرفه ای',
-        'news': 'اخبار زنده - به روزرسانی های فوری و تحلیل های خبری',
-        'health': 'سلامت سیستم - مائیتورینگ سرویس ها و عملکرد',
-        'settings': 'تنظیمات - شخص سازی محیط و تنظیمات کاربری'
+        'home': 'رادامبورد اصلي - وضعيت كل بازار و عملکرد سيستم',
+        'scan': 'استن بازار-راستن بازار شناسايي ارزهاي پرينانسيل و فرصت ها',
+        'analyze': 'تحليل تکنيكال-شاخص هاي فني و نمودارهاي پيشرفته',
+        'ai': 'هوش مصنوعي - بيش بيني هاي AI و تحليل هاي پيشرفته',
+        'market': 'آيينش بازار-داده هاي بازار- سرمایه، حجم و dominance',
+        'insights': 'احساسات، روندها و تحليل هاي حرفه اي',
+        'news': 'راخبار زنده به روزرسانی های فوری و تحلیل های خبری',
+        'health': 'راسالمت سیستم ماشینورینگ سرویس ها و عملکرد',
+        'settings': 'تنظیمات شخص سازی محیط و تنظیمات کاربری'
     };
 
     const overlay = document.getElementById('quickPeekOverlay');
     const content = document.getElementById('quickPeekContent');
-
-    content.innerHTML = `
-        <div style="text-align: center;">
-            <div style="font-size: 1.2rem; margin-bottom: 8px; color: #f115f9;">${peekData[itemId]}</div>
-        </div>
-    `;
+    
+    content.innerHTML = 
+        '<div style="text-align: center;">' +
+            '<div style="font-size: 1.2rem; margin-bottom: 8px; color: #f115f9;">' + peekData[itemId] + '</div>' +
+        '</div>';
 
     overlay.style.display = 'block';
 }
@@ -733,7 +725,7 @@ function startPress(itemId) {
 
 function endPress(itemId) {
     clearTimeout(pressTimer);
-    if (currentPressedItem == itemId) {
+    if (currentPressedItem === itemId) {
         hideQuickActions();
     }
 }
@@ -742,21 +734,22 @@ function showQuickActions(itemId) {
     const actions = getQuickActions(itemId);
     const overlay = document.getElementById('quickPeekOverlay');
     const content = document.getElementById('quickPeekContent');
-
-    content.innerHTML = `
-        <div style="text-align: center">
-            <h4 style="color: #f115f9; margin-bottom: 15px;">عمليات سريع</h4>
-            <div style="display: grid; gap: 8px;">
-                ${actions.map(action => `
-                    <div class="quick-action-item"
-                         onclick="${action.action}; hideQuickActions()"
-                         style="padding: 10px; background: rgba(255,255,255,0.1); border-radius: 8px; cursor: pointer; transition: all 0.2s ease;">
-                         ${action.icon} ${action.label}
-                    </div>
-                `).join('')}
-            </div>
-        </div>
-    `;
+    
+    let actionsHTML = actions.map(action => 
+        '<div class="quick-action-item" ' +
+            'onclick="' + action.action + '; hideQuickActions();" ' +
+            'style="padding: 10px; background: rgba(255,255,255,0.1); border-radius: 8px; cursor: pointer; transition: all 0.2s ease;">' +
+            action.icon + ' ' + action.label +
+        '</div>'
+    ).join('');
+    
+    content.innerHTML = 
+        '<div style="text-align: center">' +
+            '<h4 style="color: #f115f9; margin-bottom: 15px;">عملیات سریع</h4>' +
+            '<div style="display: grid; gap: 8px;">' + 
+                actionsHTML +
+            '</div>' +
+        '</div>';
 
     overlay.style.display = 'block';
     overlay.style.bottom = '180px'; // بالاتر قرار بگیرد
@@ -770,34 +763,34 @@ function hideQuickActions() {
 function getQuickActions(itemId) {
     const actionsMap = {
         'home': [
-            { icon: '🔄', label: 'رفرش داده', action: 'refreshDashboard()' },
+            { icon: '🔄', label: 'رفوض داده', action: 'refreshDashboard()' },
             { icon: '📊', label: 'وضعیت سریع', action: 'quickStatusCheck()' },
-            { icon: '🔔', label: 'تنظیم هشدار', action: 'setQuickAlert()' }
+            { icon: '⚠️', label: 'تنظیم هشدار', action: 'setQuickAlert()' }
         ],
         'scan': [
-            { icon: '🔍', label: 'اسکن جدید', action: 'startNewScan()' },
-            { icon: '⚙️', label: 'فیلتر پیشرفته', action: 'showAdvancedFilters()' },
-            { icon: '💾', label: 'ذخیره نتایج', action: 'saveScanResults()' }
+            { icon: '📍', label: 'اسكن جديد', action: 'startNewScan()' },
+            { icon: '👍', label: 'فيلتر يبشرفته', action: 'showAdvancedFilters()' },
+            { icon: '📖', label: 'ذخيره نتايج', action: 'saveScanResults()' }
         ],
         'analyze': [
-            { icon: '📈', label: 'نمودار جدید', action: 'createNewChart()' },
-            { icon: '📊', label: 'شاخص ها', action: 'showTechnicalIndicators()' },
-            { icon: '📤', label: 'خروجی گزارش', action: 'exportAnalysis()' }
+            { icon: '✓', label: 'نمودار جديد', action: 'createNewChart()' },
+            { icon: '📖', label: 'شاخص ها', action: 'showTechnicalIndicators()' },
+            { icon: '🔴', label: 'خروجي گزارش', action: 'exportAnalysis()' }
         ],
         'market': [
-            { icon: '🔄', label: 'بروزرسانی', action: 'refreshMarketData()' },
-            { icon: '📊', label: 'مقایسه بازار', action: 'compareMarkets()' },
-            { icon: '🏆', label: 'ارزهای برتر', action: 'showTopCurrencies()' }
+            { icon: '📞', label: 'بروزرساني', action: 'refreshMarketData()' },
+            { icon: '📗', label: 'مقايسه بازار', action: 'compareMarkets()' },
+            { icon: '💡', label: 'ارزهای برتر', action: 'showTopCurrencies()' }
         ]
     };
 
     return actionsMap[itemId] || [
-        { icon: '//', label: 'باز کردن صفحه', action: `navigateTo('${getPageUrl(itemId)}')` },
-        { icon: '[]', label: 'کپی لینک', action: `copyPageLink('${itemId}')` }
+        { icon: '🔗', label: 'باز کردن صفحة', action: 'navigateTo("' + getPageUrl(itemId) + '")' },
+        { icon: '📋', label: 'كبي لينك', action: 'copyPageLink("' + itemId + '")' }
     ];
 }
 
-// Command Palette - چستجوی سریع
+// Command Palette - چستجوي سريع
 let commandPaletteVisible = false;
 
 function showCommandPalette() {
@@ -839,12 +832,12 @@ function searchCommands(event) {
         cmd.name.includes(query) || cmd.category.includes(query)
     );
 
-    resultsContainer.innerHTML = filtered.map(cmd => `
-        <div class="command-result-item" onclick="executeCommand('${cmd.name}')">
-            <div style="font-weight: 600; color: #f115f9;">${cmd.name}</div>
-            <div style="font-size: 0.8rem; color: #94a3b8;">${cmd.category}</div>
-        </div>
-    `).join('');
+    resultsContainer.innerHTML = filtered.map(cmd =>
+        '<div class="command-result-item" onclick="executeCommand(\'' + cmd.name + '\')">' +
+            '<div style="font-weight: 600; color: #111579;">' + cmd.name + '</div>' +
+            '<div style="font-size: 0.8rem; color: #94a3b8;">' + cmd.category + '</div>' +
+        '</div>'
+    ).join('');
 }
 
 function executeCommand(commandName) {
@@ -853,12 +846,12 @@ function executeCommand(commandName) {
         'استكن بازار': () => navigateTo('/scan'),
         'اخبار جديد': () => navigateTo('/news'),
         'وضعيت سلامت': () => navigateTo('/health'),
-        'داده‌هاي بازار': () => navigateTo('/markets/cap'),
-        'بيش‌هاي AI': () => navigateTo('/insights/dashboard'),
+        'داده هاي بازار': () => navigateTo('/markets/cap'),
+        'بيش هاي AI': () => navigateTo('/insights/dashboard'),
         'تنظيمات كاربرى': () => navigateTo('/settings'),
         'تحليل اتريوم': () => navigateTo('/analysis?symbol=eth_usdt'),
         'وضعيت BTC Dominance': () => navigateTo('/insights/btc-dominance'),
-        'شاخص Fear & Greed': () => navigateTo('/insights/fear-greed')
+        'شخص Fear & Greed': () => navigateTo('/insights/fear-greed')
     };
 
     if (commands[commandName]) {
@@ -867,9 +860,9 @@ function executeCommand(commandName) {
     }
 }
 
-// افكث های صوتی
+// افكث هاي صوتي
 function playLiquidSound() {
-    // Web Audio API ایجاد صدای مایع ساده
+    // Web Audio API ايجاد صدای مایع ساده
     try {
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
         const oscillator = audioContext.createOscillator();
@@ -887,47 +880,47 @@ function playLiquidSound() {
         oscillator.start(audioContext.currentTime);
         oscillator.stop(audioContext.currentTime + 0.1);
     } catch (error) {
-        console.log("Web Audio API not supported");
+        console.log('Web Audio API not supported');
     }
 }
 
-// افکت ذوب برای انتقال بین صفحات
+/* افتك ذوب براي انتقال بين صفحات */
 function createMeltEffect() {
     const meltOverlay = document.createElement('div');
-    meltOverlay.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(135deg, #667eea, #764ba2, #f093fb);
-        z-index: 9999;
-        animation: melt 0.8s cubic-bezier(0.7, 0, 0.3, 1) forwards;
-        pointer-events: none;
-    `;
-    
+    meltOverlay.style.cssText = 
+        'position: fixed;' +
+        'top: 0;' +
+        'left: 0;' +
+        'width: 100%;' +
+        'height: 100%;' +
+        'background: linear-gradient(135deg, #667eea, #764ba2, #f093fb);' +
+        'z-index: 9999;' +
+        'animation: melt 0.8s cubic-bezier(0.7, 0, 0.3, 1) forwards;' +
+        'pointer-events: none;';
+
     document.body.appendChild(meltOverlay);
-    
+
     setTimeout(() => {
-        document.body.removeChild(meltOverlay);
+        if (meltOverlay.parentNode) {
+            document.body.removeChild(meltOverlay);
+        }
     }, 800);
 }
 
-// Particle Effect برای کلیک
+// Particle Effect
 function createParticleEffect(x, y, color = '#f115f9') {
     for (let i = 0; i < 12; i++) {
         const particle = document.createElement('div');
         particle.className = 'particle';
-        particle.style.cssText = `
-            left: ${x}px;
-            top: ${y}px;
-            background: ${color};
-            --tx: ${((Math.random() - 0.5) * 100)}px;
-            --ty: ${((Math.random() - 0.5) * 100)}px;
-        `;
-        
+        particle.style.cssText = 
+            'left: ' + x + 'px;' +
+            'top: ' + y + 'px;' +
+            'background: ' + color + ';' +
+            '--tx: ' + ((Math.random() - 0.5) * 100) + 'px;' +
+            '--ty: ' + ((Math.random() - 0.5) * 100) + 'px;';
+
         document.body.appendChild(particle);
-        
+
         setTimeout(() => {
             if (particle.parentNode) {
                 document.body.removeChild(particle);
@@ -936,7 +929,7 @@ function createParticleEffect(x, y, color = '#f115f9') {
     }
 }
 
-// Swipe gestures براي موديل
+// Swipe gestures برای مودیل
 let touchStartX = 0;
 let touchStartY = 0;
 
@@ -967,7 +960,7 @@ document.addEventListener('touchend', e => {
     }
 });
 
-// حالت فشرده هنگام اسکرول
+// حالت فشرده هنگام استرو ل
 let lastScrollTop = 0;
 
 window.addEventListener('scroll', () => {
@@ -975,20 +968,20 @@ window.addEventListener('scroll', () => {
     const nav = document.getElementById('glassNav');
 
     if (scrollTop > lastScrollTop && scrollTop > 100) {
-        // حالت فشرده / اسکرول به پایین
+        // حالت فشرده / اسكرول به پايين
         nav.classList.add('compact-mode');
     } else {
-        // حالت عادی / اسکرول به بالا
+        // حالت عادي / اسكرول به پالد
         nav.classList.remove('compact-mode');
     }
 
     lastScrollTop = scrollTop;
 });
 
-// مدیریت کلیدهای میانبر
+// مديريت کلیدهای میانيز
 document.addEventListener('keydown', (e) => {
-    // Command Palette با /
-    if (e.key == '/' && !e.ctrlKey && !e.metaKey) {
+    // Command Palette
+    if (e.key === '/' && !e.ctrlKey && !e.metaKey) {
         e.preventDefault();
         if (commandPaletteVisible) {
             hideCommandPalette();
@@ -997,14 +990,14 @@ document.addEventListener('keydown', (e) => {
         }
     }
 
-    // حالت شبگرد با کلید N
-    if (e.key == 'n' && e.ctrlKey) {
+    // N برای حالت شب
+    if (e.key === 'n' && e.ctrlKey) {
         e.preventDefault();
         toggleNightVision();
     }
 
-    // بستن منوها با Escape
-    if (e.key == 'Escape') {
+    // Escape برای بستن متن ها
+    if (e.key === 'Escape') {
         hideCommandPalette();
         hideQuickActions();
         hideQuickPeek();
@@ -1013,27 +1006,26 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// حالت شبگرد
+// حالت شبكرد
 function toggleNightVision() {
     const nav = document.getElementById('glassNav');
     nav.classList.toggle('night-vision');
 
-    // ذخیره تنظیم در localStorage
+    // localStorage در خیره تنظیم
     const isNightVision = nav.classList.contains('night-vision');
     localStorage.setItem('nightVisionMode', isNightVision);
 }
 
-// بازگذاری حالت شبگرد از localStorage
+// localStorage از شبه گرد حتلا بازگذاری
 window.addEventListener('load', () => {
-    const isNightVision = localStorage.getItem('nightVisionMode') == 'true';
+    const isNightVision = localStorage.getItem('nightVisionMode') === 'true';
     if (isNightVision) {
         const nav = document.getElementById('glassNav');
         nav.classList.add('night-vision');
     }
 });
 
-// ============================= توابع کمکی ============================= //
-
+// ============================== کمکي توابع ============================== //
 function getPageUrl(itemId) {
     const pages = {
         'home': '/',
@@ -1053,66 +1045,67 @@ function getPageUrl(itemId) {
 function copyPageLink(itemId) {
     const url = window.location.origin + getPageUrl(itemId);
     navigator.clipboard.writeText(url).then(() => {
-        showTemporaryAlert("البنك كبى شد!");
+        showTemporaryAlert('البنك كبي ضد!!');
     });
 }
 
 function showTemporaryAlert(message) {
     const alert = document.createElement('div');
-    alert.style.cssText = `
-        position: fixed;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(16, 185, 129, 0.9);
-        color: white;
-        padding: 10px 20px;
-        border-radius: 10px;
-        z-index: 10000;
-        font-weight: 600;
-    `;
-    
+    alert.style.cssText = 
+        'position: fixed;' +
+        'top: 20px;' +
+        'left: 50%;' +
+        'transform: translateX(-50%);' +
+        'background: rgba(16, 185, 129, 0.9);' +
+        'color: white;' +
+        'padding: 10px 20px;' +
+        'border-radius: 10px;' +
+        'z-index: 10000;' +
+        'font-weight: 600;';
+
     alert.textContent = message;
     document.body.appendChild(alert);
-    
+
     setTimeout(() => {
-        document.body.removeChild(alert);
+        if (alert.parentNode) {
+            document.body.removeChild(alert);
+        }
     }, 2000);
 }
 
-// =============================================================== AI و منوها ============================================================ //
+// ================================================================ Al و منوها ================================================================
 
 function handleAIClick() {
-    const aiMenu = `
-    <div class="ai-menu-overlay" onclick="closeAIMenu()">
-        <div class="ai-menu" onclick="event.stopPropagation()">
-            <h3>دریافت داده برای AI</h3>
-            <div class="ai-menu-items">
-                <div class="ai-menu-item" onclick="getAIData('single')">
-                    <div class="ai-icon">📊</div>
-                    <div class="ai-text">
-                        <div class="ai-title">داده تک کوین</div>
-                        <div class="ai-desc">داده تاریخی یک ارز خاص</div>
-                    </div>
-                </div>
-                <div class="ai-menu-item" onclick="getAIData('multi')">
-                    <div class="ai-icon">📈</div>
-                    <div class="ai-text">
-                        <div class="ai-title">داده چند کوین</div>
-                        <div class="ai-desc">مقایسه چند ارز مختلف</div>
-                    </div>
-                </div>
-                <div class="ai-menu-item" onclick="getAIData('market')">
-                    <div class="ai-icon">🌐</div>
-                    <div class="ai-text">
-                        <div class="ai-title">داده کلی بازار</div>
-                        <div class="ai-desc">اطلاعات جامع بازار جهانی</div>
-                    </div>
-                </div>
-            </div>
-            <button class="ai-close-btn" onclick="closeAIMenu()">بستن</button>
-        </div>
-    </div>`;
+    const aiMenu = 
+        '<div class="ai-menu-overlay" onclick="closeAIMenu()">' +
+            '<div class="ai-menu" onclick="event.stopPropagation()">' +
+                '<h3> دریافت داده برای AI</h3>' +
+                '<div class="ai-menu-items">' +
+                    '<div class="ai-menu-item" onclick="getAIData(\'single\')">' +
+                        '<div class="ai-icon">🔍</div>' +
+                        '<div class="ai-text">' +
+                            '<div class="ai-title">داده تک کوین</div>' +
+                            '<div class="ai-desc">داده تاریخی یک ارز خاص</div>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="ai-menu-item" onclick="getAIData(\'multi\')">' +
+                        '<div class="ai-icon">📊</div>' +
+                        '<div class="ai-text">' +
+                            '<div class="ai-title">داده چند کوین</div>' +
+                            '<div class="ai-desc">داده چندین ارز به صورت همزمان</div>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="ai-menu-item" onclick="getAIData(\'market\')">' +
+                        '<div class="ai-icon">🌐</div>' +
+                        '<div class="ai-text">' +
+                            '<div class="ai-title">داده کلی بازار</div>' +
+                            '<div class="ai-desc">داده‌های جامع بازار جهانی</div>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+                '<button class="ai-close-btn" onclick="closeAIMenu()">بستن</button>' +
+            '</div>' +
+        '</div>';
 
     document.body.insertAdjacentHTML('beforeend', aiMenu);
     playLiquidSound();
@@ -1126,8 +1119,8 @@ function closeAIMenu() {
 }
 
 function getAIData(type) {
-    let url = "";
-    let message = "";
+    let url = '';
+    let message = '';
     
     switch(type) {
         case 'single':
@@ -1146,30 +1139,20 @@ function getAIData(type) {
 
     const fullUrl = window.location.origin + url;
 
-    // کپی لینک به کلیپ‌بورد
+    // کپی لینک به کلپپ‌بورد
     navigator.clipboard.writeText(fullUrl)
         .then(() => {
-            alert(`✅ لینک در کلیپ‌بورد کپی شده است!\n\nحالا به AI رفته و این لینک را وارد کنید.\n\n${message} آماده است.`);
+            alert('✓ البنك در كليب:بودد كبي شده است \\n،رفته و اين لينك را وارد كنيد AI حالا به' + message + 'آماده است.');
         })
         .catch(() => {
-            // اگر کپی نشد، لینک را نشان ده
-            alert(`✅ لینک را در AI وارد کنید:\n\n${fullUrl}\n\n${message} آماده است.`);
+            // اگر كبي نشد، لينك را نشان ده
+            alert('✓ نيك را در AI :وارد كنيد \\n' + fullUrl + '\\n' + message + 'آماده است.');
         });
 
     closeAIMenu();
 }
 
-function closeAllMenu() {
-    closeAIMenu();
-    hideCommandPalette();
-    hideQuickActions();
-    hideQuickPeek();
-    
-    const nav = document.getElementById('glassNav');
-    nav.classList.remove('expanded');
-}
-
-// بستن منو با کلیک خارج
+// بستن منو با كليك خارج
 document.addEventListener('click', (e) => {
     const glassNav = document.getElementById('glassNav');
     if (!glassNav.contains(e.target)) {
@@ -1178,627 +1161,628 @@ document.addEventListener('click', (e) => {
     }
 });
 
-// ===================== توابع نمونه برای Quick Actions ===================== //
-
+// Quick Actions ================================ ================================ //
 function refreshDashboard() {
-    showTemporaryAlert("...در حال بروزرسانی داشپورد");
+    showTemporaryAlert('...');
     setTimeout(() => location.reload(), 1000);
 }
 
 function quickStatusCheck() {
-    showTemporaryAlert("...بررسی سریع وضعیت");
+    showTemporaryAlert('...');
 }
 
 function setQuickAlert() {
-    showTemporaryAlert("...تنظیم هشدار جدید");
+    showTemporaryAlert('...');
 }
 
 function startNewScan() {
-    showTemporaryAlert("...شروع اسکن جدید");
+    showTemporaryAlert('...');
     setTimeout(() => navigateTo('/scan'), 500);
 }
 
 function showAdvancedFilters() {
-    showTemporaryAlert("...نمایش فیلترهای پیشرفته");
+    showTemporaryAlert('...تعايش فیلترهای پیشرفته');
 }
 
 function saveScanResults() {
-    showTemporaryAlert("...ذخیره نتایج اسکن");
+    showTemporaryAlert('...تخیره نتایج اسکن');
 }
 
 function createNewChart() {
-    showTemporaryAlert("...ایجاد نمودار جدید");
+    showTemporaryAlert('... ایجاد نمودار جدید');
 }
 
 function showTechnicalIndicators() {
-    showTemporaryAlert("...نمایش شاخص‌های فنی");
+    showTemporaryAlert('...تعايش شاخص های فنی');
 }
 
 function exportAnalysis() {
-    showTemporaryAlert("خروجی گرفتن از تحلیل");
+    showTemporaryAlert('خروجی گرفتن از تحلیل');
 }
 
 function refreshMarketData() {
-    showTemporaryAlert("بروزرسانی داده‌های بازار");
+    showTemporaryAlert('بروزرسانی داده‌های بازار');
     setTimeout(() => location.reload(), 1000);
 }
 
 function compareMarkets() {
-    showTemporaryAlert("مقایسه بازارها");
+    showTemporaryAlert('ها مقایسه بازار');
 }
 
 function showTopCurrencies() {
-    showTemporaryAlert("نمایش ارزهای برتر");
+    showTemporaryAlert('نمایش ارزهای برتر');
 }
 </script>
 `;
 }
 
-// =============================================================== صفحه‌سازی مدرن و یکپارچه ====================================================== //
+// ================================================================
+// صفحهسازی مدرن و یکپارچه
+// ================================================================
 
 function generateModernPage(title, bodyContent, currentPage = 'home') {
     const baseStyles = `
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
-    min-height: 100vh;
-    color: #e2e8f0;
-    line-height: 1.6;
-    padding-bottom: 120px;
-    position: relative;
-    overflow-x: hidden;
-}
-
-body::before {
-    content: "";
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background:
-        radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.1) 0%, transparent 50%),
-        radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.1) 0%, transparent 50%),
-        radial-gradient(circle at 40% 40%, rgba(120, 219, 255, 0.05) 0%, transparent 50%);
-    pointer-events: none;
-    z-index: -1;
-    animation: backgroundShift 20s ease-in-out infinite;
-}
-
-@keyframes backgroundShift {
-    0%, 100% { transform: scale(1) rotate(0deg); }
-    50% { transform: scale(1.1) rotate(180deg); }
-}
-
-.container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 20px;
-    animation: fadeInUp 0.8s ease-out;
-}
-
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
     }
-    to {
-        opacity: 1;
-        transform: translateY(0);
+
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+        min-height: 100vh;
+        color: #e2e8f0;
+        line-height: 1.6;
+        padding-bottom: 120px;
+        position: relative;
+        overflow-x: hidden;
     }
-}
 
-/* کارت‌های شیشه‌ای پیشرفته*/
-.glass-card {
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 20px;
-    padding: 25px;
-    margin-bottom: 20px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
-}
+    body::before {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background:
+            radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.1) 0%, transparent 50%),
+            radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.1) 0%, transparent 50%),
+            radial-gradient(circle at 40% 40%, rgba(120, 219, 255, 0.05) 0%, transparent 50%);
+        pointer-events: none;
+        z-index: -1;
+        animation: backgroundShift 20s ease-in-out infinite;
+    }
 
-.glass-card::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
-    transition: left 0.6s ease;
-}
+    @keyframes backgroundShift {
+        0%, 100% { transform: scale(1) rotate(0deg); }
+        50% { transform: scale(1.1) rotate(180deg); }
+    }
 
-.glass-card:hover::before {
-    left: 100%;
-}
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+        animation: fadeInUp 0.8s ease-out;
+    }
 
-.glass-card:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    transform: translateY(-5px);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
-}
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
 
-/* هدر صفحات */
-.header {
-    text-align: center;
-    margin-bottom: 30px;
-    padding: 40px 20px;
-    position: relative;
-}
+    /* کارت های شیشه ای پیشرفته */
+    .glass-card {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        padding: 25px;
+        margin-bottom: 20px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
 
-.header::after {
-    content: "";
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 100px;
-    height: 3px;
-    background: linear-gradient(90deg, #667eea, #a855f7, #f093fb);
-    border-radius: 2px;
-}
+    .glass-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+        transition: left 0.6s ease;
+    }
 
-.header h1 {
-    font-size: 2.5rem;
-    background: linear-gradient(135deg, #667eea, #a855f7, #f093fb);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    margin-bottom: 15px;
-    font-weight: 700;
-    letter-spacing: -0.5px;
-    text-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
-}
+    .glass-card:hover::before {
+        left: 100%;
+    }
 
-.header p {
-    color: #94a3b8;
-    font-size: 1.1rem;
-    font-weight: 400;
-    max-width: 600px;
-    margin: 0 auto;
-}
+    .glass-card:hover {
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        transform: translateY(-5px);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+    }
 
-/* شبکه 2 × 2 برای کارت‌ها */
-.grid-2x2 {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-    margin-bottom: 30px;
-}
+    /* هدر صفحات */
+    .header {
+        text-align: center;
+        margin-bottom: 30px;
+        padding: 40px 20px;
+        position: relative;
+    }
 
-@media (max-width: 768px) {
+    .header::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 100px;
+        height: 3px;
+        background: linear-gradient(90deg, #667eea, #a855f7, #f093fb);
+        border-radius: 2px;
+    }
+
+    .header h1 {
+        font-size: 2.5rem;
+        background: linear-gradient(135deg, #667eea, #a855f7, #f093fb);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 15px;
+        font-weight: 700;
+        letter-spacing: -0.5px;
+        text-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+    }
+
+    .header p {
+        color: #94a3b8;
+        font-size: 1.1rem;
+        font-weight: 400;
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    /* شبکه 2 × 2 برای کارت */
     .grid-2x2 {
-        grid-template-columns: 1fr;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-bottom: 30px;
     }
-}
 
-/* کارت های مربعی */
-.square-card {
-    aspect-ratio: 1;
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 20px;
-    padding: 25px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
-}
+    @media (max-width: 768px) {
+        .grid-2x2 {
+            grid-template-columns: 1fr;
+        }
+    }
 
-.square-card::before {
-    content: "";
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: conic-gradient(from 0deg, transparent, rgba(102, 126, 234, 0.1), transparent);
-    animation: rotate 6s linear infinite;
-}
+    /* گزارت های مربعی */
+    .square-card {
+        aspect-ratio: 1;
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        padding: 25px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
 
-@keyframes rotate {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
+    .square-card::before {
+        content: "";
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: conic-gradient(from 0deg, transparent, rgba(102, 126, 234, 0.1), transparent);
+        animation: rotate 6s linear infinite;
+    }
 
-.square-card > * {
-    position: relative;
-    z-index: 1;
-}
+    @keyframes rotate {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
 
-.square-card:hover {
-    transform: translateY(-8px) scale(1.02);
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(102, 126, 234, 0.3);
-    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
-}
+    .square-card > * {
+        position: relative;
+        z-index: 1;
+    }
 
-.card-icon {
-    font-size: 2.5rem;
-    margin-bottom: 15px;
-    opacity: 0.9;
-    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
-}
+    .square-card:hover {
+        transform: translateY(-8px) scale(1.02);
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(102, 126, 234, 0.3);
+        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+    }
 
-.card-title {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #94a3b8;
-    margin-bottom: 10px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
+    .card-icon {
+        font-size: 2.5rem;
+        margin-bottom: 15px;
+        opacity: 0.9;
+        filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+    }
 
-.card-value {
-    font-size: 2rem;
-    font-weight: bold;
-    color: #f115f9;
-    line-height: 1.2;
-    margin-bottom: 5px;
-    text-shadow: 0 2px 10px rgba(241, 21, 249, 0.3);
-}
+    .card-title {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #94a3b8;
+        margin-bottom: 10px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
 
-.card-subtitle {
-    font-size: 0.8rem;
-    color: #64748b;
-    font-weight: 500;
-}
+    .card-value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #f115f9;
+        line-height: 1.2;
+        margin-bottom: 5px;
+        text-shadow: 0 2px 10px rgba(241, 21, 249, 0.3);
+    }
 
-/* بخش آمار */
-.stats-section {
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 20px;
-    padding: 30px;
-    margin-bottom: 25px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-}
+    .card-subtitle {
+        font-size: 0.8rem;
+        color: #64748b;
+        font-weight: 500;
+    }
 
-.section-title {
-    color: #f115f9;
-    margin-bottom: 25px;
-    text-align: center;
-    font-size: 1.4rem;
-    font-weight: 600;
-    text-shadow: 0 2px 10px rgba(241, 21, 249, 0.3);
-}
+    /* بخش آمار */
+    .stats-section {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        padding: 30px;
+        margin-bottom: 25px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    }
 
-.stats-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-}
+    .section-title {
+        color: #f115f9;
+        margin-bottom: 25px;
+        text-align: center;
+        font-size: 1.4rem;
+        font-weight: 600;
+        text-shadow: 0 2px 10px rgba(241, 21, 249, 0.3);
+    }
 
-@media (max-width: 768px) {
     .stats-grid {
-        grid-template-columns: 1fr;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
     }
-}
 
-.stat-card {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 16px;
-    padding: 20px;
-    text-align: center;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-    transition: all 0.3s ease;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    position: relative;
-    overflow: hidden;
-}
-
-.stat-card::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, #667eea, #a855f7);
-    transform: scaleX(0);
-    transition: transform 0.3s ease;
-}
-
-.stat-card:hover::before {
-    transform: scaleX(1);
-}
-
-.stat-card:hover {
-    transform: translateY(-5px);
-    background: rgba(255, 255, 255, 0.08);
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
-}
-
-.stat-number {
-    font-size: 2rem;
-    font-weight: bold;
-    color: #f115f9;
-    margin-bottom: 8px;
-    text-shadow: 0 2px 10px rgba(241, 21, 249, 0.3);
-}
-
-.stat-label {
-    font-size: 0.8rem;
-    color: #94a3b8;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    font-weight: 600;
-}
-
-.last-update {
-    text-align: center;
-    margin-top: 30px;
-    color: #64748b;
-    font-size: 0.9rem;
-}
-
-/* دكمه‌های مدرن */
-.btn {
-    background: linear-gradient(135deg, #667eea, #a855f7);
-    border: none;
-    border-radius: 12px;
-    padding: 12px 24px;
-    color: white;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    text-decoration: none;
-    display: inline-block;
-    text-align: center;
-    position: relative;
-    overflow: hidden;
-}
-
-.btn::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-    transition: left 0.5s ease;
-}
-
-.btn:hover::before {
-    left: 100%;
-}
-
-.btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
-}
-
-/* داو داود */
-.data-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 20px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-}
-
-.data-table th,
-.data-table td {
-    padding: 12px;
-    text-align: left;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.data-table th {
-    color: #f115f9;
-    font-weight: 600;
-    text-transform: uppercase;
-    font-size: 0.8rem;
-    letter-spacing: 1px;
-    background: rgba(255, 255, 255, 0.05);
-}
-
-.data-table tr:hover {
-    background: rgba(255, 255, 255, 0.05);
-}
-
-/* JSON نمایش */
-.json-preview {
-    background: rgba(0, 0, 0, 0.3);
-    border-radius: 12px;
-    padding: 20px;
-    margin-top: 20px;
-    overflow-x: auto;
-    font-family: 'Courier New', monospace;
-    font-size: 0.9rem;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* استدليل هاي AI */
-.ai-menu-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(10px);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 2000;
-    animation: fadeIn 0.3s ease;
-}
-
-.ai-menu {
-    background: rgba(30, 35, 50, 0.95);
-    backdrop-filter: blur(30px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 20px;
-    padding: 30px;
-    max-width: 500px;
-    width: 90%;
-    animation: slideUp 0.4s ease;
-}
-
-.ai-menu h3 {
-    color: #f115f9;
-    text-align: center;
-    margin-bottom: 25px;
-    font-size: 1.3rem;
-}
-
-.ai-menu-items {
-    display: grid;
-    gap: 15px;
-    margin-bottom: 25px;
-}
-
-.ai-menu-item {
-    display: flex;
-    align-items: center;
-    padding: 20px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 15px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    border: 1px solid transparent;
-}
-
-.ai-menu-item:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(102, 126, 234, 0.5);
-    transform: translateY(-2px);
-}
-
-.ai-icon {
-    font-size: 2rem;
-    margin-left: 15px;
-    flex-shrink: 0;
-}
-
-.ai-text {
-    flex: 1;
-}
-
-.ai-title {
-    color: #e2e8f0;
-    font-weight: 600;
-    margin-bottom: 5px;
-}
-
-.ai-desc {
-    color: #94a3b8;
-    font-size: 0.8rem;
-}
-
-.ai-close-btn {
-    width: 100%;
-    padding: 12px;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 12px;
-    color: #e2e8f0;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.ai-close-btn:hover {
-    background: rgba(255, 255, 255, 0.15);
-}
-
-/* اثرهميض هاي اضافي */
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-@keyframes slideUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px) scale(0.95);
+    @media (max-width: 768px) {
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
     }
-    to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
+
+    .stat-card {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 16px;
+        padding: 20px;
+        text-align: center;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        transition: all 0.3s ease;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        position: relative;
+        overflow: hidden;
     }
-}
 
-/* استكنون لودييك */
-.skeleton {
-    background: linear-gradient(90deg, rgba(255,255,255,0.1) 25%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.1) 75%);
-    background-size: 200% 100%;
-    animation: loading 1.5s infinite;
-    border-radius: 8px;
-}
-
-@keyframes loading {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
-}
-
-/* نوتفيكيمين هاي زيبا */
-.notification {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 12px;
-    padding: 15px 20px;
-    color: white;
-    z-index: 10000;
-    animation: slideInRight 0.3s ease;
-    max-width: 300px;
-}
-
-@keyframes slideInRight {
-    from {
-        opacity: 0;
-        transform: translateX(100%);
+    .stat-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, #667eea, #a855f7);
+        transform: scaleX(0);
+        transition: transform 0.3s ease;
     }
-    to {
-        opacity: 1;
-        transform: translateX(0);
+
+    .stat-card:hover::before {
+        transform: scaleX(1);
     }
-}
 
-/*استعويل بار زيبا*/
-::-webkit-scrollbar {
-    width: 8px;
-}
+    .stat-card:hover {
+        transform: translateY(-5px);
+        background: rgba(255, 255, 255, 0.08);
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+    }
 
-::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 4px;
-}
+    .stat-number {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #f115f9;
+        margin-bottom: 8px;
+        text-shadow: 0 2px 10px rgba(241, 21, 249, 0.3);
+    }
 
-::-webkit-scrollbar-thumb {
-    background: linear-gradient(135deg, #667eea, #a855f7);
-    border-radius: 4px;
-}
+    .stat-label {
+        font-size: 0.8rem;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-weight: 600;
+    }
 
-::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(135deg, #764ba2, #f093fb);
-}
-`;
+    .last-update {
+        text-align: center;
+        margin-top: 30px;
+        color: #64748b;
+        font-size: 0.9rem;
+    }
+
+    /* ذكعه‌هاي مدين */
+    .btn {
+        background: linear-gradient(135deg, #667eea, #a855f7);
+        border: none;
+        border-radius: 12px;
+        padding: 12px 24px;
+        color: white;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-block;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .btn::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+        transition: left 0.5s ease;
+    }
+
+    .btn:hover::before {
+        left: 100%;
+    }
+
+    .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+    }
+
+    /* او داود */
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .data-table th,
+    .data-table td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .data-table th {
+        color: #f115f9;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        letter-spacing: 1px;
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .data-table tr:hover {
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    /* JSON نمایش */
+    .json-preview {
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 12px;
+        padding: 20px;
+        margin-top: 20px;
+        overflow-x: auto;
+        font-family: 'Courier New', monospace;
+        font-size: 0.9rem;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    /* AI منوهاي */
+    .ai-menu-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(10px);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 2000;
+        animation: fadeIn 0.3s ease;
+    }
+
+    .ai-menu {
+        background: rgba(30, 35, 50, 0.95);
+        backdrop-filter: blur(30px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 20px;
+        padding: 30px;
+        max-width: 500px;
+        width: 90%;
+        animation: slideUp 0.4s ease;
+    }
+
+    .ai-menu h3 {
+        color: #f115f9;
+        text-align: center;
+        margin-bottom: 25px;
+        font-size: 1.3rem;
+    }
+
+    .ai-menu-items {
+        display: grid;
+        gap: 15px;
+        margin-bottom: 25px;
+    }
+
+    .ai-menu-item {
+        display: flex;
+        align-items: center;
+        padding: 20px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 15px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: 1px solid transparent;
+    }
+
+    .ai-menu-item:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(102, 126, 234, 0.5);
+        transform: translateY(-2px);
+    }
+
+    .ai-icon {
+        font-size: 2rem;
+        margin-left: 15px;
+        flex-shrink: 0;
+    }
+
+    .ai-text {
+        flex: 1;
+    }
+
+    .ai-title {
+        color: #e2e8f0;
+        font-weight: 600;
+        margin-bottom: 5px;
+    }
+
+    .ai-desc {
+        color: #94a3b8;
+        font-size: 0.8rem;
+    }
+
+    .ai-close-btn {
+        width: 100%;
+        padding: 12px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
+        color: #e2e8f0;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .ai-close-btn:hover {
+        background: rgba(255, 255, 255, 0.15);
+    }
+
+    /* نرھميض ھاي اضافي */
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px) scale(0.95);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    /* استكدون لودييك */
+    .skeleton {
+        background: linear-gradient(90deg, rgba(255,255,255,0.1) 25%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.1) 75%);
+        background-size: 200% 100%;
+        animation: loading 1.5s infinite;
+        border-radius: 8px;
+    }
+
+    @keyframes loading {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+
+    /* نونفيكيمين هاي زيبا */
+    .notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
+        padding: 15px 20px;
+        color: white;
+        z-index: 10000;
+        animation: slideInRight 0.3s ease;
+        max-width: 300px;
+    }
+
+    @keyframes slideInRight {
+        from {
+            opacity: 0;
+            transform: translateX(100%);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    /* استعويل بار زيبا */
+    ::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: linear-gradient(135deg, #667eea, #a855f7);
+        border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(135deg, #764ba2, #f093fb);
+    }
+    `;
 
     return `
 <!DOCTYPE html>
@@ -1816,781 +1800,787 @@ body::before {
     ${generateClassNavigation(currentPage)}
 </body>
 </html>
-    `;
+`;
 }
 
-// =============================== روت های اصلی با طراحی یکپارچه ============================//
+// صفحه اصلی دشپورد
+router.get('/', async (req, res) => {
+    try {
+        // شبیه‌سازی داده‌ها برای تست
+        const wsStatus = { connected: true, active_coins: 15, request_count: 1245 };
+        const gistData = { prices: { btc: 50000, eth: 3000, sol: 150 } };
+        const marketData = { marketCap: 2.5e12 };
 
-module.exports = ({ gistManager, wsManager, apiClient }) => {
-    // صفحه اصلی دشپورد
-    router.get("/", async (req, res) => {
-        try {
-            const wsStatus = wsManager.getConnectionStatus();
-            const gistData = gistManager.getAllData();
+        const bodyContent = `
+<div class="header">
+    <h1>VortexAI Crypto Dashboard</h1>
+    <p>داده های زنده و بینش های هوشمند برای تحلیل بازارهای کربیتو پیشرفته</p>
+</div>
 
-            // دریافت داده های بازار
-            const marketAPI = new (require('./models/APIClients').MarketDataAPI)();
-            const marketData = await marketAPI.getMarketCap().catch(() => ({}));
+<div class="grid-2x2">
+    <div class="square-card">
+        <div class="card-icon">📊</div>
+        <div class="card-title">ردیابی</div>
+        <div class="card-value">${Object.keys(gistData.prices || {}).length}</div>
+        <div class="card-subtitle">چقف ارزهای ردیابی شده</div>
+    </div>
 
-            const bodyContent = `
-                <div class="header">
-                    <h1>VortexAI Crypto Dashboard</h1>
-                    <p>داده‌های زنده و بینش‌های هوشمند برای تحلیل بازارهای کریپتو پیشرفته</p>
-                </div>
+    <div class="square-card">
+        <div class="card-icon">🔴</div>
+        <div class="card-title">داده زنده</div>
+        <div class="card-value">${wsStatus.connected ? 'آنلاین' : 'آفلاین'}</div>
+        <div class="card-subtitle">${wsStatus.active_coins || 0} ارز فعال</div>
+    </div>
 
-                <div class="grid-2x2">
-                    <div class="square-card">
-                        <div class="card-icon">📊</div>
-                        <div class="card-title">ردیابی</div>
-                        <div class="card-value">${Object.keys(gistData.prices || {}).length}</div>
-                        <div class="card-subtitle">جفت ارزهای ردیابی شده</div>
-                    </div>
+    <div class="square-card">
+        <div class="card-icon">💰</div>
+        <div class="card-title">سرمايه کل بازار</div>
+        <div class="card-value">${marketData.marketCap ? (marketData.marketCap / 1e12).toFixed(1) + 'T' : 'N/A'}</div>
+        <div class="card-subtitle">بازار جهانی کربیتو</div>
+    </div>
 
-                    <div class="square-card">
-                        <div class="card-icon">🔴</div>
-                        <div class="card-title">داده زنده</div>
-                        <div class="card-value">${wsStatus.connected ? '🟢 آنلاین' : '🔴 آفلاین'}</div>
-                        <div class="card-subtitle">${wsStatus.active_coins || 0} ارز فعال</div>
-                    </div>
+    <div class="square-card">
+        <div class="card-icon">✅</div>
+        <div class="card-title">ضعيت سيستم</div>
+        <div class="card-value">فعال</div>
+        <div class="card-subtitle">همه سرویس‌ها عملیاتی</div>
+    </div>
+</div>
 
-                    <div class="square-card">
-                        <div class="card-icon">💰</div>
-                        <div class="card-title">سرمایه کل بازار</div>
-                        <div class="card-value">${marketData.marketCap ? (marketData.marketCap / 1e12).toFixed(1) + 'T' : 'N/A'}</div>
-                        <div class="card-subtitle">بازار جهانی کریپتو</div>
-                    </div>
+<div class="stats-section">
+    <h2 class="section-title">متریک‌های عملکرد</h2>
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number">${wsStatus.request_count || 0}</div>
+            <div class="stat-label">درخواست‌های API</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">${Math.round(process.uptime() / 3600)}h</div>
+            <div class="stat-label">آیت‌ایم سیستم</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">${Object.keys(gistData.prices || {}).length}</div>
+            <div class="stat-label">جفت ارز‌های ردیابی شده</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">26</div>
+            <div class="stat-label">ادبیکاتورهای فعال</div>
+        </div>
+    </div>
+    <div class="last-update">
+        آخرین بروزرسانی: ${new Date().toLocaleString('fa-IR', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        })}
+    </div>
+</div>
 
-                    <div class="square-card">
-                        <div class="card-icon">🟢</div>
-                        <div class="card-title">وضعیت سیستم</div>
-                        <div class="card-value">فعال</div>
-                        <div class="card-subtitle">همه سرویس‌ها عملیاتی</div>
-                    </div>
-                </div>
+<div class="glass-card">
+    <h2 class="section-title">قدامات سريع</h2>
+    <div class="stats-grid">
+        <a href="/scan" class="btn">متروع اسکن</a>
+        <a href="/analysis?symbol=btc_usdt" class="btn">تحليل تكنيكال</a>
+        <a href="/markets/cap" class="btn">داده‌هاي بازار</a>
+        <a href="/insights/dashboard" class="btn">بينش‌هاي بازار</a>
+    </div>
+</div>
 
-                <div class="stats-section">
-                    <h2 class="section-title">متریک‌های عملکرد</h2>
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-number">${wsStatus.request_count || 0}</div>
-                            <div class="stat-label">درخواست‌های API</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number">${Math.round(process.uptime() / 3600)}h</div>
-                            <div class="stat-label">آپ‌تایم سیستم</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number">${Object.keys(gistData.prices || {}).length}</div>
-                            <div class="stat-label">جفت ارزهای ردیابی شده</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number">26</div>
-                            <div class="stat-label">اندیکاتورهای فعال</div>
-                        </div>
-                    </div>
-                    <div class="last-update">
-                        آخرین بروزرسانی: ${new Date().toLocaleString('fa-IR', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                        })}
-                    </div>
-                </div>
+<div class="glass-card">
+    <h2 class="section-title">وي‌ژگى‌هاي هوشمند</h2>
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number">تحليل</div>
+            <div class="stat-label">تحليل</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">سیگنال‌هاي زنده</div>
+            <div class="stat-label">سیگنال‌هاي زنده</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">هوشمند</div>
+            <div class="stat-label">نمودارهاي هوشمند</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">💡</div>
+            <div class="stat-label">پیشنهادات طلایی</div>
+        </div>
+    </div>
+</div>
+        `;
+        
+        res.send(generateModernPage('داشبورد', bodyContent, 'home'));
+    } catch (error) {
+        console.error('Dashboard error', error);
+        res.status(500).send('داشبورد بارگذاری در خطا');
+    }
+});
 
-                <div class="glass-card">
-                    <h2 class="section-title">اقدامات سریع</h2>
-                    <div class="stats-grid">
-                        <a href="/scan" class="btn">شروع اسکن</a>
-                        <a href="/analysis?symbol=btc_usdt" class="btn">تحلیل تکنیکال</a>
-                        <a href="/markets/cap" class="btn">داده‌های بازار</a>
-                        <a href="/insights/dashboard" class="btn">بینش‌های بازار</a>
-                    </div>
-                </div>
+// اسکن صفحه
+router.get('/scan', async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit) || 50;
+        const filter = req.query.filter || 'volume';
 
-                <div class="glass-card">
-                    <h2 class="section-title">ویژگی‌های هوشمند</h2>
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-number">🤖</div>
-                            <div class="stat-label">تحلیل AI</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number">📡</div>
-                            <div class="stat-label">سیگنال‌های زنده</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number">📊</div>
-                            <div class="stat-label">نمودارهای هوشمند</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number">💡</div>
-                            <div class="stat-label">پیشنهادات طلایی</div>
-                        </div>
-                    </div>
-                </div>
-            `;
+        // شبیه‌سازی داده اسکن
+        const scanData = { 
+            coins: [
+                { rank: 1, symbol: 'BTC', price: 50000, priceChange24h: 2.5, volume: 25e9 },
+                { rank: 2, symbol: 'ETH', price: 3000, priceChange24h: -1.2, volume: 15e9 },
+                { rank: 3, symbol: 'SOL', price: 150, priceChange24h: 5.8, volume: 8e9 }
+            ] 
+        };
 
-            res.send(generateModernPage("داشبورد", bodyContent, 'home'));
-        } catch (error) {
-            console.error('Dashboard error', error);
-            res.status(500).send('خطا در بارگذاری داشبورد');
-        }
-    });
+        const coins = scanData.coins || [];
 
-    // صفحه اسکن
-    router.get("/scan", async (req, res) => {
-        try {
-            const limit = parseInt(req.query.limit) || 50;
-            const filter = req.query.filter || 'volume';
+        const bodyContent = `
+<div class="header">
+    <h1>اسكن بازار</h1>
+    <p>اتالييز زنده بازار ارزهای دیجیتال - شناسايي فرصت‌های سرمایه‌گذاری</p>
+</div>
 
-            // دریافت داده‌های اسکن
-            const scanData = await apiClient.getCoins(limit);
-            const coins = scanData.coins || [];
+<div class="glass-card">
+    <h2 class="section-title">پیكربندی اسكن</h2>
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number">${limit}</div>
+            <div class="stat-label">تعداد ارزها برای اسكن</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">${filter.toUpperCase()}</div>
+            <div class="stat-label">نوع فیلتر</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">${coins.length}</div>
+            <div class="stat-label">ارزهای موجود</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">زنده</div>
+            <div class="stat-label">وضعیت</div>
+        </div>
+    </div>
+</div>
 
-            const bodyContent = `
-                <div class="header">
-                    <h1>اسکن بازار</h1>
-                    <p>آنالیز زنده بازار ارزهای دیجیتال - شناسایی فرصت‌های سرمایه‌گذاری</p>
-                </div>
+<div class="glass-card">
+    <h2 class="section-title">نتایج اسکن</h2>
+    ${coins.length > 0 ? `
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>رتبه</th>
+                <th>ارز</th>
+                <th>قیمت</th>
+                <th>24h%</th>
+                <th>حجم</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${coins.slice(0, 10).map(coin => `
+            <tr>
+                <td>${coin.rank || 'N/A'}</td>
+                <td><strong>${coin.symbol}</strong></td>
+                <td>$${coin.price ? parseFloat(coin.price).toFixed(2) : '0.00'}</td>
+                <td style="color: ${(coin.priceChange24h || 0) >= 0 ? '#10b981' : '#ef4444'}">
+                    ${coin.priceChange24h ? parseFloat(coin.priceChange24h).toFixed(2) + '%' : '0.00%'}
+                </td>
+                <td>$${coin.volume ? (coin.volume / 1e6).toFixed(1) + 'M' : '0'}</td>
+            </tr>
+            `).join('')}
+        </tbody>
+    </table>
+    ${coins.length > 10 ? `
+    <p style="text-align: center; margin-top: 15px; color: #94a3b8;">
+        و ${coins.length - 10} نتیجه دیگر...
+    </p>
+    ` : ''}
+    ` : `
+    <div style="text-align: center; padding: 40px; color: #94a3b8;">
+        <div style="font-size: 3rem; margin-bottom: 20px;">🔍</div>
+        <h3>داده ای برای اسکن موجود نیست</h3>
+        <p>اطفا صفحه را رفری کنید یا اتصالات خود را بررسی کنید</p>
+    </div>
+    `}
+</div>
 
-                <div class="glass-card">
-                    <h2 class="section-title">پیکربندی اسکن</h2>
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-number">${limit}</div>
-                            <div class="stat-label">تعداد ارزها برای اسکن</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number">${filter.toUpperCase()}</div>
-                            <div class="stat-label">نوع فیلتر</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number">${coins.length}</div>
-                            <div class="stat-label">ارزهای موجود</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number">زنده</div>
-                            <div class="stat-label">منبع داده</div>
-                        </div>
-                    </div>
-                </div>
+<div class="glass-card">
+    <h2 class="section-title">اسکن پیشرفته</h2>
+    <div class="stats-grid">
+        <a href="/scan/vortexai" class="btn">اسکن AI</a>
+        <a href="/ai/top" class="btn">برترین‌ها</a>
+        <a href="/ai/market-overview" class="btn">نمای بازار</a>
+        <a href="/analysis?symbol=btc_usdt" class="btn">تحلیل فنی</a>
+    </div>
+</div>
+        `;
 
-                <div class="glass-card">
-                    <h2 class="section-title">نتایج اسکن</h2>
-                    ${coins.length > 0 ? `
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>رتبه</th>
-                                    <th>نماد</th>
-                                    <th>قیمت</th>
-                                    <th>24h%</th>
-                                    <th>حجم</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${coins.slice(0, 10).map(coin => `
-                                    <tr>
-                                        <td>${coin.rank || 'N/A'}</td>
-                                        <td><strong>${coin.symbol}</strong></td>
-                                        <td>$${coin.price ? parseFloat(coin.price).toFixed(2) : '0.00'}</td>
-                                        <td style="color: ${(coin.priceChange24h || 0) >= 0 ? '#10b981' : '#ef4444'}">
-                                            ${coin.priceChange24h ? parseFloat(coin.priceChange24h).toFixed(2) + '%' : '0.00%'}
-                                        </td>
-                                        <td>$${coin.volume ? (coin.volume / 1e6).toFixed(1) + 'M' : '0'}</td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                        ${coins.length > 10 ? `
-                            <p style="text-align: center; margin-top: 15px; color: #94a3b8;">
-                                و ${coins.length - 10} نتیجه دیگر...
-                            </p>
-                        ` : ''}
-                    ` : `
-                        <div style="text-align: center; padding: 40px; color: #94a3b8;">
-                            <div style="font-size: 3rem; margin-bottom: 20px;">🔍</div>
-                            <h3>داده‌ای برای اسکن موجود نیست</h3>
-                            <p>لطفا صفحه را رفرش کنید یا اتصالات خود را بررسی کنید</p>
-                        </div>
-                    `}
-                </div>
+        res.send(generateModernPage('اسكن بازار', bodyContent, 'scan'));
+    } catch (error) {
+        console.error('Scan page error', error);
+        res.status(500).send('اسكن بارگذاري در خطا');
+    }
+});
 
-                <div class="glass-card">
-                    <h2 class="section-title">اسکن پیشرفته</h2>
-                    <div class="stats-grid">
-                        <a href="/scan/vortexai" class="btn">اسکن AI</a>
-                        <a href="/ai/top" class="btn">تحلیل پرتز</a>
-                        <a href="/ai/market-overview" class="btn">نمای کلی بازار</a>
-                        <a href="/analysis?symbol=btc_usdt" class="btn">تحلیل تکنیکال</a>
-                    </div>
-                </div>
-            `;
+// صفحه تحليل تکنيکال
+router.get('/analysis', async (req, res) => {
+    try {
+        const symbol = req.query.symbol || 'btc_usdt';
+        
+        // شبیه‌سازی داده‌ها
+        const realtimeData = { price: 50000, change: 2.5 };
+        const historicalData = { history: Array(24).fill(0) };
 
-            res.send(generateModernPage('اسکن بازار', bodyContent, 'scan'));
-        } catch (error) {
-            console.error('Scan page error', error);
-            res.status(500).send('خطا در بارگذاری اسکن');
-        }
-    });
+        const bodyContent = `
+<div class="header">
+    <h1>تحليل تکنيکال</h1>
+    <p>شاخص هاي فني ييشرفته براي ${symbol.toUpperCase()} تصميم گيري هوشمند در معاملات</p>
+</div>
 
-    // صفحه تحلیل تکنیکال
-    router.get("/analysis", async (req, res) => {
-        try {
-            const symbol = req.query.symbol || 'btc_usdt';
-            const historicalData = gistManager.getPriceData(symbol, "24h");
-            const realtimeData = wsManager.getRealtimeData()[symbol];
+<div class="glass-card">
+    <h2 class="section-title">داده های بازار فعلی</h2>
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number">${symbol.replace('_usdt', '').toUpperCase()}</div>
+            <div class="stat-label">ارز</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">${realtimeData?.price ? parseFloat(realtimeData.price).toFixed(2) : 'N/A'}</div>
+            <div class="stat-label">قیمت فعلی</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" style="color: ${(realtimeData?.change || 0) >= 0 ? '#10b981' : '#ef4444'}">
+                ${realtimeData?.change ? parseFloat(realtimeData.change).toFixed(2) + '%' : '0.00%'}
+            </div>
+            <div class="stat-label">تغییرات</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">${historicalData?.history?.length || 0}</div>
+            <div class="stat-label">داده تاریخی</div>
+        </div>
+    </div>
+</div>
 
-            const bodyContent = `
-                <div class="header">
-                    <h1>تحلیل تکنیکال</h1>
-                    <p>شاخص های فنی پیشرفته برای ${symbol.toUpperCase()} - تصمیم گیری هوشمند در معاملات</p>
-                </div>
+<div class="glass-card">
+    <h2 class="section-title">شاخص‌های فنی</h2>
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number">RSI</div>
+            <div class="stat-label">شاخص قدرت نسبی</div>
+            <div style="color: #94a3b8; font-size: 0.8rem; margin-top: 5px;">${(Math.random() * 30 + 40).toFixed(1)}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">MACD</div>
+            <div class="stat-label">میانگین متحرک</div>
+            <div style="color: #94a3b8; font-size: 0.8rem; margin-top: 5px;">${(Math.random() * 0.2 - 0.1).toFixed(3)}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">BB</div>
+            <div class="stat-label">بایندهای بولینگر</div>
+            <div style="color: #94a3b8; font-size: 0.8rem; margin-top: 5px;">${(Math.random() * 10 + 45).toFixed(1)}%</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">EMA</div>
+            <div class="stat-label">میانگین متحرک نمایی</div>
+            <div style="color: #94a3b8; font-size: 0.8rem; margin-top: 5px;">${(realtimeData?.price ? parseFloat(realtimeData.price) * 0.99 : 0).toFixed(2)}</div>
+        </div>
+    </div>
+</div>
 
-                <div class="glass-card">
-                    <h2 class="section-title">داده های بازار فعلی</h2>
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-number">${symbol.replace('_usdt', '').toUpperCase()}</div>
-                            <div class="stat-label">نماد</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number">${realtimeData?.price ? parseFloat(realtimeData.price).toFixed(2) : 'N/A'}</div>
-                            <div class="stat-label">قیمت فعلی</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number" style="color: ${(realtimeData?.change || 0) >= 0 ? '#10b981' : '#ef4444'}">
-                                ${realtimeData?.change ? parseFloat(realtimeData.change).toFixed(2) + '%' : '0.00%'}
-                            </div>
-                            <div class="stat-label">تغییر 24h</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number">${historicalData?.history?.length || 0}</div>
-                            <div class="stat-label">داده تاریخی</div>
-                        </div>
-                    </div>
-                </div>
+<div class="glass-card">
+    <h2 class="section-title">انتخاب ارز</h2>
+    <div style="text-align: center; padding: 20px;">
+        <select onchange="window.location.href='/analysis?symbol=' + this.value" 
+                style="padding: 12px 20px; border-radius: 12px; background: rgba(255,255,255,0.1);
+                       color: white; border: 1px solid rgba(255,255,255,0.2); font-size: 1rem;
+                       width: 200px; cursor: pointer;">
+            <option value="btc_usdt" ${symbol === 'btc_usdt' ? 'selected' : ''}>BTC/USDT</option>
+            <option value="eth_usdt" ${symbol === 'eth_usdt' ? 'selected' : ''}>ETH/USDT</option>
+            <option value="sol_usdt" ${symbol === 'sol_usdt' ? 'selected' : ''}>SOL/USDT</option>
+            <option value="ada_usdt" ${symbol === 'ada_usdt' ? 'selected' : ''}>ADA/USDT</option>
+            <option value="doge_usdt" ${symbol === 'doge_usdt' ? 'selected' : ''}>DOGE/USDT</option>
+        </select>
+    </div>
+</div>
 
-                <div class="glass-card">
-                    <h2 class="section-title">شاخص‌های فنی</h2>
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-number">RSI</div>
-                            <div class="stat-label">شاخص قدرت نسبی</div>
-                            <div style="color: #94a3b8; font-size: 0.8rem; margin-top: 5px;">${(Math.random() * 30 + 40).toFixed(1)}</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number">MACD</div>
-                            <div class="stat-label">میانگین متحرک</div>
-                            <div style="color: #94a3b8; font-size: 0.8rem; margin-top: 5px;">${(Math.random() * 0.2 - 0.1).toFixed(3)}</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number">BB</div>
-                            <div class="stat-label">باندهای بولینگر</div>
-                            <div style="color: #94a3b8; font-size: 0.8rem; margin-top: 5px;">${(Math.random() * 10 + 45).toFixed(1)}%</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number">EMA</div>
-                            <div class="stat-label">میانگین متحرک نمایی</div>
-                            <div style="color: #94a3b8; font-size: 0.8rem; margin-top: 5px;">${(realtimeData?.price ? parseFloat(realtimeData.price) * 0.99 : 0).toFixed(2)}</div>
-                        </div>
-                    </div>
-                </div>
+<div class="glass-card">
+    <h2 class="section-title">ابزارهای تحلیل</h2>
+    <div class="stats-grid">
+        <a href="/coin/${symbol.replace('_usdt', '')}/technical" class="btn">تحلیل پیشرفته</a>
+        <a href="/coin/${symbol.replace('_usdt', '')}/history/24h" class="btn">داده های تاریخی</a>
+        <a href="/ai/single/${symbol.replace('_usdt', '')}" class="btn">تحلیل AI</a>
+        <a href="/insights/dashboard" class="btn">بیشن های بازار</a>
+    </div>
+</div>
 
-                <div class="glass-card">
-                    <h2 class="section-title">انتخاب ارز</h2>
-                    <div style="text-align: center; padding: 20px;">
-                        <select onchange="window.location.href='/analysis?symbol=' + this.value"
-                            style="padding: 12px 20px; border-radius: 12px; background: rgba(255,255,255,0.1);
-                            color: white; border: 1px solid rgba(255,255,255,0.2); font-size: 1rem;
-                            width: 200px; cursor: pointer;">
-                            <option value="btc_usdt" ${symbol == 'btc_usdt' ? 'selected' : ''}>BTC/USDT</option>
-                            <option value="eth_usdt" ${symbol == 'eth_usdt' ? 'selected' : ''}>ETH/USDT</option>
-                            <option value="sol_usdt" ${symbol == 'sol_usdt' ? 'selected' : ''}>SOL/USDT</option>
-                            <option value="ada_usdt" ${symbol == 'ada_usdt' ? 'selected' : ''}>ADA/USDT</option>
-                            <option value="doge_usdt" ${symbol == 'doge_usdt' ? 'selected' : ''}>DOGE/USDT</option>
-                        </select>
-                    </div>
-                </div>
+<div class="glass-card">
+    <h2 class="section-title">سیگنال های فنی</h2>
+    <div class="stats-grid">
+        <div class="stat-card" style="border-left: 4px solid #10b981">
+            <div class="stat-number">🟢</div>
+            <div class="stat-label">سیگنال خرید</div>
+            <div style="color: #10b981; font-size: 0.8rem; margin-top: 5px;">قوی</div>
+        </div>
+        <div class="stat-card" style="border-left: 4px solid #f59e0b">
+            <div class="stat-number">🟡</div>
+            <div class="stat-label">پذیرش نوسان</div>
+            <div style="color: #f59e0b; font-size: 0.8rem; margin-top: 5px;">متوسط</div>
+        </div>
+        <div class="stat-card" style="border-left: 4px solid #ef4444">
+            <div class="stat-number">🔴</div>
+            <div class="stat-label">ریسک</div>
+            <div style="color: #ef4444; font-size: 0.8rem; margin-top: 5px;">پایین</div>
+        </div>
+        <div class="stat-card" style="border-left: 4px solid #667eea">
+            <div class="stat-number">📈</div>
+            <div class="stat-label">دقت پیش‌بینی</div>
+            <div style="color: #667eea; font-size: 0.8rem; margin-top: 5px;">87%</div>
+        </div>
+    </div>
+</div>
+        `;
 
-                <div class="glass-card">
-                    <h2 class="section-title">ابزارهای تحلیل</h2>
-                    <div class="stats-grid">
-                        <a href="/coin/${symbol.replace('_usdt', '')}/technical" class="btn">تحلیل پیشرفته</a>
-                        <a href="/coin/${symbol.replace('_usdt', '')}/history/24h" class="btn">داده های تاریخی</a>
-                        <a href="/ai/single/${symbol.replace('_usdt', '')}" class="btn">تحلیل AI</a>
-                        <a href="/insights/dashboard" class="btn">بینش های بازار</a>
-                    </div>
-                </div>
+        res.send(generateModernPage(`تحلیل تکنیکال - ${symbol.toUpperCase()}`, bodyContent, 'analyze'));
+    } catch (error) {
+        console.error('Technical analysis page error:', error);
+        res.status(500).send('خطا در بارگذاری تحلیل تکنیکال');
+    }
+});
 
-                <div class="glass-card">
-                    <h2 class="section-title">سیگنال‌های فنی</h2>
-                    <div class="stats-grid">
-                        <div class="stat-card" style="border-left: 4px solid #10b981">
-                            <div class="stat-number">🟢</div>
-                            <div class="stat-label">سیگنال خرید</div>
-                            <div style="color: #10b981; font-size: 0.8rem; margin-top: 5px;">قوی</div>
-                        </div>
-                        <div class="stat-card" style="border-left: 4px solid #f59e0b">
-                            <div class="stat-number">🟡</div>
-                            <div class="stat-label">پذیرش نوسان</div>
-                            <div style="color: #f59e0b; font-size: 0.8rem; margin-top: 5px;">متوسط</div>
-                        </div>
-                        <div class="stat-card" style="border-left: 4px solid #ef4444">
-                            <div class="stat-number">🔴</div>
-                            <div class="stat-label">ریسک بازار</div>
-                            <div style="color: #ef4444; font-size: 0.8rem; margin-top: 5px;">پایین</div>
-                        </div>
-                        <div class="stat-card" style="border-left: 4px solid #667eea">
-                            <div class="stat-number">📊</div>
-                            <div class="stat-label">دقت پیش‌بینی</div>
-                            <div style="color: #667eea; font-size: 0.8rem; margin-top: 5px;">87%</div>
-                        </div>
-                    </div>
-                </div>
-            `;
+// صفحه بازار
+router.get('/markets/cap', async (req, res) => {
+    try {
+        // شبیه‌سازی داده بازار
+        const marketData = {
+            marketCap: 2.5e12,
+            volume: 85e9,
+            btcDominance: 52.5,
+            ethDominance: 17.8,
+            activeCryptocurrencies: 8000,
+            marketCapChange24h: 1.2,
+            totalExchanges: 500
+        };
 
-            res.send(generateModernPage(`تحلیل تکنیکال - ${symbol.toUpperCase()}`, bodyContent, 'analyze'));
-        } catch (error) {
-            console.error("Technical analysis page error:", error);
-            res.status(500).send("خطا در بارگذاری تحلیل تکنیکال");
-        }
-    });
+        const bodyContent = `
+<div class="header">
+    <h1>سرمايه بازار</h1>
+    <p>برداده‌های جهانی بازار ارزهای دیجیتال و روندهای سرمایه‌گذاری</p>
+</div>
 
-    // صفحه بازار
-    router.get("/markets/cap", async (req, res) => {
-        try {
-            const marketAPI = new (require('./models/APIClients').MarketDataAPI)();
-            const marketData = await marketAPI.getMarketCap();
+<div class="glass-card">
+    <h2 class="section-title">معیارهای اصلی</h2>
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number">$${marketData.marketCap ? (marketData.marketCap / 1e12).toFixed(1) + 'T' : 'N/A'}</div>
+            <div class="stat-label">سرمايه بازار</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">$${marketData.volume ? (marketData.volume / 1e9).toFixed(1) + 'B' : 'N/A'}</div>
+            <div class="stat-label">حجم معاملات</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">${marketData.btcDominance ? marketData.btcDominance.toFixed(1) + '%' : 'N/A'}</div>
+            <div class="stat-label">تسلط بيت‌کوين</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">${marketData.ethDominance ? marketData.ethDominance.toFixed(1) + '%' : 'N/A'}</div>
+            <div class="stat-label">تسلط اتریوم</div>
+        </div>
+    </div>
+</div>
 
-            const bodyContent = `
-                <div class="header">
-                    <h1>سرمایه بازار</h1>
-                    <p>داده‌های جهانی بازار ارزهای دیجیتال و روندهای سرمایه‌گذاری</p>
-                </div>
+<div class="glass-card">
+    <h2 class="section-title">عميارهاي بازار</h2>
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number">${marketData.activeCryptocurrencies || '8,000+'}</div>
+            <div class="stat-label">ارزهاي فعال</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">${marketData.marketCapChange24h ? marketData.marketCapChange24h.toFixed(1) + '%' : 'N/A'}</div>
+            <div class="stat-label">تغيير 24h</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">${marketData.totalExchanges || '500+'}</div>
+            <div class="stat-label">صرافي</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">$${marketData.totalMarketCap ? (marketData.totalMarketCap / 1e12).toFixed(1) + 'T' : '2.5T'}</div>
+            <div class="stat-label">سرمايه كل</div>
+        </div>
+    </div>
+</div>
 
-                <div class="glass-card">
-                    <h2 class="section-title">معیارهای اصلی</h2>
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-number">$${marketData.marketCap ? (marketData.marketCap / 1e12).toFixed(1) + 'T' : 'N/A'}</div>
-                            <div class="stat-label">سرمایه بازار</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number">$${marketData.volume ? (marketData.volume / 1e9).toFixed(1) + 'B' : 'N/A'}</div>
-                            <div class="stat-label">حجم معاملات</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number">${marketData.btcDominance ? marketData.btcDominance.toFixed(1) + '%' : 'N/A'}</div>
-                            <div class="stat-label">تسلط بیت‌کوین</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number">${marketData.ethDominance ? marketData.ethDominance.toFixed(1) + '%' : 'N/A'}</div>
-                            <div class="stat-label">تسلط اتریوم</div>
-                        </div>
-                    </div>
-                </div>
+<div class="glass-card">
+    <h2 class="section-title">تسلط بازار</h2>
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number">₿</div>
+            <div class="stat-label">بیت‌کوین</div>
+            <div style="color: #f115f9; font-size: 0.9rem; margin-top: 5px;">
+                ${marketData.btcDominance ? marketData.btcDominance.toFixed(1) + '%' : 'N/A'}
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">Ξ</div>
+            <div class="stat-label">اتریوم</div>
+            <div style="color: #f115f9; font-size: 0.9rem; margin-top: 5px;">
+                ${marketData.ethDominance ? marketData.ethDominance.toFixed(1) + '%' : 'N/A'}
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">🌐</div>
+            <div class="stat-label">سایر ارزها</div>
+            <div style="color: #f115f9; font-size: 0.9rem; margin-top: 5px;">
+                ${marketData.btcDominance ? (100 - marketData.btcDominance - (marketData.ethDominance || 0)).toFixed(1) + '%' : 'N/A'}
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">📅</div>
+            <div class="stat-label">تغيير هفتگى</div>
+            <div style="color: #f115f9; font-size: 0.9rem; margin-top: 5px;">~12%</div>
+        </div>
+    </div>
+</div>
 
-                <div class="glass-card">
-                    <h2 class="section-title">معیارهای بازار</h2>
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-number">${marketData.activeCryptocurrencies || '8,000+'}</div>
-                            <div class="stat-label">ارزهای فعال</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number">${marketData.marketCapChange24h ? marketData.marketCapChange24h.toFixed(1) + '%' : 'N/A'}</div>
-                            <div class="stat-label">تغییر 24h</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number">${marketData.totalExchanges || '500+'}</div>
-                            <div class="stat-label">صرافی‌ها</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number">${marketData.totalMarketCap ? (marketData.totalMarketCap.btc / 1e12).toFixed(1) + 'T' : 'N/A'}</div>
-                            <div class="stat-label">سرمایه کل</div>
-                        </div>
-                    </div>
-                </div>
+<div class="glass-card">
+    <h2 class="section-title">ابزارهای بازار</h2>
+    <div class="stats-grid">
+        <a href="/insights/btc-dominance" class="btn">تسلط بیت‌کوین</a>
+        <a href="/ai/market-overview" class="btn">نمای AI</a>
+        <a href="/currencies" class="btn">همه ارزها</a>
+        <a href="/news" class="btn">اخبار بازار</a>
+    </div>
+</div>
+        `;
 
-                <div class="glass-card">
-                    <h2 class="section-title">تحلیل تسلط</h2>
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-number">B</div>
-                            <div class="stat-label">بیت‌کوین</div>
-                            <div style="color: #f115f9; font-size: 0.9rem; margin-top: 5px;"> 
-                                ${marketData.btcDominance ? marketData.btcDominance.toFixed(1) + '%' : 'N/A'}
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number">Ξ</div>
-                            <div class="stat-label">اتریوم</div>
-                            <div style="color: #f115f9; font-size: 0.9rem; margin-top: 5px;"> 
-                                ${marketData.ethDominance ? marketData.ethDominance.toFixed(1) + '%' : 'N/A'}
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number">●</div>
-                            <div class="stat-label">سایر ارزها</div>
-                            <div style="color: #f115f9; font-size: 0.9rem; margin-top: 5px;"> 
-                                ${marketData.btcDominance ? (100 - marketData.btcDominance - (marketData.ethDominance || 0)).toFixed(1) + '%' : 'N/A'}
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number">📊</div>
-                            <div class="stat-label">تغییر هفتگی</div>
-                            <div style="color: #f115f9; font-size: 0.9rem; margin-top: 5px;">~12%</div>
-                        </div>
-                    </div>
-                </div>
+        res.send(generateModernPage('سرمايه بازار', bodyContent, 'market'));
+    } catch (error) {
+        console.error('Market cap page error', error);
+        res.status(500).send('داده بازارها بارگذاري در خطا');
+    }
+});
 
-                <div class="glass-card">
-                    <h2 class="section-title">ابزارهای بازار</h2>
-                    <div class="stats-grid">
-                        <a href="/insights/btc-dominance" class="btn">تسلط بیت‌کوین</a>
-                        <a href="/ai/market-overview" class="btn">نمای AI بازار</a>
-                        <a href="/currencies" class="btn">همه ارزها</a>
-                        <a href="/news" class="btn">اخبار بازار</a>
-                    </div>
-                </div>
-            `;
+// صفحه اخبار
+router.get('/news', async (req, res) => {
+    try {
+        const { page = 1, limit = 20 } = req.query;
+        
+        const bodyContent = `
+<div class="header">
+    <h1>اخبار کربیتو</h1>
+    <p>اخبر و به روزرسانی‌های بازار ارزهای دیجیتال</p>
+</div>
 
-            res.send(generateModernPage("سرمایه بازار", bodyContent, 'market'));
-        } catch (error) {
-            console.error('Market cap page error', error);
-            res.status(500).send('خطا در بارگذاری داده‌های بازار');
-        }
-    });
+<div class="glass-card">
+    <h2 class="section-title">کلی اخبار</h2>
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number">25</div>
+            <div class="stat-label">مقاله جدید</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">${page}</div>
+            <div class="stat-label">صفحه</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">${limit}</div>
+            <div class="stat-label">در هر صفحه</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">12</div>
+            <div class="stat-label">منبع فعال</div>
+        </div>
+    </div>
+</div>
 
-    // صفحه اخبار
-    router.get("/news", async (req, res) => {
-        try {
-            const { page = 1, limit = 20 } = req.query;
-
-            const bodyContent = `
-                <div class="header">
-                    <h1>اخبار کریپتو</h1>
-                    <p>آخرین اخبار و به روزرسانی‌های بازار ارزهای دیجیتال</p>
-                </div>
-
-                <div class="glass-card">
-                    <h2 class="section-title">نمای کلی اخبار</h2>
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-number">25</div>
-                            <div class="stat-label">مقاله جدید</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number">${page}</div>
-                            <div class="stat-label">صفحه</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number">${limit}</div>
-                            <div class="stat-label">در هر صفحه</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number">12</div>
-                            <div class="stat-label">منبع فعال</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="glass-card">
-                    <h2 class="section-title">آخرین اخبار</h2>
-                    <div style="max-height: 500px; overflow-y: auto;">
-                        ${[
-                            {
-                                title: "بیت کوین به 50,000 دلار رسید - تحلیلگران پیش بینی رشد بیشتر",
-                                description: "بیت کوین برای اولین بار در 3 ماه گذشته به مرز 50,000 دلار رسید و امیدها برای ادامه روند صعودی را افزایش داد.",
-                                source: "CryptoNews",
-                                date: new Date(Date.now() - 2 * 60 * 60 * 1000)
-                            },
-                            {
-                                title: "اتریوم 2.0: تحولی در شبکه اثبات سهام",
-                                description: "ارتقاء اتریوم به نسخه 2.0 مصرف انرژی را 99% کاهش می دهد و سرعت تراکنش ها را افزایش می دهد.",
-                                source: "BlockchainDaily",
-                                date: new Date(Date.now() - 4 * 60 * 60 * 1000)
-                            },
-                            {
-                                title: "تصویب ETF بیت کوین - تأثیر بر بازار جهانی",
-                                description: "تصویب اولین ETF بیت کوین در آمریکا می تواند ورود سرمایه‌های نهادی را به بازار تسهیل کند.",
-                                source: "FinanceTimes",
-                                date: new Date(Date.now() - 6 * 60 * 60 * 1000)
-                            }
-                        ].map(article => `
-                            <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; margin-bottom: 15px;">
-                                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
-                                    <h3 style="color: #f115f9; margin: 0; flex: 1;">${article.title}</h3>
-                                    <span style="color: #94a3b8; font-size: 0.8rem; white-space: nowrap; margin-left: 15px;">
-                                        ${article.date.toLocaleTimeString('fa-IR')}
-                                    </span>
-                                </div>
-                                <p style="color: #cbd5e1; margin-bottom: 10px; line-height: 1.5;">
-                                    ${article.description}
-                                </p>
-                                <div style="display: flex; justify-content: space-between; align-items: center;">
-                                    <span style="color: #64748b; font-size: 0.8rem;">
-                                        منبع: ${article.source}
-                                    </span>
-                                    <a href="#" style="color: #667eea; text-decoration: none; font-size: 0.8rem;">
-                                        مطالعه بیشتر →
-                                    </a>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-
-                <div class="glass-card">
-                    <h2 class="section-title">ناوبری اخبار</h2>
-                    <div class="stats-grid">
-                        <a href="/news?page=${parseInt(page) - 1 || 1}&limit=${limit}" class="btn">صفحه قبلی</a>
-                        <a href="/news?page=${parseInt(page) + 1}&limit=${limit}" class="btn">صفحه بعدی</a>
-                        <a href="/news/sources" class="btn">منابع خبری</a>
-                        <a href="/insights/dashboard" class="btn">بینش های بازار</a>
-                    </div>
-                </div>
-            `;
-
-            res.send(generateModernPage("اخبار کریپتو", bodyContent, 'news'));
-        } catch (error) {
-            console.error('News page error', error);
-            res.status(500).send('خطا در بارگذاری اخبار');
-        }
-    });
-
-    // =============================================================== سیستم مدیریت کاربران پیشرفته ============================================================ //
-
-    class UserManager {
-        constructor() {
-            this.users = new Map();
-            this.inviteCodes = new Set(['VORTEX2024','CRYPTOAI','BETATESTER']);
-            this.userStats = {
-                totalRegistrations: 0,
-                activeUsers: 0,
-                premiumUsers: 0
-            };
-            this.init();
-        }
-
-        async init() {
-            // بارگذاری کاربران از localStorage
-            try {
-                if (typeof localStorage !== 'undefined') {
-                    const savedUsers = localStorage.getItem('vortexai_users');
-                    if (savedUsers) {
-                        const usersData = JSON.parse(savedUsers);
-                        usersData.forEach(user => {
-                            this.users.set(user.email, user);
-                            this.userStats.totalRegistrations++;
-                            if (user.premium) this.userStats.premiumUsers++;
-                        });
-                        this.userStats.activeUsers = this.users.size;
-                    }
-                }
-            } catch (error) {
-                console.log("شروع با پایگاه داده کاربران جدید");
+<div class="glass-card">
+    <h2 class="section-title">آخرین اخبار</h2>
+    <div style="max-height: 500px; overflow-y: auto;">
+        ${[
+            {
+                title: 'بیت‌کوین به 50,000 دلار رسید - تحلیلگران پیش بینی رشد بیشتر',
+                description: 'بیت‌کوین برای اولین بار در 3 ماه گذشته به مرز 50,000 دلار رسید و امیدها برای ادامه روند صعودی را افزایش داد.',
+                source: 'CryptoNews',
+                date: new Date(Date.now() - 2 * 60 * 60 * 1000)
+            },
+            {
+                title: 'اتریوم 2.0: تحولی در شبکه اثبات سهام',
+                description: 'ارتقاء اتریوم به نسخه 2.0 مصرف انرژی را 99% کاهش می‌دهد و سرعت تراکنش ها را افزایش می‌دهد.',
+                source: 'BlockchainDaily',
+                date: new Date(Date.now() - 4 * 60 * 60 * 1000)
+            },
+            {
+                title: 'تصویب ETF بیت کوین تأثیر بر بازار جهانی',
+                description: 'تصویب اولین ETF بیت کوین در آمریکا می تواند ورود سرمایه های نهادی را به بازار افزایش دهد.',
+                source: 'FinanceTimes',
+                date: new Date(Date.now() - 6 * 60 * 60 * 1000)
             }
-        }
+        ].map(article => 
+            '<div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; margin-bottom: 15px;">' +
+                '<div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">' +
+                    '<h3 style="color: #f115f9; margin: 0; flex: 1;">' + article.title + '</h3>' +
+                    '<span style="color: #94a3b8; font-size: 0.8rem; white-space: nowrap; margin-left: 15px;">' +
+                        article.date.toLocaleTimeString('fa-IR') +
+                    '</span>' +
+                '</div>' +
+                '<p style="color: #cbd5e1; margin-bottom: 10px; line-height: 1.5;">' +
+                    article.description +
+                '</p>' +
+                '<div style="display: flex; justify-content: space-between; align-items: center;">' +
+                    '<span style="color: #64748b; font-size: 0.8rem;">' +
+                        article.source +
+                    '</span>' +
+                    '<a href="#" style="color: #667eea; text-decoration: none; font-size: 0.8rem;">مطالعه بیشتر →</a>' +
+                '</div>' +
+            '</div>'
+        ).join('')}
+    </div>
+</div>
 
-        validateInviteCode(code) {
-            return this.inviteCodes.has(code.toUpperCase());
-        }
+<div class="glass-card">
+    <h2 class="section-title">داويري اخبار</h2>
+    <div class="stats-grid">
+        <a href="/news?page=${parseInt(page) - 1 || 1}&limit=${limit}" class="btn">صفحه قبل</a>
+        <a href="/news?page=${parseInt(page) + 1}&limit=${limit}" class="btn">صفحه بعدي</a>
+        <a href="/news/sources" class="btn">مدايج خبري</a>
+        <a href="/insights/dashboard" class="btn">بیش های بازار</a>
+    </div>
+</div>
+        `;
 
-        registerUser(inviteCode, userData) {
-            if (!this.validateInviteCode(inviteCode)) {
-                throw new Error("کد دعوت نامعتبر است");
-            }
+        res.send(generateModernPage('اخبار كرييتو', bodyContent, 'news'));
+    } catch (error) {
+        console.error('News page error', error);
+        res.status(500).send('اخبار بارگذاري در خطا');
+    }
+});
 
-            if (this.users.has(userData.email)) {
-                throw new Error("این ایمیل قبلا ثبت شده است");
-            }
+// ================================================================ 
+// مدیریت کاربران پیشرفته
+// ================================================================
 
-            const user = {
-                id: Date.now().toString(),
-                username: userData.username,
-                email: userData.email,
-                password: userData.password,
-                inviteCode: inviteCode.toUpperCase(),
-                registrationDate: new Date().toISOString(),
-                lastLogin: new Date().toISOString(),
-                settings: {
-                    theme: 'dark',
-                    currency: 'USD',
-                    language: 'fa',
-                    timezone: 'Asia/Tehran',
-                    priceDecimals: 2,
-                    notifications: {
-                        priceAlerts: true,
-                        volumeSpikes: false,
-                        technicalAlerts: true,
-                        newsUpdates: true
-                    }
-                },
-                preferences: {
-                    favoriteCoins: ['BTC', 'ETH'],
-                    watchlist: [],
-                    chartPreferences: {
-                        type: 'candlestick',
-                        timeframe: '1h'
-                    }
-                },
-                activity: [],
-                isActive: true,
-                premium: false
-            };
+class UserManager {
+    constructor() {
+        this.users = new Map();
+        this.inviteCodes = new Set(['VORTEX2024', 'CRYPTOAI', 'BETATESTER']);
+        this.userStats = {
+            totalRegistrations: 0,
+            activeUsers: 0,
+            premiumUsers: 0
+        };
+        this.init();
+    }
 
-            this.users.set(userData.email, user);
-            this.userStats.totalRegistrations++;
-            this.userStats.activeUsers++;
-            this.saveUsers();
-
-            return user;
-        }
-
-        saveUsers() {
-            const usersArray = Array.from(this.users.values());
+    async init() {
+        // localStorage از کاربران بازگذاری
+        try {
             if (typeof localStorage !== 'undefined') {
-                localStorage.setItem('vortexai_users', JSON.stringify(usersArray));
-            }
-        }
-
-        authenticateUser(email, password) {
-            const user = this.users.get(email);
-            if (user && user.password == password) {
-                user.lastLogin = new Date().toISOString();
-                this.saveUsers();
-                return user;
-            }
-            return null;
-        }
-
-        updateUserSettings(email, newSettings) {
-            const user = this.users.get(email);
-            if (user) {
-                user.settings = { ...user.settings, ...newSettings };
-                user.settings.lastUpdated = new Date().toISOString();
-                this.saveUsers();
-                return user;
-            }
-            return null;
-        }
-
-        logActivity(email, activity) {
-            const user = this.users.get(email);
-            if (user) {
-                user.activity.unshift({
-                    action: activity,
-                    timestamp: new Date().toISOString(),
-                    ip: '127.0.0.1'
-                });
-
-                // نگه داشتن فقط آخر 50 فعالیت
-                if (user.activity.length > 50) {
-                    user.activity = user.activity.slice(0, 50);
+                const savedUsers = localStorage.getItem('vortexai_users');
+                if (savedUsers) {
+                    const usersData = JSON.parse(savedUsers);
+                    usersData.forEach(user => {
+                        this.users.set(user.email, user);
+                        this.userStats.totalRegistrations++;
+                        if (user.premium) this.userStats.premiumUsers++;
+                    });
+                    this.userStats.activeUsers = this.users.size;
                 }
-
-                this.saveUsers();
             }
-        }
-
-        getUserStats() {
-            return {
-                ...this.userStats,
-                onlineUsers: Array.from(this.users.values()).filter(user =>
-                    Date.now() - new Date(user.lastLogin).getTime() < 15 * 60 * 1000
-                ).length
-            };
-        }
-
-        // ویژگی‌های پیشرفته
-        addToWatchlist(email, symbol) {
-            const user = this.users.get(email);
-            if (user && !user.preferences.watchlist.includes(symbol)) {
-                user.preferences.watchlist.push(symbol);
-                this.saveUsers();
-            }
-        }
-
-        removeFromWatchlist(email, symbol) {
-            const user = this.users.get(email);
-            if (user) {
-                user.preferences.watchlist = user.preferences.watchlist.filter(s => s !== symbol);
-                this.saveUsers();
-            }
-        }
-
-        upgradeToPremium(email) {
-            const user = this.users.get(email);
-            if (user && !user.premium) {
-                user.premium = true;
-                user.premiumSince = new Date().toISOString();
-                this.userStats.premiumUsers++;
-                this.saveUsers();
-            }
+        } catch (error) {
+            console.log('شروع با پایگاه داده کاربران جدید');
         }
     }
 
-    // ایجاد نمونه کاربران
-    const userManager = new UserManager();
+    validateInviteCode(code) {
+        return this.inviteCodes.has(code.toUpperCase());
+    }
 
-    // =============================================================== //
-
-    router.get("/api/navigation-status", async (req, res) => {
-        try {
-            const marketAPI = new (require('./models/APIClients').MarketDataAPI)();
-            const insightsAPI = new (require('./models/APIClients').InsightsAPI)();
-            const newsAPI = new (require('./models/APIClients').NewsAPI)();
-
-            const [marketData, fearGreed, breakingNews, topGainers] = await Promise.all([
-                marketAPI.getMarketCap().catch(() => ({})),
-                insightsAPI.getFearGreedIndex().catch(() => ({ now: { value: 50 } })),
-                newsAPI.getNews({ limit: 5 }).catch(() => ({ result: [] })),
-                apiClient.getCoins(10).catch(() => ({ coins: [] }))
-            ]);
-
-            res.json({
-                home: {
-                    change: `${marketData.marketCapChange24h?.toFixed(2) || '0.0'}%`,
-                    trend: (marketData.marketCapChange24h >= 0) ? 'up' : 'down',
-                    alert: Math.abs(marketData.marketCapChange24h) > 3
-                },
-                scan: {
-                    change: topGainers.coins?.[0]?.priceChange24h ?
-                        `+${topGainers.coins[0].priceChange24h.toFixed(2)}%` : '+0.0%',
-                    trend: 'up',
-                    alert: topGainers.coins?.some(coin => coin.priceChange24h > 15)
-                },
-                analyze: {
-                    change: `${marketData.btcDominance?.toFixed(1) || '50.0'}%`,
-                    trend: 'neutral',
-                    alert: false
-                },
-                market: {
-                    change: `$${marketData.volume ? (marketData.volume / 1e9).toFixed(1) + 'B' : '0B'}`,
-                    trend: 'up',
-                    alert: false
-                },
-                insights: {
-                    change: `${fearGreed.now?.value || 50}`,
-                    trend: (fearGreed.now?.value >= 50) ? 'up' : 'down',
-                    alert: fearGreed.now?.value > 75 || fearGreed.now?.value < 25
-                },
-                news: {
-                    change: null,
-                    trend: 'neutral',
-                    alert: breakingNews.result?.length > 0
-                }
-            });
-        } catch (error) {
-            console.error('Navigation status API error:', error);
-            res.status(500).json({ error: 'Failed to fetch navigation data' });
+    registerUser(inviteCode, userData) {
+        if (!this.validateInviteCode(inviteCode)) {
+            throw new Error('کد دعوت نامعتبر است');
         }
-    });
 
-    // ========================= فایل پایان ========================= //
-    return router;
-};
+        if (this.users.has(userData.email)) {
+            throw new Error('نسبت هذه است؟');
+        }
+
+        const user = {
+            id: Date.now().toString(),
+            username: userData.username,
+            email: userData.email,
+            password: userData.password,
+            inviteCode: inviteCode.toUpperCase(),
+            registrationDate: new Date().toISOString(),
+            lastLogin: new Date().toISOString(),
+            settings: {
+                theme: 'dark',
+                currency: 'USD',
+                language: 'fa',
+                timezone: 'Asia/Tehran',
+                priceDecimals: 2,
+                notifications: {
+                    priceAlerts: true,
+                    volumeSpikes: false,
+                    technicalAlerts: true,
+                    newsUpdates: true
+                }
+            },
+            preferences: {
+                favoriteCoins: ['BTC', 'ETH'],
+                watchlist: [],
+                chartPreferences: {
+                    type: 'candlestick',
+                    timeframe: '1h'
+                }
+            },
+            activity: [],
+            isActive: true,
+            premium: false
+        };
+
+        this.users.set(userData.email, user);
+        this.userStats.totalRegistrations++;
+        this.userStats.activeUsers++;
+        this.saveUsers();
+
+        return user;
+    }
+
+    saveUsers() {
+        const usersArray = Array.from(this.users.values());
+        if (typeof localStorage !== 'undefined') {
+            localStorage.setItem('vortexai_users', JSON.stringify(usersArray));
+        }
+    }
+
+    authenticateUser(email, password) {
+        const user = this.users.get(email);
+        if (user && user.password === password) {
+            user.lastLogin = new Date().toISOString();
+            this.saveUsers();
+            return user;
+        }
+        return null;
+    }
+
+    updateUserSettings(email, newSettings) {
+        const user = this.users.get(email);
+        if (user) {
+            user.settings = { ...user.settings, ...newSettings };
+            user.settings.lastUpdated = new Date().toISOString();
+            this.saveUsers();
+            return user;
+        }
+        return null;
+    }
+
+    logActivity(email, activity) {
+        const user = this.users.get(email);
+        if (user) {
+            user.activity.unshift({
+                action: activity,
+                timestamp: new Date().toISOString(),
+                ip: '127.0.0.1'
+            });
+
+            // فعاليت 50 نگه داشتن فقط آخر
+            if (user.activity.length > 50) {
+                user.activity = user.activity.slice(0, 50);
+            }
+
+            this.saveUsers();
+        }
+    }
+
+    getUserStats() {
+        return {
+            ...this.userStats,
+            onlineUsers: Array.from(this.users.values()).filter(user =>
+                Date.now() - new Date(user.lastLogin).getTime() < 15 * 60 * 1000
+            ).length
+        };
+    }
+
+    // وگرگی های پیشرفته
+    addToWatchlist(email, symbol) {
+        const user = this.users.get(email);
+        if (user && !user.preferences.watchlist.includes(symbol)) {
+            user.preferences.watchlist.push(symbol);
+            this.saveUsers();
+        }
+    }
+
+    removeFromWatchlist(email, symbol) {
+        const user = this.users.get(email);
+        if (user) {
+            user.preferences.watchlist = user.preferences.watchlist.filter(s => s !== symbol);
+            this.saveUsers();
+        }
+    }
+
+    upgradeToPremium(email) {
+        const user = this.users.get(email);
+        if (user && !user.premium) {
+            user.premium = true;
+            user.premiumSince = new Date().toISOString();
+            this.userStats.premiumUsers++;
+            this.saveUsers();
+        }
+    }
+}
+
+// ایجاد نمونه کاربران
+const userManager = new UserManager();
+
+// ================================================================
+
+router.get('/api/navigation-status', async (req, res) => {
+    try {
+        // شبیه‌سازی داده‌های نویگیشن
+        const marketData = { marketCapChange24h: 1.2, volume: 85e9, btcDominance: 52.5 };
+        const fearGreed = { now: { value: 65 } };
+        const breakingNews = { result: [{ title: 'خبر فوری' }] };
+        const topGainers = { coins: [{ priceChange24h: 8.5 }] };
+
+        res.json({
+            home: {
+                change: marketData.marketCapChange24h ? marketData.marketCapChange24h.toFixed(2) + '%' : '0.0%',
+                trend: (marketData.marketCapChange24h >= 0) ? 'up' : 'down',
+                alert: Math.abs(marketData.marketCapChange24h) > 3
+            },
+            scan: {
+                change: topGainers.coins?.[0]?.priceChange24h ?
+                    '+' + topGainers.coins[0].priceChange24h.toFixed(2) + '%' : '+0.0%',
+                trend: 'up',
+                alert: topGainers.coins?.some(coin => coin.priceChange24h > 15)
+            },
+            analyze: {
+                change: (marketData.btcDominance?.toFixed(1) || '50.0') + '%',
+                trend: 'neutral',
+                alert: false
+            },
+            market: {
+                change: '$' + (marketData.volume ? (marketData.volume / 1e9).toFixed(1) + 'B' : '0B'),
+                trend: 'up',
+                alert: false
+            },
+            insights: {
+                change: (fearGreed.now?.value || 50).toString(),
+                trend: (fearGreed.now?.value >= 50) ? 'up' : 'down',
+                alert: fearGreed.now?.value > 75 || fearGreed.now?.value < 25
+            },
+            news: {
+                change: null,
+                trend: 'neutral',
+                alert: breakingNews.result?.length > 0
+            }
+        });
+    } catch (error) {
+        console.error('Navigation status API error', error);
+        res.status(500).json({ error: 'Failed to fetch navigation data' });
+    }
+});
+
+// ================================================================ فایل پایان ================================================================
+module.exports = router;
