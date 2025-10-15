@@ -1828,9 +1828,6 @@ function generateModernPage(title, bodyContent, currentPage = 'home') {
 
 module.exports = (dependencies) => {
     const { gistManager, wsManager, apiClient } = dependencies;
-    const router = express.Router();
-const express = require('express');
-const router = express.Router();
 
   // 1. صفحه اصلی
   router.get('/', async (req, res) => {
