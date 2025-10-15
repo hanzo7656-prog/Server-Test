@@ -90,14 +90,79 @@ function generateClassNavigation(currentPage = 'home') {
     ];
 
     // وضعیت زنده بازار برای هر آیتم
-    const marketStatus = {
-        home: { change: '+2.3%', trend: 'up', alert: false },
-        scan: { change: '+5.1%', trend: 'up', alert: true },
-        analyze: { change: '-1.2%', trend: 'down', alert: false },
-        market: { change: '+3.8%', trend: 'up', alert: false },
-        insights: { change: '+0.5%', trend: 'up', alert: false },
-        news: { change: null, trend: 'neutral', alert: true }
-    };
+    
+    
+    // اضافه کردن این اسکریپت برای لود داده واقعی
+    const navigationScript = `
+    <script>
+    let realMarketStatus = {};
+    
+    async function loadRealNavigationStatus() {
+        try {
+            const response = await fetch('/api/navigation-status');
+            if (!response.ok) throw new Error('API response not ok');
+            realMarketStatus = await response.json();
+            updateNavigationDisplay();
+        } catch (error) {
+            console.error('Failed to load navigation status:', error);
+            // مخفی کردن عناصر وضعیت در صورت خطا
+            document.querySelectorAll('.market-status, .live-alert-indicator').forEach(el => {
+                el.style.display = 'none';
+            });
+        }
+    }
+    
+    function updateNavigationDisplay() {
+        // آپدیت نمایش وضعیت در نویگیشن بار
+        Object.keys(realMarketStatus).forEach(itemId => {
+            const statusElement = document.querySelector(\`[data-item="\${itemId}"] .market-status\`);
+            if (statusElement && realMarketStatus[itemId].change) {
+                statusElement.innerHTML = \`
+                    \${realMarketStatus[itemId].trend === 'up' ? '📈' : '📉'} 
+                    \${realMarketStatus[itemId].change}
+                \`;
+                statusElement.className = \`market-status \${realMarketStatus[itemId].trend}\`;
+            }
+            
+            const alertElement = document.querySelector(\`[data-item="\${itemId}"] .live-alert-indicator\`);
+            if (alertElement) {
+                alertElement.style.display = realMarketStatus[itemId].alert ? 'block' : 'none';
+            }
+        });
+    }
+    
+    // بارگذاری اولیه و آپدیت دوره‌ای
+    loadRealNavigationStatus();
+    setInterval(loadRealNavigationStatus, 30000);
+    </script>
+    `;
+
+    // در بخش HTML نویگیشن بار، از realMarketStatus استفاده کن
+    const navHTML = `
+    <!-- کدهای نویگیشن بار -->
+    ${contextAwareItems.map(item => `
+        <div class="nav-item ${item.id === currentPage ? 'active' : ''}"
+             data-item="${item.id}"
+             onclick="navigateTo('${item.page}', ${item.external || false}, ${item.ai || false})">
+            
+            <div class="nav-icon animated-gradient">${item.icon}</div>
+            <div class="nav-text">${item.label}</div>
+            
+            <!-- وضعیت زنده بازار -->
+            <div class="market-status" style="display: none;">
+                📈 +0.0%
+            </div>
+            
+            <!-- هشدار زنده -->
+            <div class="live-alert-indicator" style="display: none;"></div>
+        </div>
+    `).join('')}
+    
+    ${navigationScript}
+    `;
+    
+    return navHTML;
+}
 
     // فیلتر کردن آیتم‌ها بر اساس context
     const contextAwareItems = getContextAwareItems(navItems, currentPage);
