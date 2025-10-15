@@ -156,34 +156,7 @@ function generateClassNavigation(currentPage = 'home') {
     // فیلتر کردن آیتم‌ها بر اساس context
     const contextAwareItems = getContextAwareItems(navItems, currentPage);
 
-    // در بخش HTML نویگیشن بار، از realMarketStatus استفاده کن
-    const navHTML = `
-    <!-- کدهای نویگیشن بار -->
-    ${contextAwareItems.map(item => `
-        <div class="nav-item ${item.id === currentPage ? 'active' : ''}"
-             data-item="${item.id}"
-             onclick="navigateTo('${item.page}', ${item.external || false}, ${item.ai || false})">
-            
-            <div class="nav-icon animated-gradient">${item.icon}</div>
-            <div class="nav-text">${item.label}</div>
-            
-            <!-- وضعیت زنده بازار -->
-            <div class="market-status" style="display: none;">
-                📈 +0.0%
-            </div>
-            
-            <!-- هشدار زنده -->
-            <div class="live-alert-indicator" style="display: none;"></div>
-        </div>
-    `).join('')}
     
-    ${navigationScript}
-    `;
-    
-    return navHTML;
-}
-    
-
     return `
 <!-- ناوبری شیشه‌ای هوشمند -->
 <div id="glassNav" class="glass-navigation">
