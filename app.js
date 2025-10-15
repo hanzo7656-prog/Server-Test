@@ -10,7 +10,7 @@ const GistManager = require('./models/GistManager');
 const WebSocketManager = require('./models/WebSocketManager');
 const { AdvancedCoinStatsAPIClient, HistoricalDataAPI, ExchangeAPI, InsightsAPI } = require('./models/APIClients');
 const apiRoutes = require('./routes/api');
-const pageRoutes = require('./routes/pages');
+const pageRoutes = require('./routes/modern-pages');
 const modernRoutes = require('./routes/modern-pages');
 
 const app = express();
