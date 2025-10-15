@@ -707,7 +707,6 @@ function navigateTo(page, isExternal = false, isAI = false) {
 // ادامه در قسمت بعدی...
 </script>
 `;
-}
 // ========================= توابع پیشرفته نویگیشن =========================
 
 // Quick Peek - پیش‌نمایش صفحات
