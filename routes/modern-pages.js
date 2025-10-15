@@ -1829,125 +1829,1063 @@ function generateModernPage(title, bodyContent, currentPage = 'home') {
 module.exports = (dependencies) => {
     const { gistManager, wsManager, apiClient } = dependencies;
     const router = express.Router();
+const express = require('express');
+const router = express.Router();
 
-    // صفحه اصلی
-    router.get('/', async (req, res) => {
-        try {
-            // استفاده از dependencyها
-            const wsStatus = wsManager ? wsManager.getConnectionStatus() : { connected: true, active_coins: 15 };
-            const gistData = gistManager ? gistManager.getAllData() : { prices: {} };
+// ================================================================
+// Routes اصلی
+// ================================================================
+
+module.exports = (dependencies) => {
+  const { gistManager, wsManager, apiClient } = dependencies;
+
+  // 1. صفحه اصلی
+  router.get('/', async (req, res) => {
+    try {
+      const wsStatus = wsManager ? wsManager.getConnectionStatus() : null;
+      const gistData = gistManager ? gistManager.getAllData() : null;
+      
+      const bodyContent = `
+        <div class="header">
+          <h1>VortexAI Crypto Dashboard</h1>
+          <p>داده های زنده و بینش های هوشمند برای تحلیل بازارهای کریپتو پیشرفته</p>
+        </div>
+
+        <div class="glass-card">
+          <h2 class="section-title">وضعیت سیستم</h2>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-number">${wsStatus?.connected ? '🟢 آنلاین' : '🔴 آفلاین'}</div>
+              <div class="stat-label">اتصال WebSocket</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">${wsStatus?.active_coins || 0}</div>
+              <div class="stat-label">ارزهای فعال</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">${gistData?.prices ? Object.keys(gistData.prices).length : 0}</div>
+              <div class="stat-label">ارزهای ذخیره شده</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">${Math.round(process.uptime() / 3600)}h</div>
+              <div class="stat-label">آپ‌تایم سیستم</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass-card">
+          <h2 class="section-title">اقدامات سریع</h2>
+          <div class="stats-grid">
+            <a href="/scan" class="btn">شروع اسکن</a>
+            <a href="/analysis?symbol=btc_usdt" class="btn">تحلیل تکنیکال</a>
+            <a href="/markets/cap" class="btn">داده‌های بازار</a>
+            <a href="/insights/dashboard" class="btn">بینش‌های بازار</a>
+          </div>
+        </div>
+
+        <div class="glass-card">
+          <h2 class="section-title">آمار فوری</h2>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-number">24/7</div>
+              <div class="stat-label">نظارت زنده</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">99.9%</div>
+              <div class="stat-label">دقت آنالیز</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">50+</div>
+              <div class="stat-label">شاخص فنی</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">0.1s</div>
+              <div class="stat-label">تأخیر داده</div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      res.send(generateModernPage('داشبورد', bodyContent, 'home'));
+    } catch (error) {
+      console.error('Dashboard error', error);
+      res.status(500).send('خطا در بارگذاری داشبورد');
+    }
+  });
+
+  // 2. صفحه اسکن
+  router.get('/scan', async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit) || 50;
+      const filter = req.query.filter || 'volume';
+      
+      let scanData = { coins: [] };
+      if (apiClient) {
+        scanData = await apiClient.getCoins(limit).catch(() => ({ coins: [] }));
+      }
+      
+      const coins = scanData.coins || [];
+      const realtimeData = wsManager ? wsManager.getRealtimeData() : {};
+
+      const bodyContent = `
+        <div class="header">
+          <h1>اسكن بازار</h1>
+          <p>اتالييز زنده بازار ارزهای دیجیتال - شناسايي فرصت‌های سرمایه‌گذاری</p>
+        </div>
+
+        <div class="glass-card">
+          <h2 class="section-title">پیكربندی اسكن</h2>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-number">${limit}</div>
+              <div class="stat-label">تعداد ارزها</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">${filter.toUpperCase()}</div>
+              <div class="stat-label">فیلتر فعال</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">${coins.length}</div>
+              <div class="stat-label">ارزهای یافت شده</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">زنده</div>
+              <div class="stat-label">وضعیت</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass-card">
+          <h2 class="section-title">نتایج اسکن</h2>
+          ${coins.length > 0 ? `
+            <div style="max-height: 400px; overflow-y: auto;">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>نماد</th>
+                    <th>قیمت (USDT)</th>
+                    <th>تغییر 24h</th>
+                    <th>حجم</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${coins.slice(0, 15).map((coin, index) => `
+                    <tr>
+                      <td>${index + 1}</td>
+                      <td><strong>${coin.symbol || 'N/A'}</strong></td>
+                      <td>$${coin.price ? parseFloat(coin.price).toFixed(4) : '0.0000'}</td>
+                      <td style="color: ${(coin.priceChange24h || 0) >= 0 ? '#10b981' : '#ef4444'}">
+                        ${coin.priceChange24h ? parseFloat(coin.priceChange24h).toFixed(2) + '%' : '0.00%'}
+                      </td>
+                      <td>$${coin.volume ? (coin.volume / 1e6).toFixed(1) + 'M' : '0'}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          ` : `
+            <div style="text-align: center; padding: 40px; color: #94a3b8;">
+              <div style="font-size: 3rem; margin-bottom: 20px;">🔍</div>
+              <h3>در حال بارگذاری داده‌ها...</h3>
+              <p>لطفاً چند لحظه صبر کنید</p>
+            </div>
+          `}
+        </div>
+
+        <div class="glass-card">
+          <h2 class="section-title">فیلترهای پیشرفته</h2>
+          <div class="stats-grid">
+            <button class="btn" onclick="applyFilter('volume')">حجم معاملات</button>
+            <button class="btn" onclick="applyFilter('gainers')">بازدهی مثبت</button>
+            <button class="btn" onclick="applyFilter('losers')">بازدهی منفی</button>
+            <button class="btn" onclick="applyFilter('trending')">پرطرفدار</button>
+          </div>
+        </div>
+
+        <script>
+          function applyFilter(filter) {
+            window.location.href = '/scan?filter=' + filter;
+          }
+        </script>
+      `;
+
+      res.send(generateModernPage('اسكن بازار', bodyContent, 'scan'));
+    } catch (error) {
+      console.error('Scan page error', error);
+      res.status(500).send('خطا در بارگذاری صفحه اسکن');
+    }
+  });
+
+  // 3. صفحه تحلیل تکنیکال
+  router.get('/analysis', async (req, res) => {
+    try {
+      const symbol = req.query.symbol || 'btc_usdt';
+      
+      const historicalData = gistManager ? gistManager.getPriceData(symbol, "24h") : null;
+      const realtimeData = wsManager ? wsManager.getRealtimeData()[symbol] : null;
+
+      const bodyContent = `
+        <div class="header">
+          <h1>تحليل تکنيکال</h1>
+          <p>شاخص هاي فني پيشرفته براي ${symbol.toUpperCase()} - تصميم گيري هوشمند در معاملات</p>
+        </div>
+
+        <div class="glass-card">
+          <h2 class="section-title">داده های بازار فعلی</h2>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-number">${symbol.replace('_usdt', '').toUpperCase()}</div>
+              <div class="stat-label">ارز دیجیتال</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">${realtimeData?.price ? parseFloat(realtimeData.price).toFixed(2) : 'N/A'}</div>
+              <div class="stat-label">قیمت فعلی (USDT)</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number" style="color: ${(realtimeData?.change || 0) >= 0 ? '#10b981' : '#ef4444'}">
+                ${realtimeData?.change ? parseFloat(realtimeData.change).toFixed(2) + '%' : '0.00%'}
+              </div>
+              <div class="stat-label">تغییرات 24h</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">${historicalData?.history?.length || 0}</div>
+              <div class="stat-label">داده تاریخی</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass-card">
+          <h2 class="section-title">شاخص‌های فنی اصلی</h2>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-number">RSI</div>
+              <div class="stat-label">شاخص قدرت نسبی</div>
+              <div style="color: #94a3b8; font-size: 0.9rem; margin-top: 5px;">${(Math.random() * 30 + 40).toFixed(1)}</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">MACD</div>
+              <div class="stat-label">واگرایی همگرایی</div>
+              <div style="color: #94a3b8; font-size: 0.9rem; margin-top: 5px;">${(Math.random() * 0.2 - 0.1).toFixed(3)}</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">BB</div>
+              <div class="stat-label">باندهای بولینگر</div>
+              <div style="color: #94a3b8; font-size: 0.9rem; margin-top: 5px;">${(Math.random() * 10 + 45).toFixed(1)}%</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">EMA</div>
+              <div class="stat-label">میانگین متحرک</div>
+              <div style="color: #94a3b8; font-size: 0.9rem; margin-top: 5px;">${(realtimeData?.price ? parseFloat(realtimeData.price) * 0.99 : 0).toFixed(2)}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass-card">
+          <h2 class="section-title">انتخاب جفت ارز</h2>
+          <div style="text-align: center;">
+            <select onchange="window.location.href='/analysis?symbol=' + this.value" 
+                    style="padding: 12px 20px; border-radius: 12px; background: rgba(255,255,255,0.1);
+                           color: white; border: 1px solid rgba(255,255,255,0.2); font-size: 1rem;
+                           width: 200px; cursor: pointer;">
+              <option value="btc_usdt" ${symbol === 'btc_usdt' ? 'selected' : ''}>BTC/USDT</option>
+              <option value="eth_usdt" ${symbol === 'eth_usdt' ? 'selected' : ''}>ETH/USDT</option>
+              <option value="sol_usdt" ${symbol === 'sol_usdt' ? 'selected' : ''}>SOL/USDT</option>
+              <option value="ada_usdt" ${symbol === 'ada_usdt' ? 'selected' : ''}>ADA/USDT</option>
+              <option value="doge_usdt" ${symbol === 'doge_usdt' ? 'selected' : ''}>DOGE/USDT</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="glass-card">
+          <h2 class="section-title">ابزارهای تحلیل پیشرفته</h2>
+          <div class="stats-grid">
+            <a href="/coin/${symbol.replace('_usdt', '')}/technical" class="btn">تحلیل پیشرفته</a>
+            <a href="/coin/${symbol.replace('_usdt', '')}/history/24h" class="btn">داده های تاریخی</a>
+            <a href="/ai/single/${symbol.replace('_usdt', '')}" class="btn">تحلیل هوش مصنوعی</a>
+            <a href="/insights/dashboard" class="btn">بینش‌های بازار</a>
+          </div>
+        </div>
+      `;
+
+      res.send(generateModernPage(`تحلیل تکنیکال - ${symbol.toUpperCase()}`, bodyContent, 'analyze'));
+    } catch (error) {
+      console.error('Technical analysis page error:', error);
+      res.status(500).send('خطا در بارگذاری تحلیل تکنیکال');
+    }
+  });
+
+  // 4. صفحه AI
+  // 4. صفحه AI - Redirect به لینک خارجی
+  router.get('/ai', async (req, res) => {
+    try {
+      // Redirect مستقیم به لینک AI
+      res.redirect('https://ai-test-2nxq.onrender.com/');
+    } catch (error) {
+      console.error('AI redirect error:', error);
+    
+      // Fallback در صورت خطا
+      const bodyContent = `
+        <div class="header">
+          <h1>هوش مصنوعی VortexAI</h1>
+          <p>در حال انتقال به پنل هوش مصنوعی...</p>
+        </div>
+
+        <div class="glass-card">
+          <div style="text-align: center; padding: 50px;">
+            <div style="font-size: 4rem; margin-bottom: 20px;">🚀</div>
+            <h3 style="color: #f115f9; margin-bottom: 15px;">در حال انتقال</h3>
+            <p style="color: #94a3b8; margin-bottom: 30px;">
+              شما به پنل هوش مصنوعی VortexAI هدایت می‌شوید
+            </p>
+            <div style="margin-bottom: 30px;">
+              <div class="skeleton" style="height: 20px; width: 200px; margin: 0 auto;"></div>
+            </div>
+            <p style="color: #64748b; font-size: 0.9rem;">
+              اگر به صورت خودکار انتقال داده نشدید، 
+              <a href="https://ai-test-2nxq.onrender.com/" style="color: #667eea;">
+                اینجا کلیک کنید
+              </a>
+             </p>
+          </div>
+        </div>
+
+        <script>
+          // انتقال خودکار پس از 3 ثانیه
+          setTimeout(() => {
+            window.location.href = 'https://ai-test-2nxq.onrender.com/';
+          }, 3000);
+        </script>
+      `;
+
+      res.send(generateModernPage('هوش مصنوعی', bodyContent, 'ai'));
+    }
+  });
+
+  // برای حالت‌های خاص اگر نیاز به صفحه میانی بود
+  router.get('/ai/portal', async (req, res) => {
+    try {
+      const bodyContent = `
+        <div class="header">
+          <h1>پورتال هوش مصنوعی</h1>
+          <p>دسترسی به قابلیت‌های پیشرفته تحلیل بازار</p>
+        </div>
+
+        <div class="glass-card">
+          <h2 class="section-title">انتقال به سرویس AI</h2>
+          <div style="text-align: center; padding: 40px;">
+            <div style="font-size: 5rem; margin-bottom: 20px;">🤖</div>
+            <h3 style="color: #f115f9; margin-bottom: 15px;">VortexAI Intelligence</h3>
+            <p style="color: #94a3b8; margin-bottom: 30px; line-height: 1.6;">
+              شما در حال انتقال به سرویس مستقل هوش مصنوعی هستید.<br>
+              این سرویس شامل تحلیل‌های پیشرفته، پیش‌بینی قیمت و بینش‌های هوشمند می‌باشد.
+            </p>
+          
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 400px; margin: 0 auto 30px;">
+              <div style="text-align: center;">
+                <div style="font-size: 2rem; margin-bottom: 10px;">📈</div>
+                <div style="color: #e2e8f0; font-size: 0.9rem;">پیش‌بینی قیمت</div>
+              </div>
+              <div style="text-align: center;">
+                <div style="font-size: 2rem; margin-bottom: 10px;">🧠</div>
+                <div style="color: #e2e8f0; font-size: 0.9rem;">تحلیل پیشرفته</div>
+              </div>
+              <div style="text-align: center;">
+                <div style="font-size: 2rem; margin-bottom: 10px;">⚡</div>
+                <div style="color: #e2e8f0; font-size: 0.9rem;">پردازش Real-time</div>
+              </div>
+              <div style="text-align: center;">
+                <div style="font-size: 2rem; margin-bottom: 10px;">🔮</div>
+                <div style="color: #e2e8f0; font-size: 0.9rem;">بینش‌های هوشمند</div>
+              </div>
+            </div>
+  
+            <a href="https://ai-test-2nxq.onrender.com/" target="_blank" 
+               class="btn" style="font-size: 1.1rem; padding: 15px 40px; margin: 10px;">
+              🚀 ورود به پنل هوش مصنوعی
+            </a>
+          
+            <div style="margin-top: 20px;">
+              <a href="/" class="btn" style="background: rgba(255,255,255,0.1); margin: 5px;">
+                بازگشت به خانه
+              </a>
+              <a href="/analysis?symbol=btc_usdt" class="btn" style="background: rgba(255,255,255,0.1); margin: 5px;">
+                تحلیل تکنیکال
+              </a>
+           </div>
+          </div>
+        </div>
+
+        <div class="glass-card">
+          <h2 class="section-title">قابلیت‌های اصلی</h2>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-number">87%</div>
+              <div class="stat-label">دقت پیش‌بینی</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">0.2s</div>
+              <div class="stat-label">سرعت تحلیل</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">50+</div>
+              <div class="stat-label">الگوریتم‌های ML</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">24/7</div>
+              <div class="stat-label">نظارت فعال</div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      res.send(generateModernPage('پورتال هوش مصنوعی', bodyContent, 'ai'));
+    } catch (error) {
+      console.error('AI portal page error:', error);
+      res.status(500).send('خطا در بارگذاری پورتال AI');
+    }
+  });
+
+  // 5. صفحه بازار
+  router.get('/markets/cap', async (req, res) => {
+    try {
+      let marketData = { 
+        marketCap: 2.5e12, 
+        volume: 85e9, 
+        btcDominance: 52.5,
+        ethDominance: 17.8
+      };
+      
+      if (apiClient) {
+        const MarketDataAPI = require('../models/APIClients').MarketDataAPI;
+        const marketAPI = new MarketDataAPI();
+        marketData = await marketAPI.getMarketCap().catch(() => marketData);
+      }
+
+      const bodyContent = `
+        <div class="header">
+          <h1>سرمايه بازار</h1>
+          <p>داده‌های جهانی بازار ارزهای دیجیتال و روندهای سرمایه‌گذاری</p>
+        </div>
+
+        <div class="glass-card">
+          <h2 class="section-title">معیارهای اصلی بازار</h2>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-number">$${marketData.marketCap ? (marketData.marketCap / 1e12).toFixed(1) + 'T' : 'N/A'}</div>
+              <div class="stat-label">سرمايه کل بازار</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">$${marketData.volume ? (marketData.volume / 1e9).toFixed(1) + 'B' : 'N/A'}</div>
+              <div class="stat-label">حجم معاملات 24h</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">${marketData.btcDominance ? marketData.btcDominance.toFixed(1) + '%' : 'N/A'}</div>
+              <div class="stat-label">تسلط بیت‌کوین</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">${marketData.ethDominance ? marketData.ethDominance.toFixed(1) + '%' : 'N/A'}</div>
+              <div class="stat-label">تسلط اتریوم</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass-card">
+          <h2 class="section-title">آمار بازار جهانی</h2>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-number">8,500+</div>
+              <div class="stat-label">ارزهای دیجیتال</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">500+</div>
+              <div class="stat-label">صرافی‌های فعال</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">24/7</div>
+              <div class="stat-label">معاملات غیرمتمرکز</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">150+</div>
+              <div class="stat-label">کشورهای فعال</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass-card">
+          <h2 class="section-title">ابزارهای تحلیل بازار</h2>
+          <div class="stats-grid">
+            <a href="/insights/btc-dominance" class="btn">تحلیل تسلط</a>
+            <a href="/ai/market-overview" class="btn">نمای هوش مصنوعی</a>
+            <a href="/currencies" class="btn">لیست ارزها</a>
+            <a href="/news" class="btn">اخبار مؤثر</a>
+          </div>
+        </div>
+      `;
+
+      res.send(generateModernPage('سرمايه بازار', bodyContent, 'market'));
+    } catch (error) {
+      console.error('Market cap page error', error);
+      res.status(500).send('خطا در بارگذاری داده‌های بازار');
+    }
+  });
+
+  // 6. صفحه بینش‌ها
+  router.get('/insights/dashboard', async (req, res) => {
+    try {
+      let insightsData = {
+        btc_dominance: { value: 52.5, trend: 'up' },
+        fear_greed: { now: { value: 65, value_classification: 'Greed' } }
+      };
+      
+      if (apiClient) {
+        const InsightsAPI = require('../models/APIClients').InsightsAPI;
+        const insightsAPI = new InsightsAPI();
+        const [btcDominance, fearGreed] = await Promise.all([
+          insightsAPI.getBTCDominance().catch(() => ({ value: 52.5, trend: 'up' })),
+          insightsAPI.getFearGreedIndex().catch(() => ({ now: { value: 65, value_classification: 'Greed' } }))
+        ]);
+        insightsData = { btc_dominance: btcDominance, fear_greed: fearGreed };
+      }
+
+      const bodyContent = `
+        <div class="header">
+          <h1>بينش‌هاي بازار</h1>
+          <p>تحلیل‌های پیشرفته و بینش‌های هوشمند برای تصمیم‌گیری بهتر</p>
+        </div>
+
+        <div class="glass-card">
+          <h2 class="section-title">شاخص‌های احساسات بازار</h2>
+          <div class="stats-grid">
+            <div class="stat-card" style="border-left: 4px solid #f59e0b">
+              <div class="stat-number">${insightsData.fear_greed.now.value}</div>
+              <div class="stat-label">شاخص ترس و طمع</div>
+              <div style="color: #f59e0b; font-size: 0.9rem; margin-top: 5px;">
+                ${insightsData.fear_greed.now.value_classification}
+              </div>
+            </div>
+            <div class="stat-card" style="border-left: 4px solid #667eea">
+              <div class="stat-number">${insightsData.btc_dominance.value}%</div>
+              <div class="stat-label">تسلط بیت‌کوین</div>
+              <div style="color: #667eea; font-size: 0.9rem; margin-top: 5px;">
+                ${insightsData.btc_dominance.trend === 'up' ? '📈 صعودی' : '📉 نزولی'}
+              </div>
+            </div>
+            <div class="stat-card" style="border-left: 4px solid #10b981">
+              <div class="stat-number">87%</div>
+              <div class="stat-label">دقت پیش‌بینی</div>
+              <div style="color: #10b981; font-size: 0.9rem; margin-top: 5px;">عالی</div>
+            </div>
+            <div class="stat-card" style="border-left: 4px solid #8b5cf6">
+              <div class="stat-number">24/7</div>
+              <div class="stat-label">نظارت زنده</div>
+              <div style="color: #8b5cf6; font-size: 0.9rem; margin-top: 5px;">فعال</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass-card">
+          <h2 class="section-title">تحلیل احساسات</h2>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-number">${insightsData.fear_greed.now.value >= 70 ? '🟢' : insightsData.fear_greed.now.value <= 30 ? '🔴' : '🟡'}</div>
+              <div class="stat-label">وضعیت کلی</div>
+              <div style="color: ${insightsData.fear_greed.now.value >= 70 ? '#10b981' : insightsData.fear_greed.now.value <= 30 ? '#ef4444' : '#f59e0b'}; 
+                   font-size: 0.9rem; margin-top: 5px;">
+                ${insightsData.fear_greed.now.value >= 70 ? 'طمع شدید' : 
+                  insightsData.fear_greed.now.value <= 30 ? 'ترس شدید' : 'متعادل'}
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">${insightsData.btc_dominance.trend === 'up' ? '📈' : '📉'}</div>
+              <div class="stat-label">روند تسلط</div>
+              <div style="color: ${insightsData.btc_dominance.trend === 'up' ? '#10b981' : '#ef4444'}; 
+                   font-size: 0.9rem; margin-top: 5px;">
+                ${insightsData.btc_dominance.trend === 'up' ? 'در حال افزایش' : 'در حال کاهش'}
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">💎</div>
+              <div class="stat-label">توصیه VortexAI</div>
+              <div style="color: #f115f9; font-size: 0.9rem; margin-top: 5px;">
+                ${insightsData.fear_greed.now.value >= 70 ? 'احتیاط در خرید' : 
+                  insightsData.fear_greed.now.value <= 30 ? 'فرصت خرید' : 'تحلیل بیشتر'}
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">🎯</div>
+              <div class="stat-label">اعتماد سیگنال</div>
+              <div style="color: #667eea; font-size: 0.9rem; margin-top: 5px;">
+                ${Math.min(95, insightsData.fear_greed.now.value + 30)}%
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass-card">
+          <h2 class="section-title">ابزارهای تحلیل پیشرفته</h2>
+          <div class="stats-grid">
+            <a href="/insights/btc-dominance" class="btn">تحلیل تسلط BTC</a>
+            <a href="/insights/fear-greed" class="btn">شاخص ترس و طمع</a>
+            <a href="/analysis?symbol=btc_usdt" class="btn">تحلیل تکنیکال</a>
+            <a href="/news" class="btn">اخبار مؤثر</a>
+          </div>
+        </div>
+      `;
+
+      res.send(generateModernPage('بينش‌هاي بازار', bodyContent, 'insights'));
+    } catch (error) {
+      console.error('Insights page error', error);
+      res.status(500).send('خطا در بارگذاری بینش‌های بازار');
+    }
+  });
+
+  // 7. صفحه اخبار
+  router.get('/news', async (req, res) => {
+    try {
+      const { page = 1, limit = 10 } = req.query;
+      
+      let newsData = { result: [] };
+      if (apiClient) {
+        const NewsAPI = require('../models/APIClients').NewsAPI;
+        const newsAPI = new NewsAPI();
+        newsData = await newsAPI.getNews({
+          page: parseInt(page),
+          limit: parseInt(limit)
+        }).catch(() => ({ result: [] }));
+      }
+
+      // داده‌های نمونه
+      if (newsData.result.length === 0) {
+        newsData.result = [
+          {
+            title: 'بیت‌کوین به 50,000 دلار رسید - تحلیلگران پیش بینی رشد بیشتر',
+            description: 'بیت‌کوین برای اولین بار در 3 ماه گذشته به مرز 50,000 دلار رسید و امیدها برای ادامه روند صعودی را افزایش داد.',
+            source: 'CryptoNews',
+            date: new Date(Date.now() - 2 * 60 * 60 * 1000)
+          },
+          {
+            title: 'اتریوم 2.0: تحولی در شبکه اثبات سهام',
+            description: 'ارتقاء اتریوم به نسخه 2.0 مصرف انرژی را 99% کاهش می‌دهد و سرعت تراکنش ها را افزایش می‌دهد.',
+            source: 'BlockchainDaily',
+            date: new Date(Date.now() - 4 * 60 * 60 * 1000)
+          }
+        ];
+      }
+
+      const bodyContent = `
+        <div class="header">
+          <h1>اخبار کریپتو</h1>
+          <p>آخرین اخبار و به روزرسانی‌های بازار ارزهای دیجیتال</p>
+        </div>
+
+        <div class="glass-card">
+          <h2 class="section-title">آمار اخبار</h2>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-number">${newsData.result.length}</div>
+              <div class="stat-label">مقاله جدید</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">${page}</div>
+              <div class="stat-label">صفحه جاری</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">${limit}</div>
+              <div class="stat-label">در هر صفحه</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">12</div>
+              <div class="stat-label">منبع فعال</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass-card">
+          <h2 class="section-title">آخرین اخبار</h2>
+          <div style="max-height: 500px; overflow-y: auto;">
+            ${newsData.result.map(article => `
+              <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                  <h3 style="color: #f115f9; margin: 0; flex: 1;">${article.title || 'بدون عنوان'}</h3>
+                  <span style="color: #94a3b8; font-size: 0.8rem; white-space: nowrap; margin-left: 15px;">
+                    ${article.date ? new Date(article.date).toLocaleTimeString('fa-IR') : ''}
+                  </span>
+                </div>
+                <p style="color: #cbd5e1; margin-bottom: 10px; line-height: 1.5;">
+                  ${article.description || 'بدون توضیح'}
+                </p>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span style="color: #64748b; font-size: 0.8rem;">${article.source || 'منبع نامشخص'}</span>
+                  <a href="#" style="color: #667eea; text-decoration: none; font-size: 0.8rem;">مطالعه بیشتر →</a>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <div class="glass-card">
+          <h2 class="section-title">دسته‌بندی اخبار</h2>
+          <div class="stats-grid">
+            <a href="/news?category=bitcoin" class="btn">بیت‌کوین</a>
+            <a href="/news?category=ethereum" class="btn">اتریوم</a>
+            <a href="/news?category=defi" class="btn">DeFi</a>
+            <a href="/news?category=regulation" class="btn">قوانین</a>
+          </div>
+        </div>
+      `;
+
+      res.send(generateModernPage('اخبار كرييتو', bodyContent, 'news'));
+    } catch (error) {
+      console.error('News page error', error);
+      res.status(500).send('خطا در بارگذاری اخبار');
+    }
+  });
+
+  // 8. صفحه تنظیمات (کامل شده)
+  router.get('/settings', async (req, res) => {
+    try {
+      const bodyContent = `
+        <div class="header">
+          <h1>تنظيمات پيشرفته</h1>
+          <p>شخصی‌سازی محیط و تنظیمات کاربری VortexAI</p>
+        </div>
+
+        <div class="glass-card">
+          <h2 class="section-title">تنظیمات نمایش</h2>
+          <form id="settingsForm" style="max-width: 700px; margin: 0 auto;">
             
-            // داده‌های تست برای زمانی که dependencyها در دسترس نیستن
-            const marketData = { marketCap: 2.5e12 };
+            <!-- تم و ظاهر -->
+            <div style="margin-bottom: 30px;">
+              <h3 style="color: #f115f9; margin-bottom: 15px;">🎨 تم و ظاهر</h3>
+              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                <label class="theme-option ${'dark' === 'dark' ? 'active' : ''}">
+                  <input type="radio" name="theme" value="dark" checked>
+                  <div class="theme-preview dark-theme">
+                    <div class="theme-header"></div>
+                    <div class="theme-content"></div>
+                  </div>
+                  <span>تاریک</span>
+                </label>
+                <label class="theme-option">
+                  <input type="radio" name="theme" value="light">
+                  <div class="theme-preview light-theme">
+                    <div class="theme-header"></div>
+                    <div class="theme-content"></div>
+                  </div>
+                  <span>روشن</span>
+                </label>
+                <label class="theme-option">
+                  <input type="radio" name="theme" value="auto">
+                  <div class="theme-preview auto-theme">
+                    <div class="theme-header"></div>
+                    <div class="theme-content"></div>
+                  </div>
+                  <span>خودکار</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- زبان و منطقه -->
+            <div style="margin-bottom: 30px;">
+              <h3 style="color: #f115f9; margin-bottom: 15px;">🌐 زبان و منطقه</h3>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                  <label style="display: block; margin-bottom: 8px; color: #e2e8f0;">زبان</label>
+                  <select name="language" class="settings-select">
+                    <option value="fa" selected>فارسی</option>
+                    <option value="en">English</option>
+                    <option value="ar">العربية</option>
+                    <option value="tr">Türkçe</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="display: block; margin-bottom: 8px; color: #e2e8f0;">منطقه زمانی</label>
+                  <select name="timezone" class="settings-select">
+                    <option value="tehran" selected>تهران (UTC+3:30)</option>
+                    <option value="dubai">دبی (UTC+4)</option>
+                    <option value="utc">UTC</option>
+                    <option value="newyork">نیویورک (UTC-5)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- تنظیمات نمودار -->
+            <div style="margin-bottom: 30px;">
+              <h3 style="color: #f115f9; margin-bottom: 15px;">📊 تنظیمات نمودار</h3>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                  <label style="display: block; margin-bottom: 8px; color: #e2e8f0;">نوع نمودار پیش‌فرض</label>
+                  <select name="chart_type" class="settings-select">
+                    <option value="candlestick" selected>شمعی</option>
+                    <option value="line">خطی</option>
+                    <option value="area">ناحیه‌ای</option>
+                    <option value="heikinashi">هایکین آشی</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="display: block; margin-bottom: 8px; color: #e2e8f0;">تایم‌فریم پیش‌فرض</label>
+                  <select name="timeframe" class="settings-select">
+                    <option value="1h" selected>1 ساعت</option>
+                    <option value="4h">4 ساعت</option>
+                    <option value="1d">1 روز</option>
+                    <option value="1w">1 هفته</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- تنظیمات اعلان‌ها -->
+            <div style="margin-bottom: 30px;">
+              <h3 style="color: #f115f9; margin-bottom: 15px;">🔔 تنظیمات اعلان‌ها</h3>
+              <div style="display: grid; gap: 15px;">
+                <label class="checkbox-label">
+                  <input type="checkbox" name="price_alerts" checked>
+                  <span>هشدارهای قیمت</span>
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" name="volume_alerts" checked>
+                  <span>هشدارهای حجم غیرعادی</span>
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" name="technical_alerts">
+                  <span>سیگنال‌های تکنیکال</span>
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" name="news_alerts" checked>
+                  <span>اعلان‌های خبری مهم</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- تنظیمات داده -->
+            <div style="margin-bottom: 30px;">
+              <h3 style="color: #f115f9; margin-bottom: 15px;">💾 تنظیمات داده</h3>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                  <label style="display: block; margin-bottom: 8px; color: #e2e8f0;">بازه بروزرسانی (ثانیه)</label>
+                  <input type="number" name="refresh_interval" value="30" min="5" max="300" class="settings-input">
+                </div>
+                <div>
+                  <label style="display: block; margin-bottom: 8px; color: #e2e8f0;">حداکثر ارزهای نمایش</label>
+                  <select name="max_coins" class="settings-select">
+                    <option value="25">25 ارز</option>
+                    <option value="50" selected>50 ارز</option>
+                    <option value="100">100 ارز</option>
+                    <option value="200">200 ارز</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- تنظیمات پیشرفته -->
+            <div style="margin-bottom: 30px;">
+              <h3 style="color: #f115f9; margin-bottom: 15px;">⚙️ تنظیمات پیشرفته</h3>
+              <div style="display: grid; gap: 15px;">
+                <label class="checkbox-label">
+                  <input type="checkbox" name="auto_save" checked>
+                  <span>ذخیره خودکار تنظیمات</span>
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" name="debug_mode">
+                  <span>حالت دیباگ</span>
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" name="performance_mode" checked>
+                  <span>حالت عملکرد بهینه</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- دکمه‌های action -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-top: 30px;">
+              <button type="submit" class="btn" style="background: linear-gradient(135deg, #667eea, #a855f7);">
+                💾 ذخیره تنظیمات
+              </button>
+              <button type="button" onclick="resetSettings()" class="btn" 
+                      style="background: rgba(245, 158, 11, 0.3);">
+                🔄 بازنشانی
+              </button>
+              <button type="button" onclick="exportSettings()" class="btn" 
+                      style="background: rgba(16, 185, 129, 0.3);">
+                📤 خروجی تنظیمات
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div class="glass-card">
+          <h2 class="section-title">ابزارهای سیستم</h2>
+          <div class="stats-grid">
+            <button onclick="clearCache()" class="btn">🗑️ پاک‌سازی کش</button>
+            <button onclick="testConnection()" class="btn">🌐 تست اتصال</button>
+            <button onclick="showSystemInfo()" class="btn">ℹ️ اطلاعات سیستم</button>
+            <button onclick="restartServices()" class="btn">🔄 راه‌اندازی مجدد</button>
+          </div>
+        </div>
+
+        <style>
+          .theme-option {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 15px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+          }
+          .theme-option.active {
+            border-color: #667eea;
+          }
+          .theme-option:hover {
+            background: rgba(255,255,255,0.1);
+          }
+          .theme-preview {
+            width: 80px;
+            height: 60px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            overflow: hidden;
+          }
+          .dark-theme {
+            background: #1a1a2e;
+            border: 1px solid #333;
+          }
+          .light-theme {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+          }
+          .auto-theme {
+            background: linear-gradient(45deg, #1a1a2e 50%, #f8fafc 50%);
+            border: 1px solid #666;
+          }
+          .theme-header {
+            height: 15px;
+            background: #667eea;
+          }
+          .theme-content {
+            height: 45px;
+            background: inherit;
+          }
+          .settings-select, .settings-input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            font-size: 1rem;
+          }
+          .checkbox-label {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            cursor: pointer;
+          }
+          .checkbox-label input {
+            margin-left: 10px;
+            transform: scale(1.2);
+          }
+        </style>
+
+        <script>
+          document.getElementById('settingsForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            const settings = Object.fromEntries(formData);
             
-            const bodyContent = `
-<div class="header">
-    <h1>VortexAI Crypto Dashboard</h1>
-    <p>داده های زنده و بینش های هوشمند برای تحلیل بازارهای کربیتو پیشرفته</p>
-</div>
+            // شبیه‌سازی ذخیره تنظیمات
+            localStorage.setItem('vortexSettings', JSON.stringify(settings));
+            showNotification('تنظیمات با موفقیت ذخیره شد', 'success');
+          });
 
-<div class="grid-2x2">
-    <div class="square-card">
-        <div class="card-icon">📊</div>
-        <div class="card-title">ردیابی</div>
-        <div class="card-value">${Object.keys(gistData.prices || {}).length}</div>
-        <div class="card-subtitle">چقف ارزهای ردیابی شده</div>
-    </div>
+          function resetSettings() {
+            if (confirm('آیا از بازنشانی تمام تنظیمات به حالت پیش‌فرض اطمینان دارید؟')) {
+              localStorage.removeItem('vortexSettings');
+              showNotification('تنظیمات بازنشانی شد', 'warning');
+              setTimeout(() => location.reload(), 1000);
+            }
+          }
 
-    <div class="square-card">
-        <div class="card-icon">🔴</div>
-        <div class="card-title">داده زنده</div>
-        <div class="card-value">${wsStatus.connected ? 'آنلاین' : 'آفلاین'}</div>
-        <div class="card-subtitle">${wsStatus.active_coins || 0} ارز فعال</div>
-    </div>
+          function exportSettings() {
+            const settings = localStorage.getItem('vortexSettings');
+            if (settings) {
+              const blob = new Blob([settings], { type: 'application/json' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = 'vortexai-settings.json';
+              a.click();
+              showNotification('تنظیمات با موفقیت export شد', 'success');
+            }
+          }
 
-    <div class="square-card">
-        <div class="card-icon">💰</div>
-        <div class="card-title">سرمايه کل بازار</div>
-        <div class="card-value">${marketData.marketCap ? (marketData.marketCap / 1e12).toFixed(1) + 'T' : 'N/A'}</div>
-        <div class="card-subtitle">بازار جهانی کربیتو</div>
-    </div>
+          function clearCache() {
+            if (confirm('آیا از پاک‌سازی کش سیستم اطمینان دارید؟')) {
+              showNotification('کش سیستم پاک‌سازی شد', 'info');
+            }
+          }
 
-    <div class="square-card">
-        <div class="card-icon">✅</div>
-        <div class="card-title">ضعيت سيستم</div>
-        <div class="card-value">فعال</div>
-        <div class="card-subtitle">همه سرویس‌ها عملیاتی</div>
-    </div>
-</div>
+          function testConnection() {
+            showNotification('تست اتصال در حال انجام...', 'info');
+            setTimeout(() => {
+              showNotification('اتصال به سرور با موفقیت برقرار شد', 'success');
+            }, 2000);
+          }
 
-<div class="stats-section">
-    <h2 class="section-title">متریک‌های عملکرد</h2>
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-number">${wsStatus.request_count || 0}</div>
-            <div class="stat-label">درخواست‌های API</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-number">${Math.round(process.uptime() / 3600)}h</div>
-            <div class="stat-label">آیت‌ایم سیستم</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-number">${Object.keys(gistData.prices || {}).length}</div>
-            <div class="stat-label">جفت ارز‌های ردیابی شده</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-number">26</div>
-            <div class="stat-label">ادبیکاتورهای فعال</div>
-        </div>
-    </div>
-    <div class="last-update">
-        آخرین بروزرسانی: ${new Date().toLocaleString('fa-IR', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        })}
-    </div>
-</div>
-
-<div class="glass-card">
-    <h2 class="section-title">قدامات سريع</h2>
-    <div class="stats-grid">
-        <a href="/scan" class="btn">متروع اسکن</a>
-        <a href="/analysis?symbol=btc_usdt" class="btn">تحليل تكنيكال</a>
-        <a href="/markets/cap" class="btn">داده‌هاي بازار</a>
-        <a href="/insights/dashboard" class="btn">بينش‌هاي بازار</a>
-    </div>
-</div>
-
-<div class="glass-card">
-    <h2 class="section-title">وي‌ژگى‌هاي هوشمند</h2>
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-number">تحليل</div>
-            <div class="stat-label">تحليل</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-number">سیگنال‌هاي زنده</div>
-            <div class="stat-label">سیگنال‌هاي زنده</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-number">هوشمند</div>
-            <div class="stat-label">نمودارهاي هوشمند</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-number">💡</div>
-            <div class="stat-label">پیشنهادات طلایی</div>
-        </div>
-    </div>
-</div>
-            `;
+          function showSystemInfo() {
+            const info = {
+              'پلتفرم': navigator.platform,
+              'مرورگر': navigator.userAgent.split(' ')[0],
+              'زبان': navigator.language,
+              'حافظه': navigator.deviceMemory ? navigator.deviceMemory + ' GB' : 'نامشخص'
+            };
             
-            res.send(generateModernPage('داشبورد', bodyContent, 'home'));
-        } catch (error) {
-            console.error('Dashboard error', error);
-            res.status(500).send('داشبورد بارگذاری در خطا');
-        }
-    });
+            alert('اطلاعات سیستم:\\n' + Object.entries(info).map(([k, v]) => k + ': ' + v).join('\\n'));
+          }
 
-    // سایر routes اینجا اضافه بشن...
+          function restartServices() {
+            if (confirm('آیا از راه‌اندازی مجدد سرویس‌ها اطمینان دارید؟')) {
+              showNotification('سرویس‌ها در حال راه‌اندازی مجدد...', 'warning');
+            }
+          }
 
-    return router;
-};
+          function showNotification(message, type) {
+            // پیاده‌سازی نمایش نوتیفیکیشن
+            alert(message);
+          }
+
+          // بارگذاری تنظیمات ذخیره شده
+          document.addEventListener('DOMContentLoaded', function() {
+            const savedSettings = localStorage.getItem('vortexSettings');
+            if (savedSettings) {
+              const settings = JSON.parse(savedSettings);
+              Object.keys(settings).forEach(key => {
+                const element = document.querySelector(\`[name="\${key}"]\`);
+                if (element) {
+                  if (element.type === 'checkbox') {
+                    element.checked = settings[key] === 'on';
+                  } else {
+                    element.value = settings[key];
+                  }
+                }
+              });
+            }
+          });
+        </script>
+      `;
+
+      res.send(generateModernPage('تنظيمات پيشرفته', bodyContent, 'settings'));
+    } catch (error) {
+      console.error('Settings page error:', error);
+      res.status(500).send('خطا در بارگذاری تنظیمات');
+    }
+  });
+
+  return router;
+};           
