@@ -1,6 +1,19 @@
 const express = require('express');
 const router = express.Router();
 
+function detectCurrentPage() {
+    const path = window?.location?.pathname || '/';
+    if (path === '/') return 'home';
+    if (path.includes('/scan')) return 'scan';
+    if (path.includes('/analysis')) return 'analyze';
+    if (path.includes('/markets')) return 'market';
+    if (path.includes('/insights')) return 'insights';
+    if (path.includes('/news')) return 'news';
+    if (path.includes('/health')) return 'health';
+    if (path.includes('/settings')) return 'settings';
+    return 'home';
+}
+
 // *******************************
 // نوبکیشن بار هوشمند پیشرفته
 
