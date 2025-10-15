@@ -1979,7 +1979,7 @@ module.exports = ({ gistManager, wsManager, apiClient }) => {
 
                 <div class="glass-card">
                     <h2 class="section-title">نتایج اسکن</h2>
-                    ${coins.length > 0 ? \`
+                    ${coins.length > 0 ? `
                         <table class="data-table">
                             <thead>
                                 <tr>
