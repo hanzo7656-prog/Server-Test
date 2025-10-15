@@ -9,6 +9,8 @@ const logger = require('./config/logger');
 const GistManager = require('./models/GistManager');
 const WebSocketManager = require('./models/WebSocketManager');
 const { AdvancedCoinStatsAPIClient, HistoricalDataAPI, ExchangeAPI, InsightsAPI } = require('./models/APIClients');
+
+// ✅ ایمپورت ماژول‌های روت که جا افتاده بود
 const apiRoutes = require('./routes/api');
 const modernRoutes = require('./routes/modern-pages');
 
@@ -43,11 +45,10 @@ const insightsAPI = new InsightsAPI();
 
 // ========== REDIRECT ROUTES برای Frontend ==========
 
-// Redirect از root به /api
 app.get('/scan', (req, res) => {
   const limit = req.query.limit;
   const filter = req.query.filter;
-  let redirectUrl = '/api/scan/vortexai';
+  let redirectUrl = '/scan';
   if (limit || filter) {
     redirectUrl += '?' + new URLSearchParams(req.query).toString();
   }
@@ -57,7 +58,7 @@ app.get('/scan', (req, res) => {
 app.get('/analysis', (req, res) => {
   const symbol = req.query.symbol;
   if (symbol) {
-    res.redirect(`/api/coin/${symbol}/technical`);
+    res.redirect(`/analysis?symbol=${symbol}`);
   } else {
     res.status(400).json({ error: "Symbol parameter required" });
   }
@@ -80,7 +81,7 @@ app.get('/api-data', (req, res) => {
 });
 
 // ========== MAIN ROUTES ==========
-// فقط یکبار routeها رو اضافه کن
+// ✅ حالا این routeها کار میکنن چون ماژول‌ها ایمپورت شدن
 app.use('/api', apiRoutes({ gistManager, wsManager, apiClient, exchangeAPI }));
 app.use('/', modernRoutes({ gistManager, wsManager, apiClient }));
 
@@ -157,7 +158,6 @@ async function gracefulShutdown(signal) {
 
     // 3. بستن اتصالات به APIهای خارجی
     logger.info('🔌 Closing external API connections...');
-    // اینجا می‌توانید اتصالات به دیتابیس یا APIهای دیگر را هم ببندید
 
     // 4. ذخیره داده‌های نهایی در Gist
     logger.info('💾 Saving final data to Gist...');
