@@ -215,6 +215,8 @@ function generateClassNavigation(currentPage = 'home') {
     <div class="quick-peek-overlay" id="quickPeekOverlay">
         <div class="quick-peek-content" id="quickPeekContent"></div>
     </div>
+
+    ${navigationScript}
 </div>
 
 <style>
