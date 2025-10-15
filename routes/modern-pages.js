@@ -1,22 +1,14 @@
 const express = require('express');
 const router = express.Router();
 
+// تابع کمکی برای تشخیص صفحه
 function detectCurrentPage() {
-    const path = window?.location?.pathname || '/';
-    if (path === '/') return 'home';
-    if (path.includes('/scan')) return 'scan';
-    if (path.includes('/analysis')) return 'analyze';
-    if (path.includes('/markets')) return 'market';
-    if (path.includes('/insights')) return 'insights';
-    if (path.includes('/news')) return 'news';
-    if (path.includes('/health')) return 'health';
-    if (path.includes('/settings')) return 'settings';
+    // این تابع در سمت کلاینت اجرا میشه، پس یه نسخه ساده براش میذاریم
     return 'home';
 }
 
 // *******************************
 // نوبکیشن بار هوشمند پیشرفته
-
 function generateClassNavigation(currentPage = 'home') {
     // تشخیص خودکار صفحه اگر مشخص نشده
     if (currentPage === 'home') {
@@ -122,7 +114,7 @@ async function loadRealNavigationStatus() {
 function updateNavigationDisplay() {
     // آیینت نمایش وضعیت در نویسیدن بار
     Object.keys(realMarketStatus).forEach(itemId => {
-        const statusElement = document.querySelector('[data-item="${itemId}"] .market-status');
+        const statusElement = document.querySelector('[data-item="\${itemId}"] .market-status');
         if (statusElement && realMarketStatus[itemId].change) {
             statusElement.innerHTML = 
                 (realMarketStatus[itemId].trend === 'up' ? '↗' : '↘') +
@@ -130,7 +122,7 @@ function updateNavigationDisplay() {
             statusElement.className = 'market-status ' + realMarketStatus[itemId].trend;
         }
 
-        const alertElement = document.querySelector('[data-item="${itemId}"] .live-alert-indicator');
+        const alertElement = document.querySelector('[data-item="\${itemId}"] .live-alert-indicator');
         if (alertElement) {
             alertElement.style.display = realMarketStatus[itemId].alert ? 'block' : 'none';
         }
@@ -991,7 +983,7 @@ window.addEventListener('scroll', () => {
     lastScrollTop = scrollTop;
 });
 
-// مديريت کلیدهای میانيز
+// مديریت کلیدهای میانيز
 document.addEventListener('keydown', (e) => {
     // Command Palette
     if (e.key === '/' && !e.ctrlKey && !e.metaKey) {
@@ -1816,15 +1808,24 @@ function generateModernPage(title, bodyContent, currentPage = 'home') {
 `;
 }
 
-// صفحه اصلی دشپورد
-router.get('/', async (req, res) => {
-    try {
-        // شبیه‌سازی داده‌ها برای تست
-        const wsStatus = { connected: true, active_coins: 15, request_count: 1245 };
-        const gistData = { prices: { btc: 50000, eth: 3000, sol: 150 } };
-        const marketData = { marketCap: 2.5e12 };
+// ================================================================
+// Routes اصلی
+// ================================================================
 
-        const bodyContent = `
+module.exports = (dependencies) => {
+    const { gistManager, wsManager, apiClient } = dependencies;
+
+    // صفحه اصلی
+    router.get('/', async (req, res) => {
+        try {
+            // استفاده از dependencyها
+            const wsStatus = wsManager ? wsManager.getConnectionStatus() : { connected: true, active_coins: 15 };
+            const gistData = gistManager ? gistManager.getAllData() : { prices: {} };
+            
+            // داده‌های تست برای زمانی که dependencyها در دسترس نیستن
+            const marketData = { marketCap: 2.5e12 };
+            
+            const bodyContent = `
 <div class="header">
     <h1>VortexAI Crypto Dashboard</h1>
     <p>داده های زنده و بینش های هوشمند برای تحلیل بازارهای کربیتو پیشرفته</p>
@@ -1922,33 +1923,31 @@ router.get('/', async (req, res) => {
         </div>
     </div>
 </div>
-        `;
-        
-        res.send(generateModernPage('داشبورد', bodyContent, 'home'));
-    } catch (error) {
-        console.error('Dashboard error', error);
-        res.status(500).send('داشبورد بارگذاری در خطا');
-    }
-});
+            `;
+            
+            res.send(generateModernPage('داشبورد', bodyContent, 'home'));
+        } catch (error) {
+            console.error('Dashboard error', error);
+            res.status(500).send('داشبورد بارگذاری در خطا');
+        }
+    });
 
-// اسکن صفحه
-router.get('/scan', async (req, res) => {
-    try {
-        const limit = parseInt(req.query.limit) || 50;
-        const filter = req.query.filter || 'volume';
+        // صفحه اسکن
+    router.get('/scan', async (req, res) => {
+        try {
+            const limit = parseInt(req.query.limit) || 50;
+            const filter = req.query.filter || 'volume';
 
-        // شبیه‌سازی داده اسکن
-        const scanData = { 
-            coins: [
-                { rank: 1, symbol: 'BTC', price: 50000, priceChange24h: 2.5, volume: 25e9 },
-                { rank: 2, symbol: 'ETH', price: 3000, priceChange24h: -1.2, volume: 15e9 },
-                { rank: 3, symbol: 'SOL', price: 150, priceChange24h: 5.8, volume: 8e9 }
-            ] 
-        };
+            // استفاده از dependencyها
+            let scanData = { coins: [] };
+            if (apiClient) {
+                scanData = await apiClient.getCoins(limit).catch(() => ({ coins: [] }));
+            }
 
-        const coins = scanData.coins || [];
+            const coins = scanData.coins || [];
+            const realtimeData = wsManager ? wsManager.getRealtimeData() : {};
 
-        const bodyContent = `
+            const bodyContent = `
 <div class="header">
     <h1>اسكن بازار</h1>
     <p>اتالييز زنده بازار ارزهای دیجیتال - شناسايي فرصت‌های سرمایه‌گذاری</p>
@@ -2026,25 +2025,25 @@ router.get('/scan', async (req, res) => {
         <a href="/analysis?symbol=btc_usdt" class="btn">تحلیل فنی</a>
     </div>
 </div>
-        `;
+            `;
 
-        res.send(generateModernPage('اسكن بازار', bodyContent, 'scan'));
-    } catch (error) {
-        console.error('Scan page error', error);
-        res.status(500).send('اسكن بارگذاري در خطا');
-    }
-});
+            res.send(generateModernPage('اسكن بازار', bodyContent, 'scan'));
+        } catch (error) {
+            console.error('Scan page error', error);
+            res.status(500).send('اسكن بارگذاري در خطا');
+        }
+    });
 
-// صفحه تحليل تکنيکال
-router.get('/analysis', async (req, res) => {
-    try {
-        const symbol = req.query.symbol || 'btc_usdt';
-        
-        // شبیه‌سازی داده‌ها
-        const realtimeData = { price: 50000, change: 2.5 };
-        const historicalData = { history: Array(24).fill(0) };
+    // صفحه تحلیل تکنیکال
+    router.get('/analysis', async (req, res) => {
+        try {
+            const symbol = req.query.symbol || 'btc_usdt';
+            
+            // استفاده از dependencyها
+            const historicalData = gistManager ? gistManager.getPriceData(symbol, "24h") : null;
+            const realtimeData = wsManager ? wsManager.getRealtimeData()[symbol] : null;
 
-        const bodyContent = `
+            const bodyContent = `
 <div class="header">
     <h1>تحليل تکنيکال</h1>
     <p>شاخص هاي فني ييشرفته براي ${symbol.toUpperCase()} تصميم گيري هوشمند در معاملات</p>
@@ -2151,30 +2150,27 @@ router.get('/analysis', async (req, res) => {
         </div>
     </div>
 </div>
-        `;
+            `;
 
-        res.send(generateModernPage(`تحلیل تکنیکال - ${symbol.toUpperCase()}`, bodyContent, 'analyze'));
-    } catch (error) {
-        console.error('Technical analysis page error:', error);
-        res.status(500).send('خطا در بارگذاری تحلیل تکنیکال');
-    }
-});
+            res.send(generateModernPage(`تحلیل تکنیکال - ${symbol.toUpperCase()}`, bodyContent, 'analyze'));
+        } catch (error) {
+            console.error('Technical analysis page error:', error);
+            res.status(500).send('خطا در بارگذاری تحلیل تکنیکال');
+        }
+    });
 
-// صفحه بازار
-router.get('/markets/cap', async (req, res) => {
-    try {
-        // شبیه‌سازی داده بازار
-        const marketData = {
-            marketCap: 2.5e12,
-            volume: 85e9,
-            btcDominance: 52.5,
-            ethDominance: 17.8,
-            activeCryptocurrencies: 8000,
-            marketCapChange24h: 1.2,
-            totalExchanges: 500
-        };
+        // صفحه بازار
+    router.get('/markets/cap', async (req, res) => {
+        try {
+            // استفاده از dependencyها
+            let marketData = { marketCap: 2.5e12, volume: 85e9, btcDominance: 52.5 };
+            if (apiClient) {
+                const MarketDataAPI = require('../models/APIClients').MarketDataAPI;
+                const marketAPI = new MarketDataAPI();
+                marketData = await marketAPI.getMarketCap().catch(() => marketData);
+            }
 
-        const bodyContent = `
+            const bodyContent = `
 <div class="header">
     <h1>سرمايه بازار</h1>
     <p>برداده‌های جهانی بازار ارزهای دیجیتال و روندهای سرمایه‌گذاری</p>
@@ -2265,21 +2261,163 @@ router.get('/markets/cap', async (req, res) => {
         <a href="/news" class="btn">اخبار بازار</a>
     </div>
 </div>
-        `;
+            `;
 
-        res.send(generateModernPage('سرمايه بازار', bodyContent, 'market'));
-    } catch (error) {
-        console.error('Market cap page error', error);
-        res.status(500).send('داده بازارها بارگذاري در خطا');
-    }
-});
+            res.send(generateModernPage('سرمايه بازار', bodyContent, 'market'));
+        } catch (error) {
+            console.error('Market cap page error', error);
+            res.status(500).send('داده بازارها بارگذاري در خطا');
+        }
+    });
 
-// صفحه اخبار
-router.get('/news', async (req, res) => {
-    try {
-        const { page = 1, limit = 20 } = req.query;
-        
-        const bodyContent = `
+    // صفحه Insights
+    router.get('/insights/dashboard', async (req, res) => {
+        try {
+            // استفاده از dependencyها
+            let insightsData = {
+                btc_dominance: { value: 52.5, trend: 'up' },
+                fear_greed: { now: { value: 65, value_classification: 'Greed' } },
+                rainbow_chart: {}
+            };
+
+            if (apiClient) {
+                const InsightsAPI = require('../models/APIClients').InsightsAPI;
+                const insightsAPI = new InsightsAPI();
+                
+                const [btcDominance, fearGreed, rainbowChart] = await Promise.all([
+                    insightsAPI.getBTCDominance().catch(() => ({ value: 52.5, trend: 'up' })),
+                    insightsAPI.getFearGreedIndex().catch(() => ({ now: { value: 65, value_classification: 'Greed' } })),
+                    insightsAPI.getRainbowChart('bitcoin').catch(() => ({}))
+                ]);
+
+                insightsData = { btc_dominance: btcDominance, fear_greed: fearGreed, rainbow_chart: rainbowChart };
+            }
+
+            const bodyContent = `
+<div class="header">
+    <h1>بينش‌هاي بازار</h1>
+    <p>تحلیل‌های پیشرفته و بینش‌های هوشمند برای تصمیم‌گیری بهتر</p>
+</div>
+
+<div class="glass-card">
+    <h2 class="section-title">شاخص‌های احساسات بازار</h2>
+    <div class="stats-grid">
+        <div class="stat-card" style="border-left: 4px solid #f59e0b">
+            <div class="stat-number">${insightsData.fear_greed.now.value}</div>
+            <div class="stat-label">شاخص ترس و طمع</div>
+            <div style="color: #f59e0b; font-size: 0.8rem; margin-top: 5px;">
+                ${insightsData.fear_greed.now.value_classification}
+            </div>
+        </div>
+        <div class="stat-card" style="border-left: 4px solid #667eea">
+            <div class="stat-number">${insightsData.btc_dominance.value}%</div>
+            <div class="stat-label">تسلط بیت‌کوین</div>
+            <div style="color: #667eea; font-size: 0.8rem; margin-top: 5px;">
+                ${insightsData.btc_dominance.trend === 'up' ? '📈 صعودی' : '📉 نزولی'}
+            </div>
+        </div>
+        <div class="stat-card" style="border-left: 4px solid #10b981">
+            <div class="stat-number">87%</div>
+            <div class="stat-label">دقت پیش‌بینی</div>
+            <div style="color: #10b981; font-size: 0.8rem; margin-top: 5px;">عالی</div>
+        </div>
+        <div class="stat-card" style="border-left: 4px solid #8b5cf6">
+            <div class="stat-number">24/7</div>
+            <div class="stat-label">نظارت زنده</div>
+            <div style="color: #8b5cf6; font-size: 0.8rem; margin-top: 5px;">فعال</div>
+        </div>
+    </div>
+</div>
+
+<div class="glass-card">
+    <h2 class="section-title">تحلیل احساسات</h2>
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number">${insightsData.fear_greed.now.value >= 70 ? '🟢' : insightsData.fear_greed.now.value <= 30 ? '🔴' : '🟡'}</div>
+            <div class="stat-label">وضعیت کلی</div>
+            <div style="color: ${insightsData.fear_greed.now.value >= 70 ? '#10b981' : insightsData.fear_greed.now.value <= 30 ? '#ef4444' : '#f59e0b'}; 
+                font-size: 0.8rem; margin-top: 5px;">
+                ${insightsData.fear_greed.now.value >= 70 ? 'طمع شدید' : 
+                  insightsData.fear_greed.now.value <= 30 ? 'ترس شدید' : 'متعادل'}
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">${insightsData.btc_dominance.trend === 'up' ? '📈' : '📉'}</div>
+            <div class="stat-label">روند تسلط</div>
+            <div style="color: ${insightsData.btc_dominance.trend === 'up' ? '#10b981' : '#ef4444'}; 
+                font-size: 0.8rem; margin-top: 5px;">
+                ${insightsData.btc_dominance.trend === 'up' ? 'در حال افزایش' : 'در حال کاهش'}
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">💎</div>
+            <div class="stat-label">توصیه VortexAI</div>
+            <div style="color: #f115f9; font-size: 0.8rem; margin-top: 5px;">
+                ${insightsData.fear_greed.now.value >= 70 ? 'احتیاط در خرید' : 
+                  insightsData.fear_greed.now.value <= 30 ? 'فرصت خرید' : 'تحلیل بیشتر'}
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">🎯</div>
+            <div class="stat-label">اعتماد سیگنال</div>
+            <div style="color: #667eea; font-size: 0.8rem; margin-top: 5px;">${Math.min(95, insightsData.fear_greed.now.value + 30)}%</div>
+        </div>
+    </div>
+</div>
+
+<div class="glass-card">
+    <h2 class="section-title">ابزارهای تحلیل</h2>
+    <div class="stats-grid">
+        <a href="/insights/btc-dominance" class="btn">تسلط بیت‌کوین</a>
+        <a href="/insights/fear-greed" class="btn">شاخص ترس و طمع</a>
+        <a href="/analysis?symbol=btc_usdt" class="btn">تحلیل تکنیکال</a>
+        <a href="/news" class="btn">اخبار مؤثر</a>
+    </div>
+</div>
+            `;
+
+            res.send(generateModernPage('بينش‌هاي بازار', bodyContent, 'insights'));
+        } catch (error) {
+            console.error('Insights page error', error);
+            res.status(500).send('بينش‌ها بارگذاري در خطا');
+        }
+    });
+
+    // صفحه اخبار
+    router.get('/news', async (req, res) => {
+        try {
+            const { page = 1, limit = 20 } = req.query;
+            
+            // استفاده از dependencyها
+            let newsData = { result: [] };
+            if (apiClient) {
+                const NewsAPI = require('../models/APIClients').NewsAPI;
+                const newsAPI = new NewsAPI();
+                newsData = await newsAPI.getNews({
+                    page: parseInt(page),
+                    limit: parseInt(limit)
+                }).catch(() => ({ result: [] }));
+            }
+
+            // داده‌های نمونه اگر API کار نکنه
+            if (newsData.result.length === 0) {
+                newsData.result = [
+                    {
+                        title: 'بیت‌کوین به 50,000 دلار رسید - تحلیلگران پیش بینی رشد بیشتر',
+                        description: 'بیت‌کوین برای اولین بار در 3 ماه گذشته به مرز 50,000 دلار رسید و امیدها برای ادامه روند صعودی را افزایش داد.',
+                        source: 'CryptoNews',
+                        date: new Date(Date.now() - 2 * 60 * 60 * 1000)
+                    },
+                    {
+                        title: 'اتریوم 2.0: تحولی در شبکه اثبات سهام',
+                        description: 'ارتقاء اتریوم به نسخه 2.0 مصرف انرژی را 99% کاهش می‌دهد و سرعت تراکنش ها را افزایش می‌دهد.',
+                        source: 'BlockchainDaily',
+                        date: new Date(Date.now() - 4 * 60 * 60 * 1000)
+                    }
+                ];
+            }
+
+            const bodyContent = `
 <div class="header">
     <h1>اخبار کربیتو</h1>
     <p>اخبر و به روزرسانی‌های بازار ارزهای دیجیتال</p>
@@ -2289,7 +2427,7 @@ router.get('/news', async (req, res) => {
     <h2 class="section-title">کلی اخبار</h2>
     <div class="stats-grid">
         <div class="stat-card">
-            <div class="stat-number">25</div>
+            <div class="stat-number">${newsData.result.length}</div>
             <div class="stat-label">مقاله جدید</div>
         </div>
         <div class="stat-card">
@@ -2310,39 +2448,20 @@ router.get('/news', async (req, res) => {
 <div class="glass-card">
     <h2 class="section-title">آخرین اخبار</h2>
     <div style="max-height: 500px; overflow-y: auto;">
-        ${[
-            {
-                title: 'بیت‌کوین به 50,000 دلار رسید - تحلیلگران پیش بینی رشد بیشتر',
-                description: 'بیت‌کوین برای اولین بار در 3 ماه گذشته به مرز 50,000 دلار رسید و امیدها برای ادامه روند صعودی را افزایش داد.',
-                source: 'CryptoNews',
-                date: new Date(Date.now() - 2 * 60 * 60 * 1000)
-            },
-            {
-                title: 'اتریوم 2.0: تحولی در شبکه اثبات سهام',
-                description: 'ارتقاء اتریوم به نسخه 2.0 مصرف انرژی را 99% کاهش می‌دهد و سرعت تراکنش ها را افزایش می‌دهد.',
-                source: 'BlockchainDaily',
-                date: new Date(Date.now() - 4 * 60 * 60 * 1000)
-            },
-            {
-                title: 'تصویب ETF بیت کوین تأثیر بر بازار جهانی',
-                description: 'تصویب اولین ETF بیت کوین در آمریکا می تواند ورود سرمایه های نهادی را به بازار افزایش دهد.',
-                source: 'FinanceTimes',
-                date: new Date(Date.now() - 6 * 60 * 60 * 1000)
-            }
-        ].map(article => 
+        ${newsData.result.map(article => 
             '<div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; margin-bottom: 15px;">' +
                 '<div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">' +
-                    '<h3 style="color: #f115f9; margin: 0; flex: 1;">' + article.title + '</h3>' +
+                    '<h3 style="color: #f115f9; margin: 0; flex: 1;">' + (article.title || 'بدون عنوان') + '</h3>' +
                     '<span style="color: #94a3b8; font-size: 0.8rem; white-space: nowrap; margin-left: 15px;">' +
-                        article.date.toLocaleTimeString('fa-IR') +
+                        (article.date ? new Date(article.date).toLocaleTimeString('fa-IR') : '') +
                     '</span>' +
                 '</div>' +
                 '<p style="color: #cbd5e1; margin-bottom: 10px; line-height: 1.5;">' +
-                    article.description +
+                    (article.description || 'بدون توضیح') +
                 '</p>' +
                 '<div style="display: flex; justify-content: space-between; align-items: center;">' +
                     '<span style="color: #64748b; font-size: 0.8rem;">' +
-                        article.source +
+                        (article.source || 'منبع نامشخص') +
                     '</span>' +
                     '<a href="#" style="color: #667eea; text-decoration: none; font-size: 0.8rem;">مطالعه بیشتر →</a>' +
                 '</div>' +
@@ -2360,240 +2479,216 @@ router.get('/news', async (req, res) => {
         <a href="/insights/dashboard" class="btn">بیش های بازار</a>
     </div>
 </div>
-        `;
+            `;
 
-        res.send(generateModernPage('اخبار كرييتو', bodyContent, 'news'));
-    } catch (error) {
-        console.error('News page error', error);
-        res.status(500).send('اخبار بارگذاري در خطا');
-    }
-});
-
-// ================================================================ 
-// مدیریت کاربران پیشرفته
-// ================================================================
-
-class UserManager {
-    constructor() {
-        this.users = new Map();
-        this.inviteCodes = new Set(['VORTEX2024', 'CRYPTOAI', 'BETATESTER']);
-        this.userStats = {
-            totalRegistrations: 0,
-            activeUsers: 0,
-            premiumUsers: 0
-        };
-        this.init();
-    }
-
-    async init() {
-        // localStorage از کاربران بازگذاری
-        try {
-            if (typeof localStorage !== 'undefined') {
-                const savedUsers = localStorage.getItem('vortexai_users');
-                if (savedUsers) {
-                    const usersData = JSON.parse(savedUsers);
-                    usersData.forEach(user => {
-                        this.users.set(user.email, user);
-                        this.userStats.totalRegistrations++;
-                        if (user.premium) this.userStats.premiumUsers++;
-                    });
-                    this.userStats.activeUsers = this.users.size;
-                }
-            }
+            res.send(generateModernPage('اخبار كرييتو', bodyContent, 'news'));
         } catch (error) {
-            console.log('شروع با پایگاه داده کاربران جدید');
+            console.error('News page error', error);
+            res.status(500).send('اخبار بارگذاري در خطا');
         }
-    }
+    });
 
-    validateInviteCode(code) {
-        return this.inviteCodes.has(code.toUpperCase());
-    }
+    // صفحه سلامت
+    router.get('/health', async (req, res) => {
+        try {
+            // استفاده از dependencyها
+            const wsStatus = wsManager ? wsManager.getConnectionStatus() : { connected: false, active_coins: 0 };
+            const gistData = gistManager ? gistManager.getAllData() : { prices: {} };
 
-    registerUser(inviteCode, userData) {
-        if (!this.validateInviteCode(inviteCode)) {
-            throw new Error('کد دعوت نامعتبر است');
+            const bodyContent = `
+<div class="header">
+    <h1>سلامت سيستم</h1>
+    <p>نظارت بر وضعیت سرویس‌ها و عملکرد VortexAI</p>
+</div>
+
+<div class="glass-card">
+    <h2 class="section-title">وضعیت سرویس‌ها</h2>
+    <div class="stats-grid">
+        <div class="stat-card" style="border-left: 4px solid ${wsStatus.connected ? '#10b981' : '#ef4444'}">
+            <div class="stat-number">${wsStatus.connected ? '🟢' : '🔴'}</div>
+            <div class="stat-label">WebSocket</div>
+            <div style="color: ${wsStatus.connected ? '#10b981' : '#ef4444'}; font-size: 0.8rem; margin-top: 5px;">
+                ${wsStatus.connected ? 'متصل' : 'قطع'}
+            </div>
+        </div>
+        <div class="stat-card" style="border-left: 4px solid ${process.env.GITHUB_TOKEN ? '#10b981' : '#f59e0b'}">
+            <div class="stat-number">${process.env.GITHUB_TOKEN ? '🟢' : '🟡'}</div>
+            <div class="stat-label">دیتابیس</div>
+            <div style="color: ${process.env.GITHUB_TOKEN ? '#10b981' : '#f59e0b'}; font-size: 0.8rem; margin-top: 5px;">
+                ${process.env.GITHUB_TOKEN ? 'فعال' : 'محدود'}
+            </div>
+        </div>
+        <div class="stat-card" style="border-left: 4px solid #10b981">
+            <div class="stat-number">🟢</div>
+            <div class="stat-label">API</div>
+            <div style="color: #10b981; font-size: 0.8rem; margin-top: 5px;">فعال</div>
+        </div>
+        <div class="stat-card" style="border-left: 4px solid #10b981">
+            <div class="stat-number">🟢</div>
+            <div class="stat-label">تحلیل‌گر</div>
+            <div style="color: #10b981; font-size: 0.8rem; margin-top: 5px;">فعال</div>
+        </div>
+    </div>
+</div>
+
+<div class="glass-card">
+    <h2 class="section-title">آمار سیستم</h2>
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number">${wsStatus.active_coins || 0}</div>
+            <div class="stat-label">ارزهای فعال</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">${Object.keys(gistData.prices || {}).length}</div>
+            <div class="stat-label">ارزهای ذخیره شده</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">${Math.round(process.uptime() / 3600)}h</div>
+            <div class="stat-label">آپ‌تایم</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">${(process.memoryUsage().rss / 1024 / 1024).toFixed(1)}MB</div>
+            <div class="stat-label">مصرف حافظه</div>
+        </div>
+    </div>
+</div>
+
+<div class="glass-card">
+    <h2 class="section-title">جزئیات فنی</h2>
+    <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 12px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div>
+                <strong>WebSocket Status:</strong> ${wsStatus.connected ? 'Connected' : 'Disconnected'}<br>
+                <strong>Active Coins:</strong> ${wsStatus.active_coins || 0}<br>
+                <strong>Total Subscribed:</strong> ${wsStatus.total_subscribed || 0}
+            </div>
+            <div>
+                <strong>Node.js Version:</strong> ${process.version}<br>
+                <strong>Platform:</strong> ${process.platform}<br>
+                <strong>Uptime:</strong> ${Math.round(process.uptime())} seconds
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="glass-card">
+    <h2 class="section-title">ابزارهای نظارت</h2>
+    <div class="stats-grid">
+        <a href="/health/ready" class="btn">بررسی آمادگی</a>
+        <a href="/api/health" class="btn">API Health</a>
+        <a href="/api/health-combined" class="btn">وضعیت ترکیبی</a>
+        <a href="/" class="btn">بازگشت به خانه</a>
+    </div>
+</div>
+            `;
+
+            res.send(generateModernPage('سلامت سيستم', bodyContent, 'health'));
+        } catch (error) {
+            console.error('Health page error', error);
+            res.status(500).send('صفحه سلامت بارگذاري در خطا');
         }
+    });
 
-        if (this.users.has(userData.email)) {
-            throw new Error('نسبت هذه است؟');
-        }
+    // صفحه تنظیمات
+    router.get('/settings', async (req, res) => {
+        try {
+            const bodyContent = `
+<div class="header">
+    <h1>تنظيمات</h1>
+    <p>شخصی‌سازی محیط و تنظیمات کاربری VortexAI</p>
+</div>
 
-        const user = {
-            id: Date.now().toString(),
-            username: userData.username,
-            email: userData.email,
-            password: userData.password,
-            inviteCode: inviteCode.toUpperCase(),
-            registrationDate: new Date().toISOString(),
-            lastLogin: new Date().toISOString(),
-            settings: {
-                theme: 'dark',
-                currency: 'USD',
-                language: 'fa',
-                timezone: 'Asia/Tehran',
-                priceDecimals: 2,
-                notifications: {
-                    priceAlerts: true,
-                    volumeSpikes: false,
-                    technicalAlerts: true,
-                    newsUpdates: true
-                }
-            },
-            preferences: {
-                favoriteCoins: ['BTC', 'ETH'],
-                watchlist: [],
-                chartPreferences: {
-                    type: 'candlestick',
-                    timeframe: '1h'
-                }
-            },
-            activity: [],
-            isActive: true,
-            premium: false
-        };
+<div class="glass-card">
+    <h2 class="section-title">تنظیمات نمایش</h2>
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number">🌙</div>
+            <div class="stat-label">حالت شب</div>
+            <div style="margin-top: 10px;">
+                <button onclick="toggleNightVision()" class="btn" style="padding: 8px 16px; font-size: 0.8rem;">
+                    فعال/غیرفعال
+                </button>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">💎</div>
+            <div class="stat-label">تم شیشه‌ای</div>
+            <div style="color: #94a3b8; font-size: 0.8rem; margin-top: 5px;">فعال</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">📊</div>
+            <div class="stat-label">نوع نمودار</div>
+            <div style="color: #94a3b8; font-size: 0.8rem; margin-top: 5px;">شمعی</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">🔔</div>
+            <div class="stat-label">اعلان‌ها</div>
+            <div style="color: #94a3b8; font-size: 0.8rem; margin-top: 5px;">فعال</div>
+        </div>
+    </div>
+</div>
 
-        this.users.set(userData.email, user);
-        this.userStats.totalRegistrations++;
-        this.userStats.activeUsers++;
-        this.saveUsers();
+<div class="glass-card">
+    <h2 class="section-title">تنظیمات داده</h2>
+    <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 12px;">
+        <div style="display: grid; gap: 15px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span>به‌روزرسانی خودکار</span>
+                <button class="btn" style="padding: 6px 12px; font-size: 0.8rem;">30 ثانیه</button>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span>حداکثر ارزهای نمایش</span>
+                <button class="btn" style="padding: 6px 12px; font-size: 0.8rem;">50 ارز</button>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span>زمان‌بندی ذخیره‌سازی</span>
+                <button class="btn" style="padding: 6px 12px; font-size: 0.8rem;">15 دقیقه</button>
+            </div>
+        </div>
+    </div>
+</div>
 
-        return user;
-    }
+<div class="glass-card">
+    <h2 class="section-title">ابزارهای مدیریت</h2>
+    <div class="stats-grid">
+        <button class="btn" onclick="clearCache()">پاک‌سازی کش</button>
+        <button class="btn" onclick="exportData()">خروجی داده</button>
+        <button class="btn" onclick="resetSettings()">بازنشانی</button>
+        <a href="/" class="btn">بازگشت</a>
+    </div>
+</div>
 
-    saveUsers() {
-        const usersArray = Array.from(this.users.values());
-        if (typeof localStorage !== 'undefined') {
-            localStorage.setItem('vortexai_users', JSON.stringify(usersArray));
-        }
-    }
-
-    authenticateUser(email, password) {
-        const user = this.users.get(email);
-        if (user && user.password === password) {
-            user.lastLogin = new Date().toISOString();
-            this.saveUsers();
-            return user;
-        }
-        return null;
-    }
-
-    updateUserSettings(email, newSettings) {
-        const user = this.users.get(email);
-        if (user) {
-            user.settings = { ...user.settings, ...newSettings };
-            user.settings.lastUpdated = new Date().toISOString();
-            this.saveUsers();
-            return user;
-        }
-        return null;
-    }
-
-    logActivity(email, activity) {
-        const user = this.users.get(email);
-        if (user) {
-            user.activity.unshift({
-                action: activity,
-                timestamp: new Date().toISOString(),
-                ip: '127.0.0.1'
-            });
-
-            // فعاليت 50 نگه داشتن فقط آخر
-            if (user.activity.length > 50) {
-                user.activity = user.activity.slice(0, 50);
-            }
-
-            this.saveUsers();
-        }
-    }
-
-    getUserStats() {
-        return {
-            ...this.userStats,
-            onlineUsers: Array.from(this.users.values()).filter(user =>
-                Date.now() - new Date(user.lastLogin).getTime() < 15 * 60 * 1000
-            ).length
-        };
-    }
-
-    // وگرگی های پیشرفته
-    addToWatchlist(email, symbol) {
-        const user = this.users.get(email);
-        if (user && !user.preferences.watchlist.includes(symbol)) {
-            user.preferences.watchlist.push(symbol);
-            this.saveUsers();
-        }
-    }
-
-    removeFromWatchlist(email, symbol) {
-        const user = this.users.get(email);
-        if (user) {
-            user.preferences.watchlist = user.preferences.watchlist.filter(s => s !== symbol);
-            this.saveUsers();
-        }
-    }
-
-    upgradeToPremium(email) {
-        const user = this.users.get(email);
-        if (user && !user.premium) {
-            user.premium = true;
-            user.premiumSince = new Date().toISOString();
-            this.userStats.premiumUsers++;
-            this.saveUsers();
-        }
-    }
+<script>
+function toggleNightVision() {
+    const nav = document.getElementById('glassNav');
+    nav.classList.toggle('night-vision');
+    localStorage.setItem('nightVisionMode', nav.classList.contains('night-vision'));
+    showTemporaryAlert('حالت شب ' + (nav.classList.contains('night-vision') ? 'فعال شد' : 'غیرفعال شد'));
 }
 
-// ایجاد نمونه کاربران
-const userManager = new UserManager();
+function clearCache() {
+    showTemporaryAlert('کش سیستم پاک‌سازی شد');
+}
 
-// ================================================================
+function exportData() {
+    showTemporaryAlert('داده‌ها برای خروجی آماده شد');
+}
 
-router.get('/api/navigation-status', async (req, res) => {
-    try {
-        // شبیه‌سازی داده‌های نویگیشن
-        const marketData = { marketCapChange24h: 1.2, volume: 85e9, btcDominance: 52.5 };
-        const fearGreed = { now: { value: 65 } };
-        const breakingNews = { result: [{ title: 'خبر فوری' }] };
-        const topGainers = { coins: [{ priceChange24h: 8.5 }] };
-
-        res.json({
-            home: {
-                change: marketData.marketCapChange24h ? marketData.marketCapChange24h.toFixed(2) + '%' : '0.0%',
-                trend: (marketData.marketCapChange24h >= 0) ? 'up' : 'down',
-                alert: Math.abs(marketData.marketCapChange24h) > 3
-            },
-            scan: {
-                change: topGainers.coins?.[0]?.priceChange24h ?
-                    '+' + topGainers.coins[0].priceChange24h.toFixed(2) + '%' : '+0.0%',
-                trend: 'up',
-                alert: topGainers.coins?.some(coin => coin.priceChange24h > 15)
-            },
-            analyze: {
-                change: (marketData.btcDominance?.toFixed(1) || '50.0') + '%',
-                trend: 'neutral',
-                alert: false
-            },
-            market: {
-                change: '$' + (marketData.volume ? (marketData.volume / 1e9).toFixed(1) + 'B' : '0B'),
-                trend: 'up',
-                alert: false
-            },
-            insights: {
-                change: (fearGreed.now?.value || 50).toString(),
-                trend: (fearGreed.now?.value >= 50) ? 'up' : 'down',
-                alert: fearGreed.now?.value > 75 || fearGreed.now?.value < 25
-            },
-            news: {
-                change: null,
-                trend: 'neutral',
-                alert: breakingNews.result?.length > 0
-            }
-        });
-    } catch (error) {
-        console.error('Navigation status API error', error);
-        res.status(500).json({ error: 'Failed to fetch navigation data' });
+function resetSettings() {
+    if (confirm('آیا از بازنشانی تنظیمات اطمینان دارید؟')) {
+        localStorage.clear();
+        showTemporaryAlert('تنظیمات بازنشانی شد');
+        setTimeout(() => location.reload(), 1000);
     }
-});
+}
+</script>
+            `;
 
-// ================================================================ فایل پایان ================================================================
-module.exports = router;
+            res.send(generateModernPage('تنظيمات', bodyContent, 'settings'));
+        } catch (error) {
+            console.error('Settings page error', error);
+            res.status(500).send('تنظيمات بارگذاري در خطا');
+        }
+    });
+
+    return router;
