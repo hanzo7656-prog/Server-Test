@@ -174,11 +174,11 @@ function generateClassNavigation(currentPage = 'home') {
             'health': ['system', 'all'],
             'settings': ['all']
         };
-    const currentContext = contextMap[currentPage] || ['all'];
-    return allItems.filter(item =>
-        item.context.some(context => currentContext.includes(context))
-    );
-}
+        const currentContext = contextMap[currentPage] || ['all'];
+        return allItems.filter(item =>
+            item.context.some(context => currentContext.includes(context))
+        );
+    }
     // فیلتر کردن آیتم‌ها بر اساس context
     const contextAwareItems = getContextAwareItems(navItems, currentPage);
 
