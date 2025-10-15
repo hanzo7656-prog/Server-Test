@@ -681,23 +681,44 @@ function getContextAwareItems(allItems, currentPage) {
     );
 }
 
+// در script بخش نویگیشن بار، این توابع رو اضافه کن:
+
+// تابع اصلی نویگیشن
 function navigateTo(page, isExternal = false, isAI = false) {
-    // ایجاد افکت ذوب قبل از نویکیشن
+    console.log('🚀 Navigation started:', { page, isExternal, isAI });
+    
+    // ایجاد افکت
     createMeltEffect();
     playLiquidSound();
 
-    if (isAI) {
-        handleAIClick();
-        return;
-    }
-
     if (isExternal) {
+        console.log('🌐 Opening external link in new tab');
         window.open(page, '_blank');
     } else {
-        // تأخير براي نمایش افکت ذوب
+        console.log('📱 Redirecting to internal page');
         setTimeout(() => {
             window.location.href = page;
         }, 400);
+    }
+}
+
+// تابع toggle نویگیشن
+function toggleGlassNav() {
+    const nav = document.getElementById('glassNav');
+    const container = document.querySelector('.nav-container');
+    
+    console.log('🎯 Toggle navigation called');
+    
+    if (nav && container) {
+        nav.classList.toggle('expanded');
+        console.log('📌 Navigation expanded:', nav.classList.contains('expanded'));
+        
+        // نمایش/مخفی کردن مستقیم
+        if (nav.classList.contains('expanded')) {
+            container.style.display = 'block';
+        } else {
+            container.style.display = 'none';
+        }
     }
 }
 
@@ -1042,6 +1063,51 @@ window.addEventListener('load', () => {
         const nav = document.getElementById('glassNav');
         nav.classList.add('night-vision');
     }
+});
+
+// در انتهای script نویگیشن بار، این کد رو اضافه کن:
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🎯 DOM loaded - Setting up navigation...');
+    
+    // فلوتر اصلی
+    const floater = document.querySelector('.nav-floater');
+    if (floater) {
+        floater.addEventListener('click', function(e) {
+            e.stopPropagation();
+            toggleGlassNav();
+        });
+        console.log('✅ Floater event listener attached');
+    }
+    
+    // دکمه‌های نویگیشن
+    const navItems = document.querySelectorAll('.nav-item');
+    console.log('🔍 Found nav items:', navItems.length);
+    
+    navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const page = this.getAttribute('data-page') || this.getAttribute('onclick')?.match(/'([^']+)'/)?.[1];
+            const external = this.getAttribute('data-external') === 'true';
+            
+            console.log('🖱️ Nav item clicked:', { page, external });
+            
+            if (page) {
+                navigateTo(page, external, false);
+            }
+        });
+    });
+    
+    // بستن نویگیشن با کلیک خارج
+    document.addEventListener('click', function(e) {
+        const nav = document.getElementById('glassNav');
+        if (nav && !nav.contains(e.target)) {
+            nav.classList.remove('expanded');
+            const container = document.querySelector('.nav-container');
+            if (container) {
+                container.style.display = 'none';
+            }
+        }
+    });
 });
 
 // ============================== کمکي توابع ============================== //
