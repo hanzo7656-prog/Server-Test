@@ -2725,6 +2725,39 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Event handler attached manually');
     }
 });
+
+// ==================== ✅ این کد رو اضافه کن ====================
+function toggleGlassNav() {
+    const nav = document.getElementById('glassNav');
+    const container = document.querySelector('.nav-container');
+    
+    console.log('🔄 Toggling navigation...');
+    console.log('Nav element:', nav);
+    console.log('Container element:', container);
+    
+    if (nav && container) {
+        nav.classList.toggle('expanded');
+        console.log('✅ Navigation expanded:', nav.classList.contains('expanded'));
+        
+        // تست: مستقیماً display رو تغییر بده
+        if (nav.classList.contains('expanded')) {
+            container.style.display = 'block';
+        } else {
+            container.style.display = 'none';
+        }
+    }
+}
+
+// event handler دستی
+document.addEventListener('DOMContentLoaded', function() {
+    const floater = document.querySelector('.nav-floater');
+    console.log('🎯 Floater found:', floater);
+    
+    if (floater) {
+        floater.addEventListener('click', toggleGlassNav);
+        console.log('✅ Event listener attached');
+    }
+});
 </script>
             `;
 
