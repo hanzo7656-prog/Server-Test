@@ -1832,13 +1832,6 @@ module.exports = (dependencies) => {
 const express = require('express');
 const router = express.Router();
 
-// ================================================================
-// Routes اصلی
-// ================================================================
-
-module.exports = (dependencies) => {
-  const { gistManager, wsManager, apiClient } = dependencies;
-
   // 1. صفحه اصلی
   router.get('/', async (req, res) => {
     try {
