@@ -167,11 +167,11 @@ function generateClassNavigation(currentPage = 'home') {
         const contextMap = {
             'home': ['all'],
             'scan': ['analysis', 'market', 'all'],
-            'analyze': ['analysis', 'technical', 'all']
-            'market': ['market', 'overview', 'all']
-            'insights': ['analysis', 'sentiment', 'all']
-            'news': ['news', 'all']
-            'health': ['system', 'all']
+            'analyze': ['analysis', 'technical', 'all'],
+            'market': ['market', 'overview', 'all'],
+            'insights': ['analysis', 'sentiment', 'all'],
+            'news': ['news', 'all'],
+            'health': ['system', 'all'],
             'settings': ['all']
         };
     const currentContext = contextMap[currentPage] || ['all'];
