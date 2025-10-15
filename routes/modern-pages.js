@@ -2053,9 +2053,6 @@ module.exports = ({ gistManager, wsManager, apiClient }) => {
         }
     });
 
-    // ادامه روت‌ها در قسمت بعدی...
-`;
-
     // صفحه تحلیل تکنیکال
     router.get("/analysis", async (req, res) => {
         try {
