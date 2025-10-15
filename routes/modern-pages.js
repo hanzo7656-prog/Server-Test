@@ -29,7 +29,7 @@ function generateClassNavigation(currentPage = 'home') {
             page: '/scan',
             icon: 'S',
             context: ['analysis', 'market'],
-            quickPeek: 'بارزهای پرینامییا'
+            quickPeek: 'بازارهای پربیننده'
         },
         {
             id: 'analyze',
@@ -37,7 +37,7 @@ function generateClassNavigation(currentPage = 'home') {
             page: '/analysis?symbol=btc_usdt',
             icon: 'A',
             context: ['analysis', 'technical'],
-            quickPeek: 'مذخص های فنی'
+            quickPeek: 'تحلیل تکنیکال'
         },
         {
             id: 'ai',
@@ -46,7 +46,7 @@ function generateClassNavigation(currentPage = 'home') {
             icon: 'AI',
             ai: true,
             context: ['all'],
-            quickPeek: 'بیش بینی و تحلیل'
+            quickPeek: 'AI'
         },
         // دکمه‌های ردیف دوم
         {
@@ -55,7 +55,7 @@ function generateClassNavigation(currentPage = 'home') {
             page: '/markets/cap',
             icon: 'M',
             context: ['market', 'overview'],
-            quickPeek: 'بازار های داده م حجم و سرمایه'
+            quickPeek: 'مارکت کپ بازار'
         },
         {
             id: 'insights',
@@ -63,7 +63,7 @@ function generateClassNavigation(currentPage = 'home') {
             page: '/insights/dashboard',
             icon: 'I',
             context: ['analysis', 'sentiment'],
-            quickPeek: 'بازار بینش و روندها احساسات'
+            quickPeek: 'سیگنال‌های هیجانی بازار'
         },
         {
             id: 'news',
@@ -71,7 +71,7 @@ function generateClassNavigation(currentPage = 'home') {
             page: '/news',
             icon: 'N',
             context: ['news', 'all'],
-            quickPeek: 'زنده اخبار بازار های بهروزرسانی'
+            quickPeek: 'اخبار زنده بازار کریپتو'
         },
         {
             id: 'health',
@@ -79,7 +79,7 @@ function generateClassNavigation(currentPage = 'home') {
             page: '/health',
             icon: 'H',
             context: ['system', 'all'],
-            quickPeek: 'وضعيت سرورس ها'
+            quickPeek: 'وضعيت سرویس‌ها'
         },
         {
             id: 'settings',
@@ -87,7 +87,7 @@ function generateClassNavigation(currentPage = 'home') {
             page: '/settings',
             icon: 'G',
             context: ['all'],
-            quickPeek: 'تظيمات شخصي سازی محيط'
+            quickPeek: 'تنطیمات'
         }
     ];
 
