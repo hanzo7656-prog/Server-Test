@@ -88,10 +88,6 @@ function generateClassNavigation(currentPage = 'home') {
             quickPeek: 'تنظیمات - شخصی‌سازی محیط'
         }
     ];
-
-    // وضعیت زنده بازار برای هر آیتم
-    
-    
     // اضافه کردن این اسکریپت برای لود داده واقعی
     const navigationScript = `
     <script>
@@ -626,79 +622,81 @@ function generateClassNavigation(currentPage = 'home') {
 </style>
 
 <script>
+};
+
 // ========================= توابع اصلی هوشمند =========================
 
 // تشخیص خودکار صفحه فعلی
-function detectCurrentPage() {
-    const path = window.location.pathname;
-    const search = window.location.search;
+    function detectCurrentPage() {
+        const path = window.location.pathname;
+        const search = window.location.search;
     
-    if (path === '/') return 'home';
-    if (path.includes('/scan')) return 'scan';
-    if (path.includes('/analysis')) return 'analyze';
-    if (path.includes('/markets')) return 'market';
-    if (path.includes('/insights')) return 'insights';
-    if (path.includes('/news')) return 'news';
-    if (path.includes('/health')) return 'health';
-    if (path.includes('/settings')) return 'settings';
+        if (path === '/') return 'home';
+        if (path.includes('/scan')) return 'scan';
+        if (path.includes('/analysis')) return 'analyze';
+        if (path.includes('/markets')) return 'market';
+        if (path.includes('/insights')) return 'insights';
+        if (path.includes('/news')) return 'news';
+        if (path.includes('/health')) return 'health';
+        if (path.includes('/settings')) return 'settings';
     
-    return 'home';
-}
-
-// فیلتر کردن آیتم‌ها بر اساس context
-function getContextAwareItems(allItems, currentPage) {
-    const contextMap = {
-        'home': ['all'],
-        'scan': ['analysis', 'market', 'all'],
-        'analyze': ['analysis', 'technical', 'all'],
-        'market': ['market', 'overview', 'all'],
-        'insights': ['analysis', 'sentiment', 'all'],
-        'news': ['news', 'all'],
-        'health': ['system', 'all'],
-        'settings': ['all']
-    };
-    
-    const currentContext = contextMap[currentPage] || ['all'];
-    
-    return allItems.filter(item => 
-        item.context.some(context => currentContext.includes(context))
-    );
-}
-
-function toggleGlassNav() {
-    const nav = document.getElementById('glassNav');
-    nav.classList.toggle('expanded');
-    playLiquidSound();
-    
-    // اگر منو باز شد، Command Palette رو مخفی کن
-    if (nav.classList.contains('expanded')) {
-        hideCommandPalette();
+        return 'home';
     }
-}
 
-function navigateTo(page, isExternal = false, isAI = false) {
-    // ایجاد افکت ذوب قبل از نویگیشن
-    createMeltEffect();
-    playLiquidSound();
+    // فیلتر کردن آیتم‌ها بر اساس context
+    function getContextAwareItems(allItems, currentPage) {
+        const contextMap = {
+            'home': ['all'],
+            'scan': ['analysis', 'market', 'all'],
+            'analyze': ['analysis', 'technical', 'all'],
+            'market': ['market', 'overview', 'all'],
+            'insights': ['analysis', 'sentiment', 'all'],
+            'news': ['news', 'all'],
+            'health': ['system', 'all'],
+            'settings': ['all']
+        };
     
-    if (isAI) {
-        handleAIClick();
-        return;
-    }
+        const currentContext = contextMap[currentPage] || ['all'];
     
-    if (isExternal) {
-        window.open(page, '_blank');
-    } else {
-        // تأخیر برای نمایش افکت ذوب
-        setTimeout(() => {
-            window.location.href = page;
-        }, 400);
+        return allItems.filter(item => 
+            item.context.some(context => currentContext.includes(context))
+        );
     }
-}
 
-// ادامه در قسمت بعدی...
-</script>
-`;
+    function toggleGlassNav() {
+        const nav = document.getElementById('glassNav');
+        nav.classList.toggle('expanded');
+        playLiquidSound();
+    
+        // اگر منو باز شد، Command Palette رو مخفی کن
+        if (nav.classList.contains('expanded')) {
+            hideCommandPalette();
+        }
+    }
+
+    function navigateTo(page, isExternal = false, isAI = false) {
+        // ایجاد افکت ذوب قبل از نویگیشن
+        createMeltEffect();
+        playLiquidSound();
+    
+        if (isAI) {
+            handleAIClick();
+            return;
+        }
+    
+        if (isExternal) {
+            window.open(page, '_blank');
+        } else {
+            // تأخیر برای نمایش افکت ذوب
+            setTimeout(() => {
+                window.location.href = page;
+            }, 400);
+        }
+    }
+
+    // ادامه در قسمت بعدی...
+    </script>
+    `;
 // ========================= توابع پیشرفته نویگیشن =========================
 
 // Quick Peek - پیش‌نمایش صفحات
