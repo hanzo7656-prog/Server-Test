@@ -25,16 +25,16 @@ function generateClassNavigation(currentPage = 'home') {
         },
         {
             id: 'scan',
-            label: 'SCAN',
+            label: 'SCAN', 
             page: '/scan',
             icon: 'S',
             context: ['analysis', 'market'],
-            quickPeek: 'بازارهای پربیننده'
+            quickPeek: 'اسکن بازارهای پرپتانسیل'
         },
         {
             id: 'analyze',
             label: 'ANALYZE',
-            page: '/analysis?symbol=btc_usdt',
+            page: '/analysis?symbol=btc_usdt', 
             icon: 'A',
             context: ['analysis', 'technical'],
             quickPeek: 'تحلیل تکنیکال'
@@ -45,17 +45,17 @@ function generateClassNavigation(currentPage = 'home') {
             page: 'https://ai-test-2nxq.onrender.com/',
             icon: 'AI',
             ai: true,
+            external: true, // ✅ اضافه کردن این property
             context: ['all'],
-            quickPeek: 'AI'
+            quickPeek: 'تحلیل هوش مصنوعی'
         },
-        // دکمه‌های ردیف دوم
         {
             id: 'market',
             label: 'MARKET',
             page: '/markets/cap',
-            icon: 'M',
+            icon: 'M', 
             context: ['market', 'overview'],
-            quickPeek: 'مارکت کپ بازار'
+            quickPeek: 'بازار و سرمایه'
         },
         {
             id: 'insights',
@@ -63,15 +63,15 @@ function generateClassNavigation(currentPage = 'home') {
             page: '/insights/dashboard',
             icon: 'I',
             context: ['analysis', 'sentiment'],
-            quickPeek: 'سیگنال‌های هیجانی بازار'
+            quickPeek: 'بینش‌های بازار'
         },
         {
             id: 'news',
-            label: 'NEWS',
+            label: 'NEWS', 
             page: '/news',
             icon: 'N',
             context: ['news', 'all'],
-            quickPeek: 'اخبار زنده بازار کریپتو'
+            quickPeek: 'اخبار زنده بازار'
         },
         {
             id: 'health',
@@ -79,7 +79,7 @@ function generateClassNavigation(currentPage = 'home') {
             page: '/health',
             icon: 'H',
             context: ['system', 'all'],
-            quickPeek: 'وضعيت سرویس‌ها'
+            quickPeek: 'وضعیت سرورها'
         },
         {
             id: 'settings',
@@ -87,7 +87,7 @@ function generateClassNavigation(currentPage = 'home') {
             page: '/settings',
             icon: 'G',
             context: ['all'],
-            quickPeek: 'تنطیمات'
+            quickPeek: 'تنظیمات کاربری'
         }
     ];
 
