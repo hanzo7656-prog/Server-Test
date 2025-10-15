@@ -619,6 +619,32 @@ setInterval(loadRealNavigationStatus, 30000);
 </style>
 
 <script>
+
+// این توابع رو حتماً داشته باش:
+function toggleGlassNav() {
+    const nav = document.getElementById('glassNav');
+    if (nav) {
+        nav.classList.toggle('expanded');
+        playLiquidSound();
+        
+        // مخفی کردن Command Palette اگر منو باز است
+        if (nav.classList.contains('expanded')) {
+            hideCommandPalette();
+        }
+    }
+}
+
+function playLiquidSound() {
+    // برای تست موقتاً خالی بذار
+    console.log('Liquid sound played');
+}
+
+function hideCommandPalette() {
+    const palette = document.getElementById('commandPalette');
+    if (palette) {
+        palette.style.display = 'none';
+    }
+}
 // ============================== ============================== ============================== //
 // تشخيص خودکار صفحه فعلي
 function detectCurrentPage() {
