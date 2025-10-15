@@ -2692,3 +2692,4 @@ function resetSettings() {
     });
 
     return router;
+};
