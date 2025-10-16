@@ -322,9 +322,11 @@ function toggleGlassNav() {
     }
 }
 
-// وصل کردن event listener به دکمه شناور
+// 🔥 FIX: وصل کردن event listener ها به صورت کامل
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded - Setting up navigation...');
+    
+    // دکمه شناور
     const floater = document.querySelector('.nav-floater');
     if (floater) {
         floater.addEventListener('click', function(e) {
@@ -334,21 +336,52 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log("📌 Floater event listener attached");
     }
 
-    // اضافه کردن event listener برای آیتم‌های نویگیشن
-    const navItems = document.querySelectorAll('.nav-item');
-    navItems.forEach(item => {
-        item.addEventListener('click', function(e) {
-            e.preventDefault();
-            const page = this.getAttribute('data-page');
-            const isExternal = this.getAttribute('data-external') === 'true';
-            
-            if (isExternal) {
-                window.open(page, '_blank');
-            } else {
-                window.location.href = page;
+    // 🔥 FIX: وصل کردن event listener به آیتم‌های نویگیشن
+    function setupNavListeners() {
+        const navItems = document.querySelectorAll('.nav-item');
+        console.log(`🔧 Setting up listeners for ${navItems.length} nav items`);
+        
+        navItems.forEach(item => {
+            // حذف listener های قدیمی
+            const newItem = item.cloneNode(true);
+            item.parentNode.replaceChild(newItem, item);
+        });
+
+        // وصل کردن listener های جدید
+        const newNavItems = document.querySelectorAll('.nav-item');
+        newNavItems.forEach(item => {
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const page = this.getAttribute('data-page');
+                const isExternal = this.getAttribute('data-external') === 'true';
+                
+                console.log('🎯 Navigation clicked:', page, 'External:', isExternal);
+                
+                if (isExternal) {
+                    window.open(page, '_blank');
+                } else {
+                    window.location.href = page;
+                }
+            });
+        });
+        
+        console.log('✅ Navigation event listeners setup complete!');
+    }
+
+    // اجرای اولیه
+    setupNavListeners();
+    
+    // 🔥 FIX: اجرای مجدد بعد از expand/collapse
+    const nav = document.getElementById('glassNav');
+    if (nav) {
+        nav.addEventListener('transitionend', function() {
+            if (this.classList.contains('expanded')) {
+                setTimeout(setupNavListeners, 100);
             }
         });
-    });
+    }
 });
 
 // توابع کمکی برای نویگیشن
