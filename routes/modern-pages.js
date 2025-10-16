@@ -189,6 +189,22 @@ function generateClassNavigation(currentPage = 'home') {
             border-radius: 15px; padding: 15px; max-width: 300px; z-index: 1001;
             box-shadow: 0 15px 35px rgba(0,0,0,0.4);
         }
+
+        .glass-navigation.expanded .nav-container {
+            display: block !important;
+            animation: slideUp 0.4s ease;
+        }
+
+        @keyframes slideUp {
+            from { 
+                opacity: 0; 
+                transform: translateY(30px) scale(0.9); 
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0) scale(1); 
+            }
+        }
         @media (max-width: 400px) {
             .nav-container { max-width: 320px; padding: 15px; }
             .nav-scroll { gap: 10px; }
