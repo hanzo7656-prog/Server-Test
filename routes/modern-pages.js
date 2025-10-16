@@ -322,7 +322,7 @@ function toggleGlassNav() {
     }
 }
 
-// 🔥 FIX: وصل کردن event listener ها به صورت کامل
+// FIX: وصل کردن event listener ها به صورت کامل
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded - Setting up navigation...');
     
@@ -333,13 +333,13 @@ document.addEventListener('DOMContentLoaded', function() {
             e.stopPropagation();
             toggleGlassNav();
         });
-        console.log("📌 Floater event listener attached");
+        console.log("Floater event listener attached");
     }
 
-    // 🔥 FIX: وصل کردن event listener به آیتم‌های نویگیشن
+    // FIX: وصل کردن event listener به آیتم‌های نویگیشن
     function setupNavListeners() {
         const navItems = document.querySelectorAll('.nav-item');
-        console.log(`🔧 Setting up listeners for ${navItems.length} nav items`);
+        console.log(`Setting up listeners for ${navItems.length} nav items`);
         
         navItems.forEach(item => {
             // حذف listener های قدیمی
@@ -357,7 +357,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const page = this.getAttribute('data-page');
                 const isExternal = this.getAttribute('data-external') === 'true';
                 
-                console.log('🎯 Navigation clicked:', page, 'External:', isExternal);
+                console.log('Navigation clicked:', page, 'External:', isExternal);
                 
                 if (isExternal) {
                     window.open(page, '_blank');
@@ -367,13 +367,13 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
         
-        console.log('✅ Navigation event listeners setup complete!');
+        console.log('Navigation event listeners setup complete!');
     }
 
     // اجرای اولیه
     setupNavListeners();
     
-    // 🔥 FIX: اجرای مجدد بعد از expand/collapse
+    // FIX: اجرای مجدد بعد از expand/collapse
     const nav = document.getElementById('glassNav');
     if (nav) {
         nav.addEventListener('transitionend', function() {
