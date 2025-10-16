@@ -306,6 +306,7 @@ function generateClassNavigation(currentPage = 'home') {
 </style>
 
 <script>
+
 // تابع toggle
 function toggleGlassNav() {
     console.log('Toggle navigation called');
@@ -316,13 +317,52 @@ function toggleGlassNav() {
         nav.classList.toggle('expanded');
         if (!isExpanded) {
             container.style.display = 'block';
+            // FIX: وصل کردن event listener ها بعد از expand
+            setTimeout(setupNavListeners, 50);
         } else {
             container.style.display = 'none';
         }
     }
 }
 
-// FIX: وصل کردن event listener ها به صورت کامل
+// FIX: وصل کردن event listener ها
+function setupNavListeners() {
+    const navItems = document.querySelectorAll('.nav-item');
+    console.log('Setting up listeners for ' + navItems.length + ' nav items');
+    
+    navItems.forEach(item => {
+        // حذف تمام event listener های قبلی
+        const newItem = item.cloneNode(true);
+        item.parentNode.replaceChild(newItem, item);
+    });
+
+    // وصل کردن event listener های جدید
+    const newNavItems = document.querySelectorAll('.nav-item');
+    newNavItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const page = this.getAttribute('data-page');
+            const isExternal = this.getAttribute('data-external') === 'true';
+            
+            console.log('Navigation clicked: ' + page + ' External: ' + isExternal);
+            
+            if (isExternal) {
+                window.open(page, '_blank');
+            } else {
+                window.location.href = page;
+            }
+        });
+        
+        // FIX: اضافه کردن hover effect برای تست
+        item.style.cursor = 'pointer';
+    });
+    
+    console.log('Navigation event listeners setup complete');
+}
+
+// FIX: event delegation برای حل مشکل timing
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded - Setting up navigation...');
     
@@ -333,52 +373,31 @@ document.addEventListener('DOMContentLoaded', function() {
             e.stopPropagation();
             toggleGlassNav();
         });
-        console.log("Floater event listener attached");
+        console.log('Floater event listener attached');
     }
 
-    // FIX: وصل کردن event listener به آیتم‌های نویگیشن
-    function setupNavListeners() {
-        const navItems = document.querySelectorAll('.nav-item');
-        console.log('Setting up listeners for ' + navItems.length + ' nav items');
-        
-        navItems.forEach(item => {
-            // حذف listener های قدیمی
-            const newItem = item.cloneNode(true);
-            item.parentNode.replaceChild(newItem, item);
-        });
-
-        // وصل کردن listener های جدید
-        const newNavItems = document.querySelectorAll('.nav-item');
-        newNavItems.forEach(item => {
-            item.addEventListener('click', function(e) {
+    // اجرای اولیه
+    setupNavListeners();
+    
+    // FIX: event delegation برای کل navigation container
+    const navContainer = document.querySelector('.nav-container');
+    if (navContainer) {
+        navContainer.addEventListener('click', function(e) {
+            if (e.target.closest('.nav-item')) {
+                const item = e.target.closest('.nav-item');
                 e.preventDefault();
                 e.stopPropagation();
                 
-                const page = this.getAttribute('data-page');
-                const isExternal = this.getAttribute('data-external') === 'true';
+                const page = item.getAttribute('data-page');
+                const isExternal = item.getAttribute('data-external') === 'true';
                 
-                console.log('Navigation clicked: ' + page + ' External: ' + isExternal);
+                console.log('Delegation clicked: ' + page);
                 
                 if (isExternal) {
                     window.open(page, '_blank');
                 } else {
                     window.location.href = page;
                 }
-            });
-        });
-        
-        console.log('Navigation event listeners setup complete!');
-    }
-
-    // اجرای اولیه
-    setupNavListeners();
-    
-    // FIX: اجرای مجدد بعد از expand/collapse
-    const nav = document.getElementById('glassNav');
-    if (nav) {
-        nav.addEventListener('transitionend', function() {
-            if (this.classList.contains('expanded')) {
-                setTimeout(setupNavListeners, 100);
             }
         });
     }
