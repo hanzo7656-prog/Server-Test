@@ -7,10 +7,9 @@ function detectCurrentPage() {
 }
 
 // *******************************
-// نوبکیشن بار هوشمند پیشرفته
 function generateClassNavigation(currentPage = 'home') {
-    // تشخیص خودکار صفحه اگر مشخص نشده
-    if (currentPage === 'home') {
+    // تشخيص خودکار صفحة اگر مشخص نشده
+    if (currentPage == "home") {
         currentPage = detectCurrentPage();
     }
 
@@ -21,11 +20,11 @@ function generateClassNavigation(currentPage = 'home') {
             page: '/',
             icon: 'D',
             context: ['all'],
-            quickPeek: 'وضعیت کلی بازار'
+            quickPeek: 'وضعيت كلى بازار'
         },
         {
             id: 'scan',
-            label: 'SCAN', 
+            label: 'SCAN',
             page: '/scan',
             icon: 'S',
             context: ['analysis', 'market'],
@@ -34,7 +33,7 @@ function generateClassNavigation(currentPage = 'home') {
         {
             id: 'analyze',
             label: 'ANALYZE',
-            page: '/analysis?symbol=btc_usdt', 
+            page: '/analysis?symbol=btc_usdt',
             icon: 'A',
             context: ['analysis', 'technical'],
             quickPeek: 'تحلیل تکنیکال'
@@ -45,7 +44,7 @@ function generateClassNavigation(currentPage = 'home') {
             page: 'https://ai-test-2nxq.onrender.com/',
             icon: 'AI',
             ai: true,
-            external: true, // ✅ اضافه کردن این property
+            external: true,
             context: ['all'],
             quickPeek: 'تحلیل هوش مصنوعی'
         },
@@ -53,7 +52,7 @@ function generateClassNavigation(currentPage = 'home') {
             id: 'market',
             label: 'MARKET',
             page: '/markets/cap',
-            icon: 'M', 
+            icon: 'M',
             context: ['market', 'overview'],
             quickPeek: 'بازار و سرمایه'
         },
@@ -67,7 +66,7 @@ function generateClassNavigation(currentPage = 'home') {
         },
         {
             id: 'news',
-            label: 'NEWS', 
+            label: 'NEWS',
             page: '/news',
             icon: 'N',
             context: ['news', 'all'],
@@ -91,88 +90,8 @@ function generateClassNavigation(currentPage = 'home') {
         }
     ];
 
-    // اضافه کردن این اسکریپت برای لود داده واقعی
-    const navigationScript = `
-<script>
-// ============================== توابع اصلی navigation ==============================
-function toggleGlassNav() {
-    console.log('🔘 کلیک شد!');
-    const nav = document.getElementById('glassNav');
-    const container = document.querySelector('.nav-container');
-    
-    if (nav && container) {
-        if (container.style.display === 'none' || !container.style.display) {
-            container.style.display = 'block';
-            console.log('✅ منو باز شد');
-        } else {
-            container.style.display = 'none';
-            console.log('❌ منو بسته شد');
-        }
-    }
-}
-
-function playLiquidSound() {
-    console.log('Liquid sound played');
-}
-
-function hideCommandPalette() {
-    const palette = document.getElementById('commandPalette');
-    if (palette) {
-        palette.style.display = 'none';
-    }
-}
-
-// فعال‌سازی وقتی صفحه لود شد
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 صفحه آماده است');
-    
-    const floater = document.querySelector('.nav-floater');
-    console.log('دکمه پیدا شد:', floater);
-    
-    if (floater) {
-        floater.setAttribute('onclick', '');
-        floater.addEventListener('click', toggleGlassNav);
-        console.log('🎯 Event listener اضافه شد');
-    }
-});
-
-let realMarketStatus = {};
-async function loadRealNavigationStatus() {
-    try {
-        const response = await fetch('/api/navigation-status');
-        if (!response.ok) throw new Error('API response not ok');
-        realMarketStatus = await response.json();
-        updateNavigationDisplay();
-    } catch (error) {
-        console.error('Failed to load navigation status', error);
-        document.querySelectorAll('.market-status, .live-alert-indicator').forEach(el => {
-            el.style.display = 'none';
-        });
-    }
-}
-
-function updateNavigationDisplay() {
-    Object.keys(realMarketStatus).forEach(itemId => {
-        const statusElement = document.querySelector('[data-item="\${itemId}"] .market-status');
-        if (statusElement && realMarketStatus[itemId].change) {
-            statusElement.innerHTML = 
-                (realMarketStatus[itemId].trend === 'up' ? '↗' : '↘') +
-                realMarketStatus[itemId].change;
-            statusElement.className = 'market-status ' + realMarketStatus[itemId].trend;
-        }
-
-        const alertElement = document.querySelector('[data-item="\${itemId}"] .live-alert-indicator');
-        if (alertElement) {
-            alertElement.style.display = realMarketStatus[itemId].alert ? 'block' : 'none';
-        }
-    });
-}
-
-// بارگذاری اولیه و آیینت دوره ای
-loadRealNavigationStatus();
-setInterval(loadRealNavigationStatus, 30000);
-</script>
-`;
+    // فيلتر کردن آنها بر اساس context
+    const contextAwareItems = getContextAwareItems(navItems, currentPage);
 
     function getContextAwareItems(allItems, currentPage) {
         const contextMap = {
@@ -187,464 +106,638 @@ setInterval(loadRealNavigationStatus, 30000);
         };
 
         const currentContext = contextMap[currentPage] || ['all'];
-        return allItems.filter(item =>
+        
+        return allItems.filter(item => 
             item.context.some(context => currentContext.includes(context))
         );
     }
 
-    // context فيلتز کردن آنتها بر اساس
-    const contextAwareItems = getContextAwareItems(navItems, currentPage);
-
     return `
-<!-- ناويري شیشه‌ای هوشمند -->
-<div id="glassNav" class="glass-navigation">
-    <!-- دکمه شناور مایع -->
-    <div class="nav-floater">
-        <div class="liquid-button">
-            <div class="nav-dot"></div>
-            <div class="nav-dot"></div>
-            <div class="nav-dot"></div>
+    <!-- ناوبري شیشه‌ای هوشمند -->
+    <div id="glassNav" class="glass-navigation">
+        <!-- 1. دکمه شناور مایع -->
+        <div class="nav-floater">
+            <div class="liquid-button">
+                <div class="nav-dot"></div>
+                <div class="nav-dot"></div>
+                <div class="nav-dot"></div>
+            </div>
+        </div>
+
+        <!-- 2. کانتینر ناویگیشن -->
+        <div class="nav-container" style="display: none;">
+            <div class="nav-scroll" id="navScroll">
+                ${contextAwareItems.map(item => `
+                    <div class="nav-item ${item.id === currentPage ? 'active' : ''}"
+                         data-page="${item.page}"
+                         data-external="${item.external || false}"
+                         data-ai="${item.ai || false}"
+                         onmouseenter="showQuickPeek('${item.id}')"
+                         onmouseleave="hideQuickPeek()"
+                         ontouchstart="startPress('${item.id}')"
+                         ontouchend="endPress('${item.id}')">
+                        <!-- 3. آیکون متحرک گرادیان -->
+                        <div class="nav-icon animated-gradient">${item.icon}</div>
+                        <!-- 4. متن -->
+                        <div class="nav-text">${item.label}</div>
+                    </div>
+                `).join('')}
+            </div>
+
+            <!-- Command Palette -->
+            <div class="command-palette" id="commandPalette">
+                <input type="text" placeholder="...(s) btc analysis" onkeyup="searchCommands(event)">
+                <div class="command-results" id="commandResults"></div>
+            </div>
+        </div>
+
+        <!-- Quick Peek Overlay -->
+        <div class="quick-peek-overlay" id="quickPeekOverlay">
+            <div class="quick-peek-content" id="quickPeekContent"></div>
         </div>
     </div>
 
-    <!-- کانتیتر ناويري -->
-    <div class="nav-container" style="display: none;">
-        <div class="nav-scroll" id="navScroll">
-            ${contextAwareItems.map(item => `
-                <div class="nav-item ${item.id === currentPage ? 'active' : ''}"
-                     onclick="navigateTo('${item.page}', ${item.external || false}, ${item.ai || false})"
-                     onmouseenter="showQuickPeek('${item.id}')"
-                     onmouseleave="hideQuickPeek()"
-                     ontouchstart="startPress('${item.id}')"
-                     ontouchend="endPress('${item.id}')">
-                    <!-- متحرك گراديين با آيكون -->
-                    <div class="nav-icon animated-gradient">${item.icon}</div>
-                    <!-- متن -->
-                    <div class="nav-text">${item.label}</div>
-                </div>
-            `).join('')}
-        </div>
+    <style>
+        /* استایل ناوبری شیشه‌ای پیشرفته */
+        .glass-navigation {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
 
-        <!-- Command Palette -->
-        <div class="command-palette" id="commandPalette">
-            <input type="text" placeholder="...(ه) btc analysis" onkeyup="searchCommands(event)">
-            <div class="command-results" id="commandResults"></div>
-        </div>
-    </div>
+        /* دکمه شناور مایع */
+        .nav-floater {
+            width: 65px;
+            height: 65px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.9), rgba(118, 75, 162, 0.9));
+            backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 15px 35px rgba(102, 126, 234, 0.5),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+        }
 
-    <!-- Quick Peek Overlay -->
-    <div class="quick-peek-overlay" id="quickPeekOverlay">
-        <div class="quick-peek-content" id="quickPeekContent"></div>
-    </div>
+        .nav-floater:hover {
+            transform: scale(1.1);
+            box-shadow: 0 20px 45px rgba(102, 126, 234, 0.7),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        }
 
-    ${navigationScript}
-</div>
+        /* نقاط ناوبری */
+        .liquid-button {
+            position: relative;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+        }
 
-<style>
-/* استطيل ناويدي شيشه يبشرفته */
-.glass-navigation {
-    position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 1000;
-    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        .nav-dot {
+            width: 5px;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 50%;
+            animation: dotPulse 2s infinite ease-in-out;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        .nav-dot:nth-child(1) { animation-delay: 0s; }
+        .nav-dot:nth-child(2) { animation-delay: 0.3s; }
+        .nav-dot:nth-child(3) { animation-delay: 0.6s; }
+
+        @keyframes dotPulse {
+            0%, 100% { transform: scale(1); opacity: 0.7; }
+            50% { transform: scale(1.3); opacity: 1; }
+        }
+
+        /* کانتینر ناوبری */
+        .nav-container {
+            background: rgba(30, 35, 50, 0.95);
+            backdrop-filter: blur(30px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 25px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            max-width: 400px;
+        }
+
+        .glass-navigation.expanded .nav-container {
+            animation: slideUp 0.4s ease;
+        }
+
+        .glass-navigation.expanded .nav-floater {
+            transform: scale(0.9) rotate(180deg);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.7));
+        }
+
+        /* گرید 3x3 */
+        .nav-scroll {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, auto);
+            gap: 12px;
+            width: 100%;
+            max-height: 250px;
+            overflow-y: auto;
+            scroll-behavior: smooth;
+            scrollbar-width: none;
+        }
+
+        .nav-scroll::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* آیتم ناوبری */
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 8px;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid transparent;
+            position: relative;
+            overflow: hidden;
+            min-height: 70px;
+        }
+
+        /* افکت موج مایع هنگام هاور */
+        .nav-item::before {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
+            transform: translate(-50%, -50%);
+            transition: all 0.6s ease;
+            opacity: 0;
+        }
+
+        .nav-item:hover::before {
+            width: 120px;
+            height: 120px;
+            opacity: 1;
+            animation: liquidWave 0.6s ease-out;
+        }
+
+        @keyframes liquidWave {
+            0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .nav-item.active {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.3), rgba(118, 75, 162, 0.3));
+            border: 1px solid rgba(102, 126, 234, 0.4);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        /* گرادیان متحرک برای آیکون */
+        .animated-gradient {
+            background: linear-gradient(45deg, #667eea, #764ba2, #f093fb);
+            background-size: 200% 200%;
+            animation: gradientShift 3s ease infinite;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50% }
+            50% { background-position: 100% 50% }
+            100% { background-position: 0% 50% }
+        }
+
+        /* متن شیشه‌ای */
+        .nav-text {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: #f115f9;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5),
+                         0 0 20px rgba(255, 255, 255, 0.3);
+            background: linear-gradient(135deg, #f115f9, #cbd5e1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-item:hover .nav-text {
+            background: linear-gradient(135deg, #ffffff, #e2e8f0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-item.active .nav-text {
+            background: linear-gradient(135deg, #667eea, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* وضعیت بازار */
+        .market-status {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            font-size: 0.6rem;
+            padding: 2px 4px;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+        }
+
+        .market-status.up {
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .market-status.down {
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        /* نشانگر زنده */
+        .live-alert-indicator {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #ef4444;
+            animation: pulseAlert 1.5s infinite;
+            box-shadow: 0 0 10px #ef4444;
+        }
+
+        @keyframes pulseAlert {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.3); opacity: 0.7; }
+        }
+
+        /* Command Palette */
+        .command-palette {
+            display: none;
+            position: absolute;
+            top: -80px;
+            left: 0;
+            right: 0;
+            background: rgba(30, 35, 50, 0.98);
+            backdrop-filter: blur(30px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 15px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+        }
+
+        .command-palette input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 0.9rem;
+        }
+
+        .command-palette input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .command-results {
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+
+        .command-result-item {
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .command-result-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Quick Peek Overlay */
+        .quick-peek-overlay {
+            display: none;
+            position: fixed;
+            bottom: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(30, 35, 50, 0.95);
+            backdrop-filter: blur(30px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 15px;
+            max-width: 300px;
+            z-index: 1001;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+        }
+
+        .quick-peek-content {
+            color: white;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        /* حالت فشرده */
+        .glass-navigation.compact-mode {
+            transform: translateX(-50%) scale(0.7);
+            opacity: 0.6;
+            bottom: 10px;
+        }
+
+        .glass-navigation.compact-mode:hover {
+            transform: translateX(-50%) scale(0.9);
+            opacity: 1;
+        }
+
+        /* حالت شب‌نما */
+        .glass-navigation.night-vision {
+            background: rgba(0, 20, 40, 0.95);
+            border: 1px solid #00ffff;
+            filter: hue-rotate(180deg) brightness(0.9);
+        }
+
+        .glass-navigation.night-vision .nav-floater {
+            background: linear-gradient(135deg, rgba(0, 255, 255, 0.7), rgba(0, 100, 255, 0.7));
+        }
+
+        /* انیمیشن‌ها */
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px) scale(0.9); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        @keyframes melt {
+            0% {
+                clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+                opacity: 1;
+            }
+            100% {
+                clip-path: polygon(0 0, 100% 0, 100% 0, 0 0);
+                opacity: 0;
+            }
+        }
+
+        /* رسپانسیو */
+        @media (max-width: 400px) {
+            .nav-container {
+                max-width: 320px;
+                padding: 15px;
+            }
+            .nav-scroll {
+                gap: 10px;
+            }
+            .nav-item {
+                padding: 10px 6px;
+                min-height: 60px;
+            }
+            .nav-text {
+                font-size: 0.65rem;
+            }
+            .nav-floater {
+                width: 60px;
+                height: 60px;
+            }
+        }
+
+        /* Particle Effect */
+        .particle {
+            position: fixed;
+            pointer-events: none;
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            animation: particleFloat 1s ease-out forwards;
+            z-index: 1002;
+        }
+
+        @keyframes particleFloat {
+            0% {
+                transform: translate(0, 0) scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(var(--tx), var(--ty)) scale(0);
+                opacity: 0;
+            }
+        }
+    </style>
+
+    <script>
+        // JavaScript functions
+        function detectCurrentPage() {
+            const path = window.location.pathname;
+            const search = window.location.search;
+            if (path === '/') return 'home';
+            if (path.includes('/scan')) return 'scan';
+            if (path.includes('/analysis')) return 'analyze';
+            if (path.includes('/markets')) return 'market';
+            if (path.includes('/insights')) return 'insights';
+            if (path.includes('/news')) return 'news';
+            if (path.includes('/health')) return 'health';
+            if (path.includes('/settings')) return 'settings';
+            return 'home';
+        }
+
+        // تابع اصلی نویگیشن
+        function navigateTo(page, isExternal = false, isAI = false) {
+            console.log('Navigation started:', { page, isExternal, isAI });
+            
+            // ایجاد افکت
+            createMeltEffect();
+            playLiquidSound();
+
+            if (isExternal || isAI) {
+                console.log('Opening external/AI link in new tab');
+                window.open(page, '_blank');
+            } else {
+                console.log('Redirecting to internal page');
+                setTimeout(() => {
+                    window.location.href = page;
+                }, 400);
+            }
+        }
+
+        // toggle نویگیشن
+        function toggleGlassNav() {
+            const nav = document.getElementById('glassNav');
+            const container = document.querySelector('.nav-container');
+            console.log('Toggle navigation called');
+
+            if (nav && container) {
+                nav.classList.toggle('expanded');
+                console.log('Navigation expanded:', nav.classList.contains('expanded'));
+
+                // نمایش / مخفی کردن مستقیم
+                if (nav.classList.contains('expanded')) {
+                    container.style.display = 'block';
+                } else {
+                    container.style.display = 'none';
+                }
+            }
+        }
+
+        // Quick Peek - پیش نمایش صفحات
+        function showQuickPeek(itemId) {
+            const peekData = {
+                'home': 'وضعيت كل بازار و عملکرد سيستم - دشبورد اصلي',
+                'scan': 'اسکن بازار - شناسايي ارزهاي پريتانسيل و فرصت‌ها',
+                'analyze': 'تحليل تکنيكال - شاخص هاي فني و نمودارهاي پيشرفته',
+                'ai': 'تحليل هاي پيشرفته و پيش بيني هاي هوش مصنوعي - AI',
+                'market': 'نمايش بازار - داده هاي بازار: سرمايه، حجم و dominance',
+                'insights': 'احساسات، روندها و تحليل هاي حرفه اي - بينش‌ها',
+                'news': 'اخبار زنده - به روزرساني هاي فوري و تحليل هاي خبري',
+                'health': 'سلامت سيستم - مانيتورينگ سرويس ها و عملکرد سرورها',
+                'settings': 'تنظيمات شخصي سازي محيط و تنظيمات کاربري'
+            };
+
+            const overlay = document.getElementById('quickPeekOverlay');
+            const content = document.getElementById('quickPeekContent');
+            
+            if (overlay && content && peekData[itemId]) {
+                content.innerHTML = '<div style="text-align: center;">' +
+                                   '<div style="font-size: 1.2rem; margin-bottom: 8px; color: #f115f9;">' + 
+                                   peekData[itemId] + '</div>' +
+                                   '</div>';
+                overlay.style.display = 'block';
+            }
+        }
+
+        function hideQuickPeek() {
+            const overlay = document.getElementById('quickPeekOverlay');
+            if (overlay) {
+                overlay.style.display = 'none';
+            }
+        }
+
+        // event listener برای دکمه‌های نویگیشن
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded - Setting up navigation...');
+            
+            // فلوتر اصلی
+            const floater = document.querySelector('.nav-floater');
+            if (floater) {
+                floater.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    toggleGlassNav();
+                });
+                console.log('Floater event listener attached');
+            }
+
+            // دکمه‌های نویگیشن
+            const navItems = document.querySelectorAll('.nav-item');
+            console.log('Found nav items:', navItems.length);
+            
+            navItems.forEach(item => {
+                item.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const page = this.getAttribute('data-page');
+                    const isExternal = this.getAttribute('data-external') === 'true';
+                    const isAI = this.getAttribute('data-ai') === 'true';
+                    
+                    console.log('Nav item clicked:', { page, isExternal, isAI });
+                    
+                    if (page) {
+                        navigateTo(page, isExternal, isAI);
+                    }
+                });
+            });
+
+            // بستن نویگیشن با کلیک خارج
+            document.addEventListener('click', function(e) {
+                const nav = document.getElementById('glassNav');
+                if (nav && !nav.contains(e.target)) {
+                    nav.classList.remove('expanded');
+                    const container = document.querySelector('.nav-container');
+                    if (container) {
+                        container.style.display = 'none';
+                    }
+                }
+            });
+        });
+
+        // بقیه توابع ضروری
+        function createMeltEffect() {
+            const meltOverlay = document.createElement('div');
+            meltOverlay.style.cssText = 
+                'position: fixed;' +
+                'top: 0;' +
+                'left: 0;' +
+                'width: 100%;' +
+                'height: 100%;' +
+                'background: linear-gradient(135deg, #667eea, #764ba2, #f093fb);' +
+                'z-index: 9999;' +
+                'animation: melt 0.8s cubic-bezier(0.7, 0, 0.3, 1) forwards;' +
+                'pointer-events: none;';
+            
+            document.body.appendChild(meltOverlay);
+            
+            setTimeout(() => {
+                if (meltOverlay.parentNode) {
+                    document.body.removeChild(meltOverlay);
+                }
+            }, 800);
+        }
+
+        function playLiquidSound() {
+            // Web Audio API برای ایجاد صدای مایع
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+
+                oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(100, audioContext.currentTime + 0.1);
+
+                gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.1);
+            } catch (error) {
+                console.log("Web Audio API not supported");
+            }
+        }
+    </script>
+    `;
 }
-
-/* كه شاور مایع */
-.nav-floater {
-    width: 65px;
-    height: 65px;
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.9), rgba(118, 75, 162, 0.9));
-    backdrop-filter: blur(25px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 25px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    box-shadow: 0 15px 35px rgba(102, 126, 234, 0.5),
-                inset 0 1px 0 rgba(255, 255, 255, 0.2);
-    transition: all 0.4s ease;
-    position: relative;
-    overflow: hidden;
-}
-
-.nav-floater:hover {
-    transform: scale(1.1);
-    box-shadow: 0 20px 45px rgba(102, 126, 234, 0.7),
-                inset 0 1px 0 rgba(255, 255, 255, 0.3);
-}
-
-/* انقاط ناویري */
-.liquid-button {
-    position: relative;
-    width: 30px;
-    height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 3px;
-}
-
-.nav-dot {
-    width: 5px;
-    height: 5px;
-    background: rgba(255, 255, 255, 0.9);
-    border-radius: 50%;
-    animation: dotPulse 2s infinite ease-in-out;
-    box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
-}
-
-.nav-dot:nth-child(1) { animation-delay: 0s; }
-.nav-dot:nth-child(2) { animation-delay: 0.3s; }
-.nav-dot:nth-child(3) { animation-delay: 0.6s; }
-
-@keyframes dotPulse {
-    0%, 100% { transform: scale(1); opacity: 0.7; }
-    50% { transform: scale(1.3); opacity: 1; }
-}
-
-/* اصلي ناويري كاتفيد */
-.nav-container {
-    background: rgba(30, 35, 50, 0.95);
-    backdrop-filter: blur(30px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 25px;
-    padding: 20px;
-    margin-bottom: 15px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3),
-                inset 0 1px 0 rgba(255, 255, 255, 0.1);
-    max-width: 400px;
-}
-
-.glass-navigation.expanded .nav-container {
-    animation: slideUp 0.4s ease;
-}
-
-.glass-navigation.expanded .nav-floater {
-    transform: scale(0.9) rotate(180deg);
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.7));
-}
-
-/* 3 x 3 ميكه */
-.nav-scroll {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(3, auto);
-    gap: 12px;
-    width: 100%;
-    max-height: 250px;
-    overflow-y: auto;
-    scroll-behavior: smooth;
-    scrollbar-width: none;
-}
-
-.nav-scroll::-webkit-scrollbar {
-    display: none;
-}
-
-/* ناويري نايتيه */
-.nav-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 12px 8px;
-    border-radius: 16px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid transparent;
-    position: relative;
-    overflow: hidden;
-    min-height: 70px;
-}
-
-/* hover فككت موج مايع هيكم */
-.nav-item::before {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 0;
-    height: 0;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
-    transform: translate(-50%, -50%);
-    transition: all 0.6s ease;
-    opacity: 0;
-}
-
-.nav-item:hover::before {
-    width: 120px;
-    height: 120px;
-    opacity: 1;
-    animation: liquidWave 0.6s ease-out;
-}
-
-@keyframes liquidWave {
-    0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
-    100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
-}
-
-.nav-item:hover {
-    background: rgba(255, 255, 255, 0.15);
-    transform: translateY(-2px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
-}
-
-.nav-item.active {
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.3), rgba(118, 75, 162, 0.3));
-    border: 1px solid rgba(102, 126, 234, 0.4);
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3),
-                inset 0 1px 0 rgba(255, 255, 255, 0.2);
-}
-
-/* گرادیان متحرک برای آبکون */
-.animated-gradient {
-    background: linear-gradient(45deg, #667eea, #764ba2, #f093fb);
-    background-size: 200% 200%;
-    animation: gradientShift 3s ease infinite;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-@keyframes gradientShift {
-    0% { background-position: 0% 50% }
-    50% { background-position: 100% 50% }
-    100% { background-position: 0% 50% }
-}
-
-/* متن شیشه‌ای */
-.nav-text {
-    font-size: 0.7rem;
-    font-weight: 700;
-    color: #f115f9;
-    text-align: center;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5),
-                 0 0 20px rgba(255, 255, 255, 0.3);
-    background: linear-gradient(135deg, #f115f9, #cbd5e1);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-.nav-item:hover .nav-text {
-    background: linear-gradient(135deg, #ffffff, #e2e8f0);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-
-.nav-item.active .nav-text {
-    background: linear-gradient(135deg, #667eea, #a855f7);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-
-/* وضعيت بازارية */
-.market-status {
-    position: absolute;
-    top: 5px;
-    right: 5px;
-    font-size: 0.6rem;
-    padding: 2px 4px;
-    border-radius: 8px;
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(10px);
-}
-
-.market-status.up {
-    color: #10b981;
-    border: 1px solid rgba(16, 185, 129, 0.3);
-}
-
-.market-status.down {
-    color: #ef4444;
-    border: 1px solid rgba(239, 68, 68, 0.3);
-}
-
-/* مشدار زنده */
-.live-alert-indicator {
-    position: absolute;
-    top: 5px;
-    left: 5px;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #ef4444;
-    animation: pulseAlert 1.5s infinite;
-    box-shadow: 0 0 10px #ef4444;
-}
-
-@keyframes pulseAlert {
-    0%, 100% { transform: scale(1); opacity: 1; }
-    50% { transform: scale(1.3); opacity: 0.7; }
-}
-
-/* Command Palette */
-.command-palette {
-    display: none;
-    position: absolute;
-    top: -80px;
-    left: 0;
-    right: 0;
-    background: rgba(30, 35, 50, 0.98);
-    backdrop-filter: blur(30px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 15px;
-    padding: 15px;
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
-}
-
-.command-palette input {
-    width: 100%;
-    padding: 12px;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: white;
-    font-size: 0.9rem;
-}
-
-.command-palette input::placeholder {
-    color: rgba(255, 255, 255, 0.6);
-}
-
-.command-results {
-    max-height: 200px;
-    overflow-y: auto;
-    margin-top: 10px;
-}
-
-.command-result-item {
-    padding: 10px;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: background 0.2s ease;
-}
-
-.command-result-item:hover {
-    background: rgba(255, 255, 255, 0.1);
-}
-
-/* Quick Peek Overlay */
-.quick-peek-overlay {
-    display: none;
-    position: fixed;
-    bottom: 120px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(30, 35, 50, 0.95);
-    backdrop-filter: blur(30px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 15px;
-    padding: 15px;
-    max-width: 300px;
-    z-index: 1001;
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
-}
-
-.quick-peek-content {
-    color: white;
-    font-size: 0.9rem;
-    text-align: center;
-}
-
-/* حالت فشردة */
-.glass-navigation.compact-mode {
-    transform: translateX(-50%) scale(0.7);
-    opacity: 0.6;
-    bottom: 10px;
-}
-
-.glass-navigation.compact-mode:hover {
-    transform: translateX(-50%) scale(0.9);
-    opacity: 1;
-}
-
-/* حالت شبكورة */
-.glass-navigation.night-vision {
-    background: rgba(0, 20, 40, 0.95);
-    border: 1px solid #00ffff;
-    filter: hue-rotate(180deg) brightness(0.9);
-}
-
-.glass-navigation.night-vision .nav-floater {
-    background: linear-gradient(135deg, rgba(0, 255, 255, 0.7), rgba(0, 100, 255, 0.7));
-}
-
-/* نهمش */
-@keyframes slideUp {
-    from { opacity: 0; transform: translateY(30px) scale(0.9); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-@keyframes melt {
-    0% {
-        clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
-        opacity: 1;
-    }
-    100% {
-        clip-path: polygon(0 0, 100% 0, 100% 0, 0 0);
-        opacity: 0;
-    }
-}
-
-/* رسپانسيو */
-@media (max-width: 400px) {
-    .nav-container {
-        max-width: 320px;
-        padding: 15px;
-    }
-    
-    .nav-scroll {
-        gap: 10px;
-    }
-    
-    .nav-item {
-        padding: 10px 6px;
-        min-height: 60px;
-    }
-    
-    .nav-text {
-        font-size: 0.65rem;
-    }
-    
-    .nav-floater {
-        width: 60px;
-        height: 60px;
-    }
-}
-
-/* Particle Effect */
-.particle {
-    position: fixed;
-    pointer-events: none;
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    animation: particleFloat 1s ease-out forwards;
-    z-index: 1002;
-}
-
-@keyframes particleFloat {
-    0% {
-        transform: translate(0, 0) scale(1);
-        opacity: 1;
-    }
-    100% {
-        transform: translate(var(--tx), var(--ty)) scale(0);
-        opacity: 0;
-    }
-}
-</style>
-
-<script>
 // ============================== توابع JavaScript ============================== //
 function detectCurrentPage() {
     const path = window.location.pathname;
