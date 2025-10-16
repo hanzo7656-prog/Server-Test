@@ -30,7 +30,7 @@ function generateClassNavigation(currentPage = 'home') {
         return allItems.filter(item => item.context.some(context => currentContext.includes(context)));
     }
 
-    const contextAwareItems = getContextAwareItems(allNavItems, currentPage);
+    const contextAwareItems = allNavItems;
 
     return `
 <!-- هوشمند ناوبری شیشه‌ای -->
