@@ -306,101 +306,52 @@ function generateClassNavigation(currentPage = 'home') {
 </style>
 
 <script>
-
-// تابع toggle
+// تابع toggle ساده شده
 function toggleGlassNav() {
-    console.log('Toggle navigation called');
     const nav = document.getElementById('glassNav');
     const container = document.querySelector('.nav-container');
     if (nav && container) {
         const isExpanded = nav.classList.contains('expanded');
         nav.classList.toggle('expanded');
-        if (!isExpanded) {
-            container.style.display = 'block';
-            // FIX: وصل کردن event listener ها بعد از expand
-            setTimeout(setupNavListeners, 50);
-        } else {
-            container.style.display = 'none';
-        }
+        container.style.display = isExpanded ? 'none' : 'block';
     }
 }
 
-// FIX: وصل کردن event listener ها
-function setupNavListeners() {
-    const navItems = document.querySelectorAll('.nav-item');
-    console.log('Setting up listeners for ' + navItems.length + ' nav items');
-    
-    navItems.forEach(item => {
-        // حذف تمام event listener های قبلی
-        const newItem = item.cloneNode(true);
-        item.parentNode.replaceChild(newItem, item);
-    });
+// ساده‌ترین و مطمئن‌ترین event handling
+document.addEventListener('DOMContentLoaded', function() {
+    // دکمه شناور
+    const floater = document.querySelector('.nav-floater');
+    if (floater) {
+        floater.addEventListener('click', toggleGlassNav);
+    }
 
-    // وصل کردن event listener های جدید
-    const newNavItems = document.querySelectorAll('.nav-item');
-    newNavItems.forEach(item => {
-        item.addEventListener('click', function(e) {
+    // کلیک روی آیتم‌های نویگیشن - با event delegation
+    document.addEventListener('click', function(e) {
+        const navItem = e.target.closest('.nav-item');
+        if (navItem) {
             e.preventDefault();
-            e.stopPropagation();
-            
-            const page = this.getAttribute('data-page');
-            const isExternal = this.getAttribute('data-external') === 'true';
-            
-            console.log('Navigation clicked: ' + page + ' External: ' + isExternal);
+            const page = navItem.getAttribute('data-page');
+            const isExternal = navItem.getAttribute('data-external') === 'true';
             
             if (isExternal) {
                 window.open(page, '_blank');
             } else {
                 window.location.href = page;
             }
-        });
-        
-        // FIX: اضافه کردن hover effect برای تست
-        item.style.cursor = 'pointer';
+        }
     });
-    
-    console.log('Navigation event listeners setup complete');
-}
 
-// FIX: event delegation برای حل مشکل timing
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM loaded - Setting up navigation...');
-    
-    // دکمه شناور
-    const floater = document.querySelector('.nav-floater');
-    if (floater) {
-        floater.addEventListener('click', function(e) {
-            e.stopPropagation();
-            toggleGlassNav();
-        });
-        console.log('Floater event listener attached');
-    }
-
-    // اجرای اولیه
-    setupNavListeners();
-    
-    // FIX: event delegation برای کل navigation container
-    const navContainer = document.querySelector('.nav-container');
-    if (navContainer) {
-        navContainer.addEventListener('click', function(e) {
-            if (e.target.closest('.nav-item')) {
-                const item = e.target.closest('.nav-item');
-                e.preventDefault();
-                e.stopPropagation();
-                
-                const page = item.getAttribute('data-page');
-                const isExternal = item.getAttribute('data-external') === 'true';
-                
-                console.log('Delegation clicked: ' + page);
-                
-                if (isExternal) {
-                    window.open(page, '_blank');
-                } else {
-                    window.location.href = page;
-                }
+    // بستن نویگیشن با کلیک بیرون
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.glass-navigation')) {
+            const nav = document.getElementById('glassNav');
+            const container = document.querySelector('.nav-container');
+            if (nav && container) {
+                nav.classList.remove('expanded');
+                container.style.display = 'none';
             }
-        });
-    }
+        }
+    });
 });
 // توابع کمکی برای نویگیشن
 function showQuickPeek(itemId) {
