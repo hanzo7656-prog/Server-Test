@@ -5,14 +5,14 @@ const router = express.Router();
 function generateClassNavigation(currentPage = 'home') {
     const allNavItems = [
         { id: 'home', label: 'DASH', page: '/', icon: 'D', context: ['all'], quickPeek: 'داشبورد اصلی' },
-        { id: 'scan', label: 'SCAN', page: '/scan', icon: 'S', context: ['analysis', 'market'], quickPeek: 'اسکن بازار' },
-        { id: 'analyze', label: 'ANALYZE', page: '/analysis?symbol=btc_usdt', icon: 'A', context: ['analysis', 'technical'], quickPeek: 'تحلیل تکنیکال' },
+        { id: 'scan', label: 'SCAN', page: '/scan-page', icon: 'S', context: ['analysis', 'market'], quickPeek: 'اسکن بازار' },
+        { id: 'analyze', label: 'ANALYZE', page: '/analysis-page', icon: 'A', context: ['analysis', 'technical'], quickPeek: 'تحلیل تکنیکال' },
         { id: 'ai', label: 'AI', page: 'https://ai-test-2nxq.onrender.com/', icon: 'AI', ai: true, external: true, context: ['all'], quickPeek: 'تحلیل هوش مصنوعی' },
-        { id: 'market', label: 'MARKET', page: '/markets/cap', icon: 'M', context: ['market', 'overview'], quickPeek: 'بازار و سرمایه' },
-        { id: 'insights', label: 'INSIGHTS', page: '/insights/dashboard', icon: 'I', context: ['analysis', 'sentiment'], quickPeek: 'بینش های بازار' },
-        { id: 'news', label: 'NEWS', page: '/news', icon: 'N', context: ['news', 'all'], quickPeek: 'اخبار زنده بازار' },
-        { id: 'health', label: 'HEALTH', page: '/health', icon: 'H', context: ['system', 'all'], quickPeek: 'وضعیت سرورها' },
-        { id: 'settings', label: 'SETTINGS', page: '/settings', icon: 'G', context: ['all'], quickPeek: 'تنظیمات کاربری' }
+        { id: 'market', label: 'MARKET', page: '/markets-page', icon: 'M', context: ['market', 'overview'], quickPeek: 'بازار و سرمایه' },
+        { id: 'insights', label: 'INSIGHTS', page: '/insights-page', icon: 'I', context: ['analysis', 'sentiment'], quickPeek: 'بینش های بازار' },
+        { id: 'news', label: 'NEWS', page: '/news-page', icon: 'N', context: ['news', 'all'], quickPeek: 'اخبار زنده بازار' },
+        { id: 'health', label: 'HEALTH', page: '/health-page', icon: 'H', context: ['system', 'all'], quickPeek: 'وضعیت سرورها' },
+        { id: 'settings', label: 'SETTINGS', page: '/setting', icon: 'G', context: ['all'], quickPeek: 'تنظیمات کاربری' }
     ];
 
     function getContextAwareItems(allItems, currentPage) {
@@ -653,7 +653,7 @@ module.exports = (dependencies) => {
         }
     });
     // صفحه اسکن
-    router.get('/scan', async (req, res) => {
+    router.get('/scan-page', async (req, res) => {
         try {
             const limit = parseInt(req.query.limit) || 50;
             const filter = req.query.filter || 'volume';
@@ -743,7 +743,7 @@ module.exports = (dependencies) => {
 
                 <script>
                     function applyFilter(filter) {
-                        window.location.href = '/scan?filter=' + filter;
+                        window.location.href = '/scan-page?filter=' + filter;
                     }
                 </script>
             `;
@@ -791,7 +791,7 @@ module.exports = (dependencies) => {
     });
 
     // صفحه بازار سرمایه
-    router.get('/markets/cap', async (req, res) => {
+    router.get('/markets-page', async (req, res) => {
         const bodyContent = `
             <div class="header">
                 <h1>سرمایه بازار</h1>
@@ -860,7 +860,7 @@ module.exports = (dependencies) => {
     });
 
     // صفحه بینش‌های بازار
-    router.get('/insights/dashboard', async (req, res) => {
+    router.get('/insights-page', async (req, res) => {
         const bodyContent = `
             <div class="header">
                 <h1>بینش های بازار</h1>
@@ -908,7 +908,7 @@ module.exports = (dependencies) => {
     });
 
     // صفحه اخبار
-    router.get('/news', async (req, res) => {
+    router.get('/news-page', async (req, res) => {
         const bodyContent = `
             <div class="header">
                 <h1>اخبار کریپتو</h1>
@@ -948,7 +948,7 @@ module.exports = (dependencies) => {
     });
 
         // صفحه سلامت سیستم
-    router.get('/health', async (req, res) => {
+    router.get('/health-page', async (req, res) => {
         const bodyContent = `
             <div class="header">
                 <h1>سلامت سیستم</h1>
