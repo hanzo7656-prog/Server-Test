@@ -339,7 +339,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // FIX: وصل کردن event listener به آیتم‌های نویگیشن
     function setupNavListeners() {
         const navItems = document.querySelectorAll('.nav-item');
-        console.log(`Setting up listeners for ${navItems.length} nav items`);
+        console.log('Setting up listeners for ' + navItems.length + ' nav items');
         
         navItems.forEach(item => {
             // حذف listener های قدیمی
@@ -357,7 +357,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const page = this.getAttribute('data-page');
                 const isExternal = this.getAttribute('data-external') === 'true';
                 
-                console.log('Navigation clicked:', page, 'External:', isExternal);
+                console.log('Navigation clicked: ' + page + ' External: ' + isExternal);
                 
                 if (isExternal) {
                     window.open(page, '_blank');
@@ -383,7 +383,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
-
 // توابع کمکی برای نویگیشن
 function showQuickPeek(itemId) {
     const overlay = document.getElementById('quickPeekOverlay');
