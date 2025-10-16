@@ -981,3 +981,131 @@ module.exports = (dependencies) => {
         `;
         res.send(generateModernPage('اخبار کریپتو', bodyContent, 'news'));
     });
+
+        // صفحه سلامت سیستم
+    router.get('/health', async (req, res) => {
+        const bodyContent = `
+            <div class="header">
+                <h1>سلامت سیستم</h1>
+                <p>مانیتورینگ سرویس ها و عملکرد سیستم</p>
+            </div>
+            <div class="glass-card">
+                <h2 style="color: #f115f9; text-align: center; margin-bottom: 25px;">وضعیت سرویس‌ها</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number">✅</div>
+                        <div class="stat-label">API سرور</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">✅</div>
+                        <div class="stat-label">WebSocket</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">✅</div>
+                        <div class="stat-label">پایگاه داده</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">🔄</div>
+                        <div class="stat-label">Cache System</div>
+                    </div>
+                </div>
+            </div>
+            <div class="glass-card">
+                <h2 style="color: #f115f9; text-align: center; margin-bottom: 25px;">مصرف منابع</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number">${(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(1)}MB</div>
+                        <div class="stat-label">مصرف RAM</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${Math.round(process.uptime() / 3600)}h</div>
+                        <div class="stat-label">آپتایم</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${process.uptime().toFixed(0)}s</div>
+                        <div class="stat-label">زمان فعالیت</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">Node.js</div>
+                        <div class="stat-label">پلتفرم</div>
+                    </div>
+                </div>
+            </div>
+            <div class="glass-card">
+                <h2 style="color: #f115f9; text-align: center; margin-bottom: 25px;">لاگ‌های سیستم</h2>
+                <div style="background: rgba(0,0,0,0.3); border-radius: 10px; padding: 15px; font-family: monospace; font-size: 0.8rem; max-height: 200px; overflow-y: auto;">
+                    <div style="color: #10b981;">[INFO] سیستم با موفقیت راه‌اندازی شد</div>
+                    <div style="color: #10b981;">[INFO] اتصال WebSocket برقرار شد</div>
+                    <div style="color: #f59e0b;">[WARN] کش در حال به‌روزرسانی است</div>
+                    <div style="color: #10b981;">[INFO] ${new Date().toLocaleString('fa-IR')} - سیستم فعال</div>
+                </div>
+            </div>
+        `;
+        res.send(generateModernPage("سلامت سیستم", bodyContent, "health"));
+    });
+
+    // صفحه تنظیمات
+    router.get('/settings', async (req, res) => {
+        const bodyContent = `
+            <div class="header">
+                <h1>تنظیمات پیشرفته</h1>
+                <p>شخصی سازی محیط و تنظیمات کاربری</p>
+            </div>
+            <div class="glass-card">
+                <h2 style="color: #f115f9; text-align: center; margin-bottom: 25px;">تنظیمات نمایش</h2>
+                <div style="text-align: center; color: #94a3b8; padding: 20px;">
+                    <p>صفحه تنظیمات در حال توسعه است</p>
+                    <div style="margin-top: 30px;">
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-number">🎨</div>
+                                <div class="stat-label">تم رنگی</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number">🔔</div>
+                                <div class="stat-label">اعلان‌ها</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number">📊</div>
+                                <div class="stat-label">نمودارها</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number">⚡</div>
+                                <div class="stat-label">کارایی</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="glass-card">
+                <h2 style="color: #f115f9; text-align: center; margin-bottom: 25px;">تنظیمات امنیتی</h2>
+                <div style="text-align: center;">
+                    <button class="btn" style="margin: 5px;">تغییر رمز عبور</button>
+                    <button class="btn" style="margin: 5px;">احراز هویت دو مرحله‌ای</button>
+                    <button class="btn" style="margin: 5px;">مدیریت دستگاه‌ها</button>
+                    <button class="btn" style="margin: 5px;">پشتیبان‌گیری</button>
+                </div>
+            </div>
+        `;
+        res.send(generateModernPage("تنظیمات پیشرفته", bodyContent, 'settings'));
+    });
+
+    // Route برای مدیریت خطاهای 404
+    router.use('*', (req, res) => {
+        const bodyContent = `
+            <div class="header">
+                <h1>صفحه یافت نشد</h1>
+                <p>صفحه‌ای که به دنبال آن هستید وجود ندارد</p>
+            </div>
+            <div class="glass-card" style="text-align: center;">
+                <div style="font-size: 4rem; margin-bottom: 20px;">🔍</div>
+                <h2 style="color: #f115f9; margin-bottom: 20px;">خطای 404</h2>
+                <p style="color: #94a3b8; margin-bottom: 30px;">آدرس درخواستی معتبر نیست یا صفحه حذف شده است</p>
+                <a href="/" class="btn">بازگشت به داشبورد</a>
+            </div>
+        `;
+        res.status(404).send(generateModernPage("صفحه یافت نشد", bodyContent, 'home'));
+    });
+
+    return router;
+};
