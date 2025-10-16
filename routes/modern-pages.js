@@ -197,6 +197,39 @@ function generateClassNavigation(currentPage = 'home') {
             .nav-floater { width: 60px; height: 60px; }
         }
     </style>
+    </script>
+        // تابع toggle برای منو
+        function toggleGlassNav() {
+            console.log('Toggle navigation called');
+            const nav = document.getElementById('glassNav');
+            const container = document.querySelector('.nav-container');
+            
+            if (nav && container) {
+                const isExpanded = nav.classList.contains('expanded');
+                nav.classList.toggle('expanded');
+                
+                if (!isExpanded) {
+                    container.style.display = 'block';
+                } else {
+                    container.style.display = 'none';
+                }
+            }
+        }
+
+        // وصل کردن event listener به دکمه شناور
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded - Setting up navigation...');
+            
+            const floater = document.querySelector('.nav-floater');
+            if (floater) {
+                floater.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    toggleGlassNav();
+                });
+                console.log('✅ Floater event listener attached');
+            }
+        });
+    </script>
 `;
 }
 
