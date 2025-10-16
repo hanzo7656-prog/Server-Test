@@ -613,80 +613,45 @@ header {
 module.exports = (dependencies) => {
     const { gistManager, wsManager, apiClient } = dependencies;
 
-    // Route اصلی
+    // Route اصلی - نسخه ساده شده برای تست
     router.get("/", async (req, res) => {
         try {
-            const wsStatus = wsManager ? wsManager.getConnectionStatus() : null;
-            const gistData = gistManager ? gistManager.getAllData() : null;
-
             const bodyContent = `
                 <div class="header">
                     <h1>VortexAI Crypto Dashboard</h1>
                     <p>داده‌های زنده و بینش‌های هوشمند برای تحلیل بازارهای کریپتو</p>
                 </div>
-
                 <div class="glass-card">
-                    <h2 style="color: #f115f9; text-align: center; margin-bottom: 25px;">وضعیت سیستم</h2>
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-number">${wsStatus?.connected ? 'فعال' : 'غیرفعال'}</div>
-                            <div class="stat-label">اتصال WebSocket</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number">${wsStatus?.active_coins || 0}</div>
-                            <div class="stat-label">ارزهای فعال</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number">${gistData?.prices ? Object.keys(gistData.prices).length : 0}</div>
-                            <div class="stat-label">ارزهای ذخیره شده</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number">${Math.round(process.uptime() / 3600)}h</div>
-                            <div class="stat-label">مدت فعالیت سیستم</div>
-                        </div>
-                    </div>
+                    <h2 style="color: #f115f9; text-align: center;">سیستم فعال شد!</h2>
+                    <p style="text-align: center;">سرور در حال اجراست - نویگیشن بار پایین صفحه</p>
                 </div>
-
                 <div class="glass-card">
-                    <h2 style="color: #f115f9; text-align: center; margin-bottom: 25px;">اقدامات سریع</h2>
-                    <div class="stats-grid">
-                        <a href="/scan" class="btn">اسکن بازار</a>
-                        <a href="/analysis?symbol=btc_usdt" class="btn">تحلیل تکنیکال</a>
-                        <a href="/markets/cap" class="btn">داده‌های بازار</a>
-                        <a href="/insights/dashboard" class="btn">بینش‌های بازار</a>
-                    </div>
-                </div>
-
-                <div class="glass-card">
-                    <h2 style="color: #f115f9; text-align: center; margin-bottom: 25px;">امکانات سیستم</h2>
                     <div class="stats-grid">
                         <div class="stat-card">
-                            <div class="stat-number">24/7</div>
-                            <div class="stat-label">نظارت زنده</div>
+                            <div class="stat-number">✅</div>
+                            <div class="stat-label">سرور فعال</div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-number">99.9%</div>
-                            <div class="stat-label">دقت تحلیل</div>
+                            <div class="stat-number">9</div>
+                            <div class="stat-label">منوها</div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-number">50+</div>
-                            <div class="stat-label">شاخص فنی</div>
+                            <div class="stat-number">🎯</div>
+                            <div class="stat-label">آماده</div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-number">0.1s</div>
-                            <div class="stat-label">تأخیر داده</div>
+                            <div class="stat-number">🚀</div>
+                            <div class="stat-label">پرسرعت</div>
                         </div>
                     </div>
                 </div>
             `;
-
             res.send(generateModernPage("داشبورد", bodyContent, 'home'));
         } catch (error) {
-            console.error('Dashboard error', error);
-            res.status(500).send('خطا در بارگذاری داشبورد');
+            console.error('Dashboard error:', error);
+            res.status(500).send('خطا: ' + error.message);
         }
     });
-
     // صفحه اسکن
     router.get('/scan', async (req, res) => {
         try {
