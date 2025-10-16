@@ -3,7 +3,7 @@ const router = express.Router();
 
 // Generate navigation function
 function generateClassNavigation(currentPage = 'home') {
-    const navItems = [
+    const allNavItems = [
         { id: 'home', label: 'DASH', page: '/', icon: 'D', context: ['all'], quickPeek: 'داشبورد اصلی' },
         { id: 'scan', label: 'SCAN', page: '/scan', icon: 'S', context: ['analysis', 'market'], quickPeek: 'اسکن بازار' },
         { id: 'analyze', label: 'ANALYZE', page: '/analysis?symbol=btc_usdt', icon: 'A', context: ['analysis', 'technical'], quickPeek: 'تحلیل تکنیکال' },
@@ -27,10 +27,10 @@ function generateClassNavigation(currentPage = 'home') {
             'settings': ['all']
         };
         const currentContext = contextMap[currentPage] || ['all'];
-        return navItems.filter(item => item.context.some(context => currentContext.includes(context)));
+        return allItems.filter(item => item.context.some(context => currentContext.includes(context)));
     }
 
-    const contextAwareItems = allNavItems
+    const contextAwareItems = getContextAwareItems(allNavItems, currentPage);
 
     return `
 <!-- هوشمند ناوبری شیشه‌ای -->
