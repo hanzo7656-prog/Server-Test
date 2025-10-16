@@ -774,7 +774,6 @@ function getContextAwareItems(allItems, currentPage) {
     );
 }
 
-// در script بخش نویگیشن بار، این توابع رو اضافه کن:
 
 // تابع اصلی نویگیشن
 function navigateTo(page, isExternal = false, isAI = false) {
@@ -1390,7 +1389,6 @@ function compareMarkets() {
 function showTopCurrencies() {
     showTemporaryAlert('نمایش ارزهای برتر');
 }
-</script>
 `;
 }
 
