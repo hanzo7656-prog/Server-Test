@@ -316,42 +316,32 @@ function toggleGlassNav() {
         container.style.display = isExpanded ? 'none' : 'block';
     }
 }
-
-// ساده‌ترین و مطمئن‌ترین event handling
-document.addEventListener('DOMContentLoaded', function() {
-    // دکمه شناور
-    const floater = document.querySelector('.nav-floater');
-    if (floater) {
-        floater.addEventListener('click', toggleGlassNav);
+// ساده‌ترین راه - بدون پیچیدگی
+document.addEventListener('click', function(e) {
+    const navItem = e.target.closest('.nav-item');
+    if (navItem) {
+        e.preventDefault();
+        const page = navItem.getAttribute('data-page');
+        const isExternal = navItem.getAttribute('data-external') === 'true';
+        
+        if (isExternal) {
+            window.open(page, '_blank');
+        } else {
+            window.location.href = page;
+        }
     }
+});
 
-    // کلیک روی آیتم‌های نویگیشن - با event delegation
-    document.addEventListener('click', function(e) {
-        const navItem = e.target.closest('.nav-item');
-        if (navItem) {
-            e.preventDefault();
-            const page = navItem.getAttribute('data-page');
-            const isExternal = navItem.getAttribute('data-external') === 'true';
-            
-            if (isExternal) {
-                window.open(page, '_blank');
-            } else {
-                window.location.href = page;
-            }
-        }
-    });
-
-    // بستن نویگیشن با کلیک بیرون
-    document.addEventListener('click', function(e) {
-        if (!e.target.closest('.glass-navigation')) {
-            const nav = document.getElementById('glassNav');
-            const container = document.querySelector('.nav-container');
-            if (nav && container) {
-                nav.classList.remove('expanded');
-                container.style.display = 'none';
-            }
-        }
-    });
+// دکمه شناور
+document.querySelector('.nav-floater')?.addEventListener('click', function(e) {
+    e.stopPropagation();
+    const nav = document.getElementById('glassNav');
+    const container = document.querySelector('.nav-container');
+    if (nav && container) {
+        const isExpanded = nav.classList.contains('expanded');
+        nav.classList.toggle('expanded');
+        container.style.display = isExpanded ? 'none' : 'block';
+    }
 });
 // توابع کمکی برای نویگیشن
 function showQuickPeek(itemId) {
