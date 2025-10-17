@@ -306,9 +306,8 @@ function generateClassNavigation(currentPage = 'home') {
 </style>
 
 <script>
-
 // ==================== 
-// Z-INDEX DEBUG TEST
+// SPECIFIC ITEMS DEBUG
 // ====================
 
 function showDebugMessage(message) {
@@ -343,18 +342,38 @@ function showDebugMessage(message) {
     }
 }
 
-// تست Z-Index - اضافه کردن border رنگی به آیتم‌ها
+// تست آیتم‌های خاص
 try {
     if (typeof document !== 'undefined') {
         document.addEventListener('DOMContentLoaded', function() {
             setTimeout(function() {
-                const items = document.querySelectorAll('.nav-item');
-                items.forEach(function(item, index) {
-                    // اضافه کردن border رنگی برای تست visibility
-                    item.style.border = '2px solid red';
-                    item.style.boxShadow = '0 0 10px yellow';
-                });
-                showDebugMessage('اضافه کردن border به آیتم‌ها - حالا کلیک کن');
+                // پیدا کردن آیتم‌های مشکل‌دار
+                const scanItem = document.querySelector('[data-page="/scan-page"]');
+                const marketItem = document.querySelector('[data-page="/markets-page"]');
+                const analyzeItem = document.querySelector('[data-page="/analysis-page"]');
+                
+                let debugInfo = 'بررسی آیتم‌ها: ';
+                
+                if (scanItem) {
+                    debugInfo += 'اسکن: ' + scanItem.className + ' ';
+                    // اضافه کردن استایل خاص برای اسکن
+                    scanItem.style.background = 'rgba(255,0,0,0.3)';
+                }
+                
+                if (marketItem) {
+                    debugInfo += 'مارکت: ' + marketItem.className + ' ';
+                    // اضافه کردن استایل خاص برای مارکت
+                    marketItem.style.background = 'rgba(0,255,0,0.3)';
+                }
+                
+                if (analyzeItem) {
+                    debugInfo += 'آنالیز: ' + analyzeItem.className + ' ';
+                    // اضافه کردن استایل خاص برای آنالیز
+                    analyzeItem.style.background = 'rgba(0,0,255,0.3)';
+                }
+                
+                showDebugMessage(debugInfo);
+                
             }, 1000);
         });
     }
@@ -366,7 +385,6 @@ try {
 document.querySelector('.nav-floater').addEventListener('click', function(e) {
     e.preventDefault();
     e.stopPropagation();
-    showDebugMessage('دکمه شناور کلیک شد - منو باز شد');
     
     const nav = document.getElementById('glassNav');
     const container = document.querySelector('.nav-container');
@@ -374,31 +392,65 @@ document.querySelector('.nav-floater').addEventListener('click', function(e) {
     if (container.style.display === 'block') {
         container.style.display = 'none';
         nav.classList.remove('expanded');
+        showDebugMessage('منو بسته شد');
     } else {
         container.style.display = 'block';
         nav.classList.add('expanded');
+        showDebugMessage('منو باز شد');
         
-        // تست: اضافه کردن event listener بعد از باز شدن منو
+        // تست مستقیم روی آیتم‌های مشکل‌دار
         setTimeout(function() {
-            const items = document.querySelectorAll('.nav-item');
-            items.forEach(function(item) {
-                item.addEventListener('click', function(e) {
+            const scanItem = document.querySelector('[data-page="/scan-page"]');
+            const marketItem = document.querySelector('[data-page="/markets-page"]');
+            
+            if (scanItem) {
+                scanItem.addEventListener('click', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
-                    const page = this.getAttribute('data-page');
-                    showDebugMessage('مستقیم کلیک روی: ' + page);
-                    
-                    // هدایت به صفحه
-                    const isExternal = this.getAttribute('data-external') === 'true';
-                    if (isExternal) {
-                        window.open(page, '_blank');
-                    } else {
-                        window.location.href = page;
-                    }
+                    showDebugMessage('مستقیم کلیک روی اسکن');
+                    window.location.href = '/scan-page';
                 });
-            });
-            showDebugMessage('Event listeners اضافه شدند - حالا تست کن');
+            }
+            
+            if (marketItem) {
+                marketItem.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    showDebugMessage('مستقیم کلیک روی مارکت');
+                    window.location.href = '/markets-page';
+                });
+            }
+            
+            showDebugMessage('Event listeners مستقیم اضافه شد');
+            
         }, 500);
+    }
+});
+
+// همچنین event listener کلی
+document.addEventListener('click', function(e) {
+    const navItem = e.target.closest('.nav-item');
+    
+    if (navItem) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const page = navItem.getAttribute('data-page');
+        showDebugMessage('کلیک کلی روی: ' + page);
+        
+        // بستن منو
+        const container = document.querySelector('.nav-container');
+        const nav = document.getElementById('glassNav');
+        container.style.display = 'none';
+        nav.classList.remove('expanded');
+        
+        // هدایت به صفحه
+        const isExternal = navItem.getAttribute('data-external') === 'true';
+        if (isExternal) {
+            window.open(page, '_blank');
+        } else {
+            window.location.href = page;
+        }
     }
 });
 
@@ -437,18 +489,6 @@ function hideQuickPeek() {
     } catch (error) {
         // ignore
     }
-}
-
-function startPress(itemId) {
-    // ignore for now
-}
-
-function endPress(itemId) {
-    // ignore for now
-}
-
-function searchCommands(event) {
-    // ignore for now
 }
 </script>
 `;
