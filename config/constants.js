@@ -3,11 +3,12 @@ require('dotenv').config();
 module.exports = {
   PORT: process.env.PORT || 3000,
 
-  // API Keys - اصلاح نام
+  // API Keys
   COINSTATS_API_KEY: "uNb+sOjnjCQmV30dYrChxgh55hRHElmiZLnKJX+5U6g=",
   GITHUB_TOKEN: process.env.GITHUB_TOKEN,
   GIST_ID: process.env.GIST_ID,
 
+  // ALL_TRADING_PAIRS
   ALL_TRADING_PAIRS: [
     "btc_usdt", "eth_usdt", "xrp_usdt", "ada_usdt", "dot_usdt", "doge_usdt", "sol_usdt",
     "matic_usdt", "avax_usdt", "link_usdt", "bch_usdt", "ltc_usdt", "etc_usdt", "trx_usdt",
@@ -47,13 +48,16 @@ module.exports = {
     "phb_usdt", "mxc_usdt"
   ],
 
+  // تایم‌فریم‌های موجود
   TIMEFRAMES: ["1h", "4h", "24h", "7d", "30d", "180d"],
 
+  // تنظیمات کش
   CACHE_CONFIG: {
-    timeout: 5 * 60 * 1000,
+    timeout: 5 * 60 * 1000, // 5 دقیقه
     batchSize: 5
   },
 
+  // URLهای API
   API_URLS: {
     base: "https://openapiv1.coinstats.app",
     exchange: "https://openapiv1.coinstats.app/coins/price/exchange",
