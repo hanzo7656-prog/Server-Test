@@ -1,11 +1,155 @@
 const express = require('express');
 const path = require('path');
 
+// سیستم دیباگ پیشرفته برای APIClient
+const apiDebugSystem = {
+  enabled: true,
+  requests: [],
+  errors: [],
+  fieldMapping: {},
+  
+  logRequest: function(method, url, params = {}) {
+    if (!this.enabled) return;
+    
+    const request = {
+      timestamp: new Date().toISOString(),
+      method,
+      url,
+      params,
+      response: null,
+      error: null,
+      duration: null
+    };
+    
+    this.requests.push(request);
+    
+    // نگه داشتن فقط 50 درخواست آخر
+    if (this.requests.length > 50) {
+      this.requests.shift();
+    }
+    
+    return request;
+  },
+  
+  logResponse: function(request, response, duration) {
+    if (!this.enabled) return;
+    
+    request.response = response;
+    request.duration = duration;
+    request.completed = true;
+  },
+  
+  logError: function(request, error) {
+    if (!this.enabled) return;
+    
+    request.error = error;
+    this.errors.push({
+      timestamp: new Date().toISOString(),
+      request: {
+        method: request.method,
+        url: request.url
+      },
+      error: error.message
+    });
+    
+    // نگه داشتن فقط 20 خطای آخر
+    if (this.errors.length > 20) {
+      this.errors.shift();
+    }
+  },
+  
+  analyzeFieldMapping: function(coinData) {
+    if (!coinData || coinData.length === 0) return {};
+    
+    const sampleCoin = coinData[0];
+    const fieldAnalysis = {
+      priceFields: [],
+      changeFields: [],
+      volumeFields: [],
+      marketCapFields: [],
+      allFields: Object.keys(sampleCoin)
+    };
+    
+    // تحلیل فیلدهای قیمت
+    fieldAnalysis.priceFields = Object.keys(sampleCoin).filter(key => 
+      key.toLowerCase().includes('price') && 
+      !key.toLowerCase().includes('change')
+    );
+    
+    // تحلیل فیلدهای تغییرات
+    fieldAnalysis.changeFields = Object.keys(sampleCoin).filter(key => 
+      (key.toLowerCase().includes('change') || key.toLowerCase().includes('percent')) &&
+      (key.toLowerCase().includes('24h') || key.toLowerCase().includes('24_hour') || key.toLowerCase().includes('price'))
+    );
+    
+    // تحلیل فیلدهای حجم
+    fieldAnalysis.volumeFields = Object.keys(sampleCoin).filter(key => 
+      key.toLowerCase().includes('volume')
+    );
+    
+    // تحلیل فیلدهای مارکت کپ
+    fieldAnalysis.marketCapFields = Object.keys(sampleCoin).filter(key => 
+      key.toLowerCase().includes('market') && key.toLowerCase().includes('cap')
+    );
+    
+    this.fieldMapping = fieldAnalysis;
+    return fieldAnalysis;
+  },
+  
+  findBestPriceChangeField: function(coin) {
+    const possibleFields = [
+      'priceChange24h', 'price_change_24h', 'change24h', 
+      'priceChangePercentage24h', 'percent_change_24h',
+      'changePercentage24h', 'priceChange', 'change_24h',
+      'price_change_percentage_24h', 'price_change_percentage_24h_in_currency'
+    ];
+    
+    for (const field of possibleFields) {
+      if (coin[field] !== undefined && coin[field] !== null) {
+        const value = parseFloat(coin[field]);
+        if (!isNaN(value) && value !== 0) {
+          return { field, value };
+        }
+      }
+    }
+    
+    // جستجوی پیشرفته در تمام فیلدها
+    for (const [key, value] of Object.entries(coin)) {
+      const lowerKey = key.toLowerCase();
+      if ((lowerKey.includes('24h') || lowerKey.includes('24_hour')) &&
+          (lowerKey.includes('change') || lowerKey.includes('percent')) &&
+          !lowerKey.includes('1h') && !lowerKey.includes('1_hour')) {
+        const numValue = parseFloat(value);
+        if (!isNaN(numValue) && numValue !== 0) {
+          return { field: key, value: numValue };
+        }
+      }
+    }
+    
+    return { field: 'not_found', value: 0 };
+  },
+  
+  getPerformanceStats: function() {
+    const recentRequests = this.requests.filter(req => req.completed);
+    const avgDuration = recentRequests.length > 0 ? 
+      recentRequests.reduce((sum, req) => sum + (req.duration || 0), 0) / recentRequests.length : 0;
+    
+    return {
+      totalRequests: this.requests.length,
+      completedRequests: recentRequests.length,
+      errorCount: this.errors.length,
+      averageDuration: avgDuration.toFixed(2) + 'ms',
+      successRate: recentRequests.length > 0 ? 
+        ((recentRequests.length - this.errors.length) / recentRequests.length * 100).toFixed(2) + '%' : '0%'
+    };
+  }
+};
+
 // تلاش برای لود constants از مسیرهای مختلف
 let constants;
 
 try {
-  constants = require('../config/constants');
+  constants = require('./config/constants');
 } catch (error) {
   try {
     constants = require('./config/constants');
@@ -13,9 +157,9 @@ try {
     try {
       constants = require('./constants');
     } catch (error3) {
-      console.log('⚠️ Using fallback constants configuration');
+      console.log('△ Using fallback constants configuration');
       constants = {
-        COINSTATS_API_KEY: process.env.COINSTATS_API_KEY || "uNb+sOjnjCQmV30dYrChxgh55hRHElmiZLnKJX+5U6g=",
+        COINSTATS_API_KEY: process.env.COINSTATS_API_KEY || "uNb+sQjnjCQmV30dYrChxgh55hRHElmizLnKJX+5U6g=",
         API_URLS: {
           base: "https://openapiv1.coinstats.app",
           exchange: "https://openapiv1.coinstats.app/coins/price/exchange",
@@ -39,7 +183,7 @@ try {
   }
 }
 
-// کلاینت اصلی CoinStats
+// کلاس اصلی CoinStats API
 class AdvancedCoinStatsAPIClient {
   constructor() {
     this.base_url = constants.API_URLS.base;
@@ -47,7 +191,8 @@ class AdvancedCoinStatsAPIClient {
     this.request_count = 0;
     this.last_request_time = Date.now();
     this.ratelimitDelay = 1000;
-    console.log('🔧 API Client initialized:', {
+    
+    console.log("📖 API Client initialized", {
       base_url: this.base_url,
       api_key: this.api_key ? '***' + this.api_key.slice(-10) : 'none'
     });
@@ -72,109 +217,142 @@ class AdvancedCoinStatsAPIClient {
   }
 
   async getCoins(limit = 100) {
-      await this._rateLimit();
+    const startTime = Date.now();
+    const request = apiDebugSystem.logRequest('GET', `${this.base_url}/coins`, { limit });
     
-      try {
-          const url = `${this.base_url}/coins?limit=${limit}&currency=USD`;
-          console.log(`🌐 Fetching coins from: ${url}`);
+    await this._rateLimit();
 
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 15000);
+    try {
+      const url = `${this.base_url}/coins?limit=${limit}&currency=USD`;
+      console.log(`🔄 Fetching coins from: ${url}`);
 
-          const response = await fetch(url, {
-              method: 'GET',
-              headers: {
-                  'X-API-KEY': this.api_key,
-                  'Accept': 'application/json',
-                  'User-Agent': 'VortexAI-Server/1.0'
-              },
-              signal: controller.signal
-          });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-          clearTimeout(timeoutId);
-        
-          console.log(`📨 Response status: ${response.status} ${response.statusText}`);
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'X-API-KEY': this.api_key,
+          'Accept': 'application/json',
+          'User-Agent': 'VortexAI-Server/1.0'
+        },
+        signal: controller.signal
+      });
 
-          if (response.status === 429) {
-              console.log('🚫 Rate limit exceeded! Increasing delay...');
-              this.ratelimitDelay = 2000;
-              return { coins: [], error: 'Rate limit exceeded' };
-          }
+      clearTimeout(timeoutId);
+      
+      console.log(`📨 Response status: ${response.status} ${response.statusText}`);
 
-          if (!response.ok) {
-              const errorText = await response.text();
-              console.log(`❌ HTTP error! status: ${response.status}, body:`, errorText);
-              return { coins: [], error: `HTTP ${response.status}: ${response.statusText}` };
-          }
-
-          const data = await response.json();
-          console.log('📦 Raw API response structure:', Object.keys(data));
-        
-          // بررسی همه حالت‌های ممکن برای ساختار داده
-          let coins = [];
-          if (data.result && Array.isArray(data.result)) {
-              coins = data.result;
-          } else if (data.coins && Array.isArray(data.coins)) {
-              coins = data.coins;
-          } else if (data.data && Array.isArray(data.data)) {
-              coins = data.data;
-          } else if (Array.isArray(data)) {
-              coins = data;
-          }
-
-          // 🔍 لاگ جزئیات اولین کوین برای دیباگ
-          if (coins.length > 0) {
-              console.log('🔬 First coin raw structure:', coins[0]);
-              console.log('🔑 All keys of first coin:', Object.keys(coins[0]));
-            
-              // پیدا کردن فیلد تغییرات قیمت
-              const firstCoin = coins[0];
-              const changeFields = Object.keys(firstCoin).filter(key => 
-                  key.toLowerCase().includes('change') || 
-                  key.toLowerCase().includes('percent')
-              );
-              console.log('💰 Change-related fields found:', changeFields);
-          }
-
-          // نرمالایز کردن ساختار داده‌ها
-          const normalizedCoins = coins.map(coin => {
-              // پیدا کردن فیلد تغییرات 24h
-              const priceChange24h = coin.priceChange24h || coin.price_change_24h || coin.change24h || 
-                                   coin.priceChangePercentage24h || coin.percent_change_24h || 0;
-
-              return {
-                  // فیلدهای اصلی
-                  id: coin.id,
-                  symbol: coin.symbol,
-                  name: coin.name,
-                  price: coin.price,
-                
-                  // فیلدهای تغییرات - نرمالایز شده
-                  priceChange24h: typeof priceChange24h === 'number' ? priceChange24h : parseFloat(priceChange24h) || 0,
-                  priceChange1h: coin.priceChange1h || coin.price_change_1h || coin.change1h || 0,
-                
-                  // فیلدهای حجم و مارکت کپ
-                  volume: coin.volume || coin.total_volume || 0,
-                  marketCap: coin.marketCap || coin.market_cap || 0,
-                  rank: coin.rank || coin.market_cap_rank || 0,
-                
-                  // نگهداری داده خام برای دیباگ
-                  _raw: coin // حذف این خط در production
-              };
-          });
-
-          console.log(`✅ Received ${normalizedCoins.length} coins from API (normalized)`);
-          console.log('📊 Sample normalized coin:', normalizedCoins[0]);
-        
-          return { coins: normalizedCoins };
-        
-      } catch (error) {
-          console.error('💥 API getCoins error:', error.message);
-          return { coins: [], error: error.message };
+      if (response.status === 429) {
+        console.log(`🚫 Rate limit exceeded! Increasing delay...`);
+        this.ratelimitDelay = 2000;
+        apiDebugSystem.logError(request, new Error('Rate limit exceeded'));
+        return { coins: [], error: 'Rate limit exceeded' };
       }
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.log(`❌ HTTP error! status: ${response.status}, body:`, errorText);
+        const error = new Error(`HTTP ${response.status}: ${response.statusText}`);
+        apiDebugSystem.logError(request, error);
+        return { coins: [], error: `HTTP ${response.status}: ${response.statusText}` };
+      }
+
+      const data = await response.json();
+      console.log('📊 Raw API response structure:', Object.keys(data));
+
+      // بررسی همه حالت‌های ممکن برای ساختار داده
+      let coins = [];
+      if (data.result && Array.isArray(data.result)) {
+        coins = data.result;
+      } else if (data.coins && Array.isArray(data.coins)) {
+        coins = data.coins;
+      } else if (data.data && Array.isArray(data.data)) {
+        coins = data.data;
+      } else if (Array.isArray(data)) {
+        coins = data;
+      }
+
+      // تحلیل فیلدها
+      const fieldAnalysis = apiDebugSystem.analyzeFieldMapping(coins);
+      console.log('🔍 Field analysis:', fieldAnalysis);
+
+      if (coins.length > 0) {
+        console.log('🔬 First coin raw structure:', coins[0]);
+        console.log('🔑 All keys of first coin:', Object.keys(coins[0]));
+
+        // نمایش فیلدهای تغییرات برای 3 کوین اول
+        coins.slice(0, 3).forEach((coin, idx) => {
+          const bestChangeField = apiDebugSystem.findBestPriceChangeField(coin);
+          console.log(`🔍 Coin ${idx + 1} (${coin.symbol}): Best change field = ${bestChangeField.field}, value = ${bestChangeField.value}`);
+        });
+      }
+
+      // نرمالیز کردن ساختار داده‌ها با سیستم پیشرفته
+      const normalizedCoins = coins.map(coin => {
+        // پیدا کردن بهترین فیلد تغییرات قیمت
+        const bestChangeField = apiDebugSystem.findBestPriceChangeField(coin);
+        
+        // پیدا کردن فیلد حجم
+        let volume = 0;
+        const volumeFields = ['volume', 'total_volume', 'volume_24h', 'total_volume_24h'];
+        for (const field of volumeFields) {
+          if (coin[field] !== undefined && coin[field] !== null) {
+            volume = parseFloat(coin[field]) || 0;
+            if (volume > 0) break;
+          }
+        }
+        
+        // پیدا کردن فیلد مارکت کپ
+        let marketCap = 0;
+        const marketCapFields = ['marketCap', 'market_cap', 'market_cap_rank', 'market_cap_24h'];
+        for (const field of marketCapFields) {
+          if (coin[field] !== undefined && coin[field] !== null) {
+            marketCap = parseFloat(coin[field]) || 0;
+            if (marketCap > 0) break;
+          }
+        }
+
+        return {
+          // فیلدهای اصلی
+          id: coin.id,
+          symbol: coin.symbol,
+          name: coin.name,
+          price: coin.price,
+          
+          // فیلدهای تغییرات - استفاده از سیستم پیشرفته
+          priceChange24h: bestChangeField.value,
+          priceChangeFieldUsed: bestChangeField.field,
+          
+          // فیلدهای حجم و مارکت کپ
+          volume: volume,
+          marketCap: marketCap,
+          rank: coin.rank || coin.market_cap_rank || 0,
+          
+          // نگهداری داده خام برای دیباگ
+          __raw: coin // حذف این خط در production
+        };
+      });
+
+      console.log(`✅ Received ${normalizedCoins.length} coins from API (normalized)`);
+      console.log(`🔍 Sample normalized coin:`, normalizedCoins[0]);
+      
+      const duration = Date.now() - startTime;
+      apiDebugSystem.logResponse(request, { coinCount: normalizedCoins.length }, duration);
+      
+      return { coins: normalizedCoins, fieldAnalysis };
+
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      apiDebugSystem.logError(request, error);
+      console.error(`❌ API getCoins error:`, error.message);
+      return { coins: [], error: error.message };
+    }
   }
 
   async getTopGainers(limit = 10) {
+    const request = apiDebugSystem.logRequest('GET', 'getTopGainers', { limit });
+    
     await this._rateLimit();
     
     try {
@@ -184,11 +362,54 @@ class AdvancedCoinStatsAPIClient {
         .sort((a, b) => b.priceChange24h - a.priceChange24h)
         .slice(0, limit);
 
-      console.log(`📈 Found ${gainers.length} top gainers`);
+      console.log(`✅ Found ${gainers.length} top gainers`);
+      apiDebugSystem.logResponse(request, { gainersCount: gainers.length }, 0);
+      
       return gainers;
     } catch (error) {
-      console.error('❌ Top gainers error:', error.message);
+      apiDebugSystem.logError(request, error);
+      console.error('❌ Top gainers error', error.message);
       return [];
+    }
+  }
+
+  async getCoinDetails(coinId) {
+    const request = apiDebugSystem.logRequest('GET', `${this.base_url}/coins/${coinId}`, { coinId });
+    
+    await this._rateLimit();
+    
+    try {
+      const url = `${this.base_url}/coins/${coinId}`;
+      console.log(`🔍 Fetching coin details from: ${url}`);
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'X-API-KEY': this.api_key,
+          'Accept': 'application/json',
+          'User-Agent': 'VortexAI-Server/1.0'
+        },
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log(`✅ Coin details received for ${coinId}`);
+      
+      apiDebugSystem.logResponse(request, data, 0);
+      return data;
+    } catch (error) {
+      apiDebugSystem.logError(request, error);
+      console.error(`❌ Coin details error for ${coinId}:`, error.message);
+      throw error;
     }
   }
 }
@@ -225,7 +446,7 @@ class HistoricalDataAPI {
       'NMR': 'numeraire', 'UMA': 'uma', 'API3': 'api3', 'GRT': 'the-graph',
       'LPT': 'livepeer', 'ANKR': 'ankr', 'STMX': 'stormx', 'CHZ': 'chiliz',
       'AR': 'arweave', 'STORJ': 'storj', 'DODO': 'dodo', 'PERP': 'perpetual-protocol',
-      'RLC': 'iexec-rlc', 'ALPHA': 'alpha-finance', 'MIR': 'mirror-protocol',
+      'RLC': 'iexec-ric', 'ALPHA': 'alpha-finance', 'MIR': 'mirror-protocol',
       'TWT': 'trust-wallet-token', 'SXP': 'swipe', 'WRX': 'wazirx', 'FRONT': 'frontier',
       'AKRO': 'akropolis', 'REEF': 'reef-finance', 'DUSK': 'dusk-network',
       'BAL': 'balancer', 'KNC': 'kyber-network', 'SNT': 'status', 'FUN': 'funfair',
@@ -245,7 +466,7 @@ class HistoricalDataAPI {
 
     const coinId = symbolMap[cleanSymbol];
     if (!coinId) {
-      console.log(`🔍 Symbol not found in map: ${cleanSymbol}, using lowercase`);
+      console.log(`△ Symbol not found in map: ${cleanSymbol}, using lowercase`);
       return cleanSymbol.toLowerCase();
     }
 
@@ -253,29 +474,32 @@ class HistoricalDataAPI {
   }
 
   async getMultipleCoinsHistorical(coinIds, period = '24h') {
+    const request = apiDebugSystem.logRequest('GET', `${this.base_url}/coins/charts`, { coinIds, period });
+    
     const cacheKey = `${coinIds.sort().join(",")}.${period}`;
     const cached = this.requestCache.get(cacheKey);
-
+    
     if (cached && (Date.now() - cached.timestamp < this.cacheTimeout)) {
       console.log(`💾 Using cached historical data for ${coinIds.length} coins`);
+      apiDebugSystem.logResponse(request, { cached: true, coinCount: coinIds.length }, 0);
       return cached.data;
     }
 
     try {
       const batchSize = constants.CACHE_CONFIG.batchSize;
       const batches = [];
-
+      
       for (let i = 0; i < coinIds.length; i += batchSize) {
         batches.push(coinIds.slice(i, i + batchSize));
       }
 
       const allResults = [];
-
+      
       for (let i = 0; i < batches.length; i++) {
         const batch = batches[i];
-        console.log(`🔄 Fetching batch ${i + 1}/${batches.length}: ${batch.join(',')}`);
+        console.log(`🔄 Fetching batch ${i + 1}/${batches.length}: ${batch.join(",")}`);
+
         const batchResult = await this.fetchBatchHistorical(batch, period);
-        
         if (batchResult.data && Array.isArray(batchResult.data)) {
           allResults.push(...batchResult.data);
         }
@@ -297,9 +521,13 @@ class HistoricalDataAPI {
       });
 
       console.log(`✅ Total historical records received: ${allResults.length}`);
+      apiDebugSystem.logResponse(request, { recordsCount: allResults.length }, 0);
+      
       return result;
+
     } catch (error) {
-      console.error('❌ Error in getMultipleCoinsHistorical:', error);
+      apiDebugSystem.logError(request, error);
+      console.error("❌ Error in getMultipleCoinsHistorical:", error);
       return { data: [], source: 'fallback', error: error.message };
     }
   }
@@ -307,7 +535,7 @@ class HistoricalDataAPI {
   async fetchBatchHistorical(coinIds, period) {
     const coinIdsString = coinIds.join(",");
     const url = `${this.base_url}/coins/charts?period=${period}&coinIds=${coinIdsString}`;
-    console.log(`📊 Fetching historical from: ${url}`);
+    console.log(`🔍 Fetching historical from: ${url}`);
 
     try {
       const controller = new AbortController();
@@ -339,19 +567,20 @@ class HistoricalDataAPI {
       );
 
       if (validData.length === 0) {
-        throw new Error('No valid historical data received');
+        throw new Error("No valid historical data received");
       }
 
       console.log(`✅ Received valid historical data for ${validData.length} coins`);
       return { data: validData, source: 'real_api' };
+
     } catch (error) {
-      console.error(`❌ Historical API error for ${coinIds.join(',')}:`, error.message);
+      console.error(`❌ Historical API error for ${coinIds.join(",")}:`, error.message);
       throw error;
     }
   }
 
   calculatePriceChangesFromChart(coinData, currentPrice) {
-    console.log("📍 CalculatePriceChangesFromChart - Input:", {
+    console.log("🔍 CalculatePriceChangesFromChart - Input:", {
       hasCoinData: !!coinData,
       coinId: coinData?.coinId,
       chartLength: coinData?.chart?.length,
@@ -379,7 +608,7 @@ class HistoricalDataAPI {
       return { changes: {}, source: 'no_data' };
     }
 
-    console.log("📈 Chart Info:", {
+    console.log("✅ Chart Info:", {
       chartLength: chart.length,
       firstPoint: chart[0],
       lastPoint: chart[chart.length - 1]
@@ -420,7 +649,7 @@ class HistoricalDataAPI {
       '180d': 180 * 24 * 60 * 60
     };
 
-    console.log("🕒 Periods Debug:");
+    console.log("📊 Periods Debug:");
     const changes = {};
 
     for (const [periodName, seconds] of Object.entries(periods)) {
@@ -430,17 +659,19 @@ class HistoricalDataAPI {
         continue;
       }
 
-      console.log(`📐 Calculating ${periodName}: targetTime = ${targetTime} (${new Date(targetTime * 1000)})`);
+      console.log(`🔍 Calculating ${periodName}: targetTime = ${targetTime} (${new Date(targetTime * 1000)})`);
+      
       const historicalPoint = this.findClosestHistoricalPoint(chart, targetTime);
-
       if (historicalPoint &&
           Array.isArray(historicalPoint) &&
           historicalPoint.length >= 2 &&
           historicalPoint[1] > 0) {
+
         const historicalPrice = historicalPoint[1];
         const change = ((latestPrice - historicalPrice) / historicalPrice) * 100;
         changes[periodName] = parseFloat(change.toFixed(2));
-        console.log(`📊 ${periodName}: ${changes[periodName]}% (from ${historicalPrice} to ${latestPrice})`);
+        console.log(`✅ ${periodName}: ${changes[periodName]}% (from ${historicalPrice} to ${latestPrice})`);
+
       } else {
         console.log(`❌ No valid historical point found for ${periodName}`);
         changes[periodName] = 0.0;
@@ -452,7 +683,7 @@ class HistoricalDataAPI {
       source: Object.keys(changes).length > 0 ? 'real' : 'no_data'
     };
 
-    console.log("✅ Final result:", result);
+    console.log("🎯 Final result:", result);
     return result;
   }
 
@@ -496,6 +727,8 @@ class ExchangeAPI {
   }
 
   async getExchangePrice(exchange, from, to, timestamp) {
+    const request = apiDebugSystem.logRequest('GET', constants.API_URLS.exchange, { exchange, from, to, timestamp });
+    
     try {
       const url = `${constants.API_URLS.exchange}?exchange=${exchange}&from=${from}&to=${to}&timestamp=${timestamp}`;
       console.log(`💱 Fetching exchange price from: ${url}`);
@@ -509,18 +742,25 @@ class ExchangeAPI {
       });
 
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      return await response.json();
+      
+      const data = await response.json();
+      apiDebugSystem.logResponse(request, data, 0);
+      return data;
+      
     } catch (error) {
+      apiDebugSystem.logError(request, error);
       console.error("❌ Exchange API error:", error);
       throw error;
     }
   }
 
   async getTickers(exchange) {
+    const request = apiDebugSystem.logRequest('GET', constants.API_URLS.tickers, { exchange });
+    
     try {
       const url = `${constants.API_URLS.tickers}?exchange=${exchange}`;
       console.log(`📊 Fetching tickers from: ${url}`);
-      
+
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -530,18 +770,25 @@ class ExchangeAPI {
       });
 
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      return await response.json();
+      
+      const data = await response.json();
+      apiDebugSystem.logResponse(request, { tickersCount: data.length }, 0);
+      return data;
+      
     } catch (error) {
+      apiDebugSystem.logError(request, error);
       console.error("❌ Tickers API error:", error);
       throw error;
     }
   }
 
   async getAveragePrice(coinId, timestamp) {
+    const request = apiDebugSystem.logRequest('GET', constants.API_URLS.avgPrice, { coinId, timestamp });
+    
     try {
       const url = `${constants.API_URLS.avgPrice}?coinId=${coinId}&timestamp=${timestamp}`;
       console.log(`📈 Fetching average price from: ${url}`);
-      
+
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -551,8 +798,13 @@ class ExchangeAPI {
       });
 
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      return await response.json();
+      
+      const data = await response.json();
+      apiDebugSystem.logResponse(request, data, 0);
+      return data;
+      
     } catch (error) {
+      apiDebugSystem.logError(request, error);
       console.error("❌ Average Price API error:", error);
       throw error;
     }
@@ -567,9 +819,11 @@ class MarketDataAPI {
   }
 
   async getMarketCap() {
+    const request = apiDebugSystem.logRequest('GET', constants.API_URLS.markets, {});
+    
     try {
       const url = `${constants.API_URLS.markets}`;
-      console.log(`🌍 Fetching market cap data from: ${url}`);
+      console.log(`🌐 Fetching market cap data from: ${url}`);
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -591,18 +845,24 @@ class MarketDataAPI {
       }
 
       const data = await response.json();
-      console.log('✅ Market cap data received');
+      console.log(`✅ Market cap data received`);
+      
+      apiDebugSystem.logResponse(request, data, 0);
       return data;
+      
     } catch (error) {
-      console.error('❌ Market cap API error:', error.message);
+      apiDebugSystem.logError(request, error);
+      console.error('❌ Market cap API error', error.message);
       throw error;
     }
   }
 
   async getCurrencies() {
+    const request = apiDebugSystem.logRequest('GET', constants.API_URLS.currencies, {});
+    
     try {
       const url = `${constants.API_URLS.currencies}`;
-      console.log(`💰 Fetching currencies data from: ${url}`);
+      console.log(`💱 Fetching currencies data from: ${url}`);
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -625,17 +885,23 @@ class MarketDataAPI {
 
       const data = await response.json();
       console.log(`✅ Currencies data received: ${data.length || 'unknown'} items`);
+      
+      apiDebugSystem.logResponse(request, { currenciesCount: data.length }, 0);
       return data;
+      
     } catch (error) {
+      apiDebugSystem.logError(request, error);
       console.error("❌ Currencies API error:", error.message);
       throw error;
     }
   }
 
   async getGlobalData() {
+    const request = apiDebugSystem.logRequest('GET', `${this.base_url}/global`, {});
+    
     try {
       const url = `${this.base_url}/global`;
-      console.log(`🌐 Fetching global data from: ${url}`);
+      console.log(`🌍 Fetching global data from: ${url}`);
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -657,15 +923,19 @@ class MarketDataAPI {
       }
 
       const data = await response.json();
-      console.log('✅ Global data received');
+      console.log(`✅ Global data received`);
+      
+      apiDebugSystem.logResponse(request, data, 0);
       return data;
+      
     } catch (error) {
-      console.error('❌ Global data API error:', error.message);
+      apiDebugSystem.logError(request, error);
+      console.error(`❌ Global data API error`, error.message);
       
       // Fallback: استفاده از داده‌های موجود
       try {
         const marketData = await this.getMarketCap();
-        return {
+        const fallbackData = {
           data: {
             market_cap_change_percentage_24h_usd: marketData.marketCapChange24h || 0,
             total_volume: marketData.volume || 0,
@@ -673,8 +943,13 @@ class MarketDataAPI {
             markets: marketData.totalExchanges || 0
           }
         };
+        
+        apiDebugSystem.logResponse(request, { fallback: true, data: fallbackData }, 0);
+        return fallbackData;
+        
       } catch (fallbackError) {
-        console.error('❌ Global data fallback error:', fallbackError.message);
+        apiDebugSystem.logError(request, fallbackError);
+        console.error('❌ Global data fallback error', fallbackError.message);
         throw error;
       }
     }
@@ -689,6 +964,8 @@ class NewsAPI {
   }
 
   async getNewsSources() {
+    const request = apiDebugSystem.logRequest('GET', constants.API_URLS.newsSources, {});
+    
     try {
       const url = `${constants.API_URLS.newsSources}`;
       console.log(`📰 Fetching news sources from: ${url}`);
@@ -714,18 +991,23 @@ class NewsAPI {
 
       const data = await response.json();
       console.log(`✅ News sources received: ${data.length || 'unknown'} sources`);
+      
+      apiDebugSystem.logResponse(request, { sourcesCount: data.length }, 0);
       return data;
+      
     } catch (error) {
-      console.error("❌ News sources API error:", error.message);
+      apiDebugSystem.logError(request, error);
+      console.error(`❌ News sources API error:`, error.message);
       throw error;
     }
   }
 
   async getNews(params = {}) {
+    const request = apiDebugSystem.logRequest('GET', constants.API_URLS.news, params);
+    
     try {
       const { page = 1, limit = 20, from, to } = params;
       let url = `${constants.API_URLS.news}?page=${page}&limit=${limit}`;
-      
       if (from) url += `&from=${from}`;
       if (to) url += `&to=${to}`;
 
@@ -752,15 +1034,18 @@ class NewsAPI {
 
       const data = await response.json();
       console.log(`✅ News received: ${data.result?.length || 0} articles`);
+      
+      apiDebugSystem.logResponse(request, { articlesCount: data.result?.length || 0 }, 0);
       return data;
+      
     } catch (error) {
-      console.error('❌ News API error:', error.message);
+      apiDebugSystem.logError(request, error);
+      console.error(`❌ News API error`, error.message);
       throw error;
     }
   }
 }
 
-// کلاس جدید برای Insights و تحلیل های پیشرفته
 class InsightsAPI {
   constructor() {
     this.base_url = constants.API_URLS.base;
@@ -768,6 +1053,8 @@ class InsightsAPI {
   }
 
   async getBTCDominance(type = 'all') {
+    const request = apiDebugSystem.logRequest('GET', constants.API_URLS.btcDominance, { type });
+    
     try {
       const url = `${constants.API_URLS.btcDominance}?type=${type}`;
       console.log(`₿ Fetching BTC Dominance from: ${url}`);
@@ -792,18 +1079,24 @@ class InsightsAPI {
       }
 
       const data = await response.json();
-      console.log('✅ BTC Dominance data received');
+      console.log(`✅ BTC Dominance data received`);
+      
+      apiDebugSystem.logResponse(request, data, 0);
       return data;
+      
     } catch (error) {
-      console.error('❌ BTC Dominance API error:', error.message);
+      apiDebugSystem.logError(request, error);
+      console.error(`❌ BTC Dominance API error:`, error.message);
       throw error;
     }
   }
 
   async getFearGreedIndex() {
+    const request = apiDebugSystem.logRequest('GET', constants.API_URLS.fearGreed, {});
+    
     try {
       const url = `${constants.API_URLS.fearGreed}`;
-      console.log(`😊 Fetching Fear & Greed Index from: ${url}`);
+      console.log(`😨 Fetching Fear & Greed Index from: ${url}`);
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -825,15 +1118,21 @@ class InsightsAPI {
       }
 
       const data = await response.json();
-      console.log("✅ Fear & Greed Index data received");
+      console.log(`✅ Fear & Greed Index data received`);
+      
+      apiDebugSystem.logResponse(request, data, 0);
       return data;
+      
     } catch (error) {
-      console.error("❌ Fear & Greed API error:", error.message);
+      apiDebugSystem.logError(request, error);
+      console.error(`❌ Fear & Greed API error:`, error.message);
       throw error;
     }
   }
 
   async getFearGreedChart() {
+    const request = apiDebugSystem.logRequest('GET', constants.API_URLS.fearGreedChart, {});
+    
     try {
       const url = `${constants.API_URLS.fearGreedChart}`;
       console.log(`📊 Fetching Fear & Greed Chart from: ${url}`);
@@ -858,15 +1157,21 @@ class InsightsAPI {
       }
 
       const data = await response.json();
-      console.log('✅ Fear & Greed Chart data received');
+      console.log(`✅ Fear & Greed Chart data received`);
+      
+      apiDebugSystem.logResponse(request, data, 0);
       return data;
+      
     } catch (error) {
-      console.error('❌ Fear & Greed Chart API error:', error.message);
+      apiDebugSystem.logError(request, error);
+      console.error(`❌ Fear & Greed Chart API error:`, error.message);
       throw error;
     }
   }
 
   async getRainbowChart(coin = 'bitcoin') {
+    const request = apiDebugSystem.logRequest('GET', constants.API_URLS.rainbowChart, { coin });
+    
     try {
       const url = `${constants.API_URLS.rainbowChart}/${coin}`;
       console.log(`🌈 Fetching Rainbow Chart for ${coin} from: ${url}`);
@@ -892,13 +1197,50 @@ class InsightsAPI {
 
       const data = await response.json();
       console.log(`✅ Rainbow Chart data received for ${coin}`);
+      
+      apiDebugSystem.logResponse(request, data, 0);
       return data;
+      
     } catch (error) {
-      console.error('❌ Rainbow Chart API error:', error.message);
+      apiDebugSystem.logError(request, error);
+      console.error(`❌ Rainbow Chart API error:`, error.message);
       throw error;
     }
   }
 }
+
+// API Routes برای دیباگ و مانیتورینگ
+const apiDebugRouter = express.Router();
+
+apiDebugRouter.get('/api-stats', (req, res) => {
+  res.json({
+    performance: apiDebugSystem.getPerformanceStats(),
+    fieldMapping: apiDebugSystem.fieldMapping,
+    recentErrors: apiDebugSystem.errors.slice(-5),
+    recentRequests: apiDebugSystem.requests.slice(-10).map(req => ({
+      method: req.method,
+      url: req.url,
+      duration: req.duration,
+      error: req.error ? req.error.message : null,
+      timestamp: req.timestamp
+    }))
+  });
+});
+
+apiDebugRouter.get('/field-analysis', (req, res) => {
+  res.json({
+    fieldMapping: apiDebugSystem.fieldMapping,
+    suggestions: apiDebugSystem.fieldMapping.changeFields && apiDebugSystem.fieldMapping.changeFields.length === 0 ? 
+      ['No price change fields found! Check API response structure'] : 
+      ['Field mapping looks good']
+  });
+});
+
+apiDebugRouter.post('/reset-stats', (req, res) => {
+  apiDebugSystem.requests = [];
+  apiDebugSystem.errors = [];
+  res.json({ success: true, message: 'API statistics reset' });
+});
 
 module.exports = {
   AdvancedCoinStatsAPIClient,
@@ -906,5 +1248,7 @@ module.exports = {
   ExchangeAPI,
   MarketDataAPI,
   NewsAPI,
-  InsightsAPI
+  InsightsAPI,
+  apiDebugRouter,
+  apiDebugSystem
 };
