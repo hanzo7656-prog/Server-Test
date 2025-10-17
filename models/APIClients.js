@@ -19,9 +19,9 @@ try {
             // fallback: تعریف مستقیم constants
             console.log('∆ Using fallback constants configuration');
             constants = {
-                COINSTATS_APL_KEY: process.env.COINSTATS_APL_KEY || "uNb+s0jnjCQmV30dYrChxgh55hRHEImiZLnKJX+5U6g=",
+                COINSTATS_API_KEY: process.env.COINSTATS_API_KEY || "uNb+s0jnjCQmV30dYrChxgh55hRHEImiZLnKJX+5U6g=",
                 API_URLS: {
-                    base: "https://server-test-ova.onrender.com",
+                    base: "https://openapiv1.coinstats.app", // ✅ درست - سرویس API کویین استتس
                     exchange: "https://openapiv1.coinstats.app/coins/price/exchange",
                     tickers: "https://openapiv1.coinstats.app/tickers/exchanges",
                     avgPrice: "https://openapiv1.coinstats.app/coins/price/avg",
@@ -48,7 +48,7 @@ try {
 class AdvancedCoinStatsAPIClient {
     constructor() {
         this.base_url = constants.API_URLS.base;
-        this.api_key = constants.COINSTATS_APL_KEY;
+        this.api_key = constants.COINSTATS_API_KEY;
         this.request_count = 0;
         this.last_request_time = Date.now();
         this.ratelimitDelay = 1000;
@@ -137,7 +137,7 @@ class AdvancedCoinStatsAPIClient {
 class HistoricalDataAPI {
     constructor() {
         this.base_url = constants.API_URLS.base;
-        this.api_key = constants.COINSTATS_APL_KEY;
+        this.api_key = constants.COINSTATS_API_KEY;
         this.requestCache = new Map();
         this.cacheTimeout = constants.CACHE_CONFIG.timeout;
     }
@@ -421,7 +421,7 @@ class HistoricalDataAPI {
 // API های جدید برای تبادل و قیمت
 class ExchangeAPI {
     constructor() {
-        this.api_key = constants.COINSTATS_APL_KEY;
+        this.api_key = constants.COINSTATS_API_KEY;
     }
 
     async getExchangePrice(exchange, from, to, timestamp) {
@@ -486,7 +486,7 @@ class ExchangeAPI {
 class MarketDataAPI {
     constructor() {
         this.base_url = constants.API_URLS.base;
-        this.api_key = constants.COINSTATS_APL_KEY;
+        this.api_key = constants.COINSTATS_API_KEY;
     }
 
     async getMarketCap() {
@@ -609,7 +609,7 @@ class MarketDataAPI {
 class NewsAPI {
     constructor() {
         this.base_url = constants.API_URLS.base;
-        this.api_key = constants.COINSTATS_APL_KEY;
+        this.api_key = constants.COINSTATS_API_KEY;
     }
 
     async getNewsSources() {
@@ -687,7 +687,7 @@ class NewsAPI {
 class InsightsAPI {
     constructor() {
         this.base_url = constants.API_URLS.base;
-        this.api_key = constants.COINSTATS_APL_KEY;
+        this.api_key = constants.COINSTATS_API_KEY;
     }
 
     async getBTCDominance(type = 'all') {
