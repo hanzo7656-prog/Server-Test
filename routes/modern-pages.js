@@ -306,36 +306,75 @@ function generateClassNavigation(currentPage = 'home') {
 </style>
 
 <script>
-
 // ==================== 
-// NAVIGATION DEBUGGER - SAFE VERSION
+// VISUAL DEBUG PANEL
 // ====================
 
-function safeDebugNavigation() {
+function createDebugPanel() {
     try {
-        // فقط در مرورگر اجرا بشه
         if (typeof document === 'undefined') return;
         
-        console.log('=== 🧭 NAVIGATION DEBUG ===');
+        // اگر از قبل وجود داره، حذفش کن
+        const existingPanel = document.getElementById('navDebugPanel');
+        if (existingPanel) existingPanel.remove();
+        
+        // ایجاد پنل دیباگ
+        const debugPanel = document.createElement('div');
+        debugPanel.id = 'navDebugPanel';
+        debugPanel.style.cssText = `
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            z-index: 10000;
+            max-width: 300px;
+            border: 2px solid red;
+        `;
+        
+        debugPanel.innerHTML = `
+            <div style="color: #ff4444; font-weight: bold;">🧭 NAV DEBUG</div>
+            <div id="debugContent">Loading...</div>
+            <button onclick="document.getElementById('navDebugPanel').remove()" 
+                    style="background: red; color: white; border: none; padding: 2px 5px; margin-top: 5px; border-radius: 3px;">
+                X
+            </button>
+        `;
+        
+        document.body.appendChild(debugPanel);
+        updateDebugInfo();
+        
+    } catch (error) {
+        // خطا رو نادیده بگیر
+    }
+}
+
+function updateDebugInfo() {
+    try {
+        const debugContent = document.getElementById('debugContent');
+        if (!debugContent) return;
         
         const navItems = document.querySelectorAll('.nav-item');
         const container = document.querySelector('.nav-container');
         const floater = document.querySelector('.nav-floater');
         
-        console.log('Navigation items found: ' + navItems.length);
-        console.log('Container exists: ' + !!container);
-        console.log('Floater exists: ' + !!floater);
+        let html = `
+            <div>Items: ${navItems.length}</div>
+            <div>Container: ${container ? '✅' : '❌'}</div>
+            <div>Floater: ${floater ? '✅' : '❌'}</div>
+            <div style="margin-top: 5px; border-top: 1px solid #444; padding-top: 5px;">
+                <strong>Last Click:</strong>
+                <div id="lastClickInfo">None</div>
+            </div>
+        `;
         
-        // نمایش اطلاعات هر آیتم
-        navItems.forEach(function(item, index) {
-            const page = item.getAttribute('data-page');
-            const external = item.getAttribute('data-external');
-            console.log('Item ' + (index + 1) + ': ' + page + ' (external: ' + external + ')');
-        });
+        debugContent.innerHTML = html;
         
     } catch (error) {
-        // خطا رو نادیده بگیر - یعنی در Node.js هستیم
-        console.log('Debug skipped - not in browser');
+        // خطا رو نادیده بگیر
     }
 }
 
@@ -357,6 +396,8 @@ document.querySelector('.nav-floater').addEventListener('click', function(e) {
         container.style.display = 'block';
         nav.classList.add('expanded');
     }
+    
+    updateDebugInfo();
 });
 
 // مدیریت کلیک روی آیتم‌های نویگیشن
@@ -370,10 +411,21 @@ document.querySelector('.nav-container').addEventListener('click', function(e) {
         const page = navItem.getAttribute('data-page');
         const isExternal = navItem.getAttribute('data-external') === 'true';
         
-        console.log('=== 🚀 NAVIGATION CLICK ===');
-        console.log('Page: ' + page);
-        console.log('External: ' + isExternal);
-        console.log('======================');
+        // نمایش اطلاعات کلیک در دیباگ
+        const lastClickInfo = document.getElementById('lastClickInfo');
+        if (lastClickInfo) {
+            lastClickInfo.innerHTML = `
+                <div style="color: ${isExternal ? '#ffaa00' : '#00ff00'}">
+                    ${page}
+                </div>
+                <div style="font-size: 10px;">
+                    External: ${isExternal ? 'Yes' : 'No'}
+                </div>
+                <div style="font-size: 10px; color: #888;">
+                    ${new Date().toLocaleTimeString()}
+                </div>
+            `;
+        }
         
         // بستن منو
         const container = document.querySelector('.nav-container');
@@ -387,6 +439,8 @@ document.querySelector('.nav-container').addEventListener('click', function(e) {
         } else {
             window.location.href = page;
         }
+        
+        updateDebugInfo();
     }
 });
 
@@ -398,6 +452,7 @@ document.addEventListener('click', function(e) {
     if (!nav.contains(e.target) && container.style.display === 'block') {
         container.style.display = 'none';
         nav.classList.remove('expanded');
+        updateDebugInfo();
     }
 });
 
@@ -405,7 +460,10 @@ document.addEventListener('click', function(e) {
 try {
     if (typeof document !== 'undefined') {
         document.addEventListener('DOMContentLoaded', function() {
-            setTimeout(safeDebugNavigation, 1000);
+            setTimeout(function() {
+                createDebugPanel();
+                updateDebugInfo();
+            }, 1500);
         });
     }
 } catch (error) {
@@ -460,7 +518,6 @@ function endPress(itemId) {
 function searchCommands(event) {
     console.log('Search commands: ' + event.target.value);
 }
-
 </script>
 `;
 }
