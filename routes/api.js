@@ -374,5 +374,361 @@ module.exports = ({ gistManager, wsManager, apiClient, exchangeAPI }) => {
             });
         }
     });
+    // =========== ENDPOINT های داده تاریخی ==========
 
+    // داده تاریخی اصلی
+    router.get('/coin/:symbol/history/:timeframe', async (req, res) => {
+        const { symbol, timeframe } = req.params;
+        const validTimeframes = gistManager.getAvailableTimeframes();
+    
+        if (!validTimeframes.includes(timeframe)) {
+            return res.status(400).json({
+                success: false,
+                error: `Invalid timeframe. Valid timeframes: ${validTimeframes.join(', ')}`
+            });
+        }
   
+        try {
+            const historicalData = gistManager.getPriceData(symbol, timeframe);
+            const realtimeData = wsManager.getRealtimeData()[symbol];
+          
+            if (!historicalData && !realtimeData) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'No data available for this symbol'
+                });
+            }
+        
+            res.json({
+                success: true,
+                symbol,
+                timeframe,
+                current_price: realtimeData?.price || historicalData?.current_price,
+                history: historicalData?.history || [],
+                data_points: historicalData?.history?.length || 0,
+                timestamp: new Date().toISOString()
+            });
+        
+        } catch (error) {
+            console.error(`History API error for ${symbol}:`, error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // =========== ENDPOINT های بازار ==========
+
+    // مارکت کپ
+    router.get("/markets/cap", async (req, res) => {
+        try {
+            const marketAPI = new MarketDataAPI();
+            const data = await marketAPI.getMarketCap();
+        
+            res.json({
+                success: true,
+                data: data,
+                timestamp: new Date().toISOString()
+            });
+        
+        } catch (error) {
+            console.error('Error in market cap endpoint', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // ارزها
+    router.get("/currencies", async (req, res) => {
+        try {
+            const marketAPI = new MarketDataAPI();
+            const data = await marketAPI.getCurrencies();
+        
+            res.json({
+                success: true,
+                data: data,
+                count: data.length || 0,
+                timestamp: new Date().toISOString()
+            });
+        
+        } catch (error) {
+            console.error('Error in /currencies endpoint', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // ========== ENDPOINT های Insights ==========
+
+    // Insights Dashboard
+    router.get("/insights/dashboard", async (req, res) => {
+        try {
+            const insightsAPI = new InsightsAPI();
+            const [btcDominance, fearGreed, rainbowChart] = await Promise.all([
+                insightsAPI.getBTCDominance().catch(() => ({ value: 50, trend: 'neutral' })),
+                insightsAPI.getFearGreedIndex().catch(() => ({ now: { value: 50, value_classification: 'Neutral' } })),
+                insightsAPI.getRainbowChart('bitcoin').catch(() => ({}))
+            ]);
+        
+            res.json({
+                success: true,
+                data: {
+                    btc_dominance: btcDominance,
+                    fear_greed: fearGreed,
+                    rainbow_chart: rainbowChart
+                },
+                timestamp: new Date().toISOString()
+            });
+        
+        } catch (error) {
+            console.error('Error in Insights Dashboard endpoint', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // BTC Dominance
+    router.get("/insights/btc-dominance", async (req, res) => {
+        try {
+            const insightsAPI = new InsightsAPI();
+            const { type = 'all' } = req.query;
+            const data = await insightsAPI.getBTCDominance(type);
+         
+            res.json({
+                success: true,
+                data: data,
+                type: type,
+                timestamp: new Date().toISOString()
+            });
+          
+        } catch (error) {
+            console.error('Error in BTC Dominance endpoint', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // Fear & Greed
+    router.get("/insights/fear-greed", async (req, res) => {
+        try {
+            const insightsAPI = new InsightsAPI();
+            const data = await insightsAPI.getFearGreedIndex();
+        
+            res.json({
+                success: true,
+                data: data,
+                timestamp: new Date().toISOString()
+            });
+          
+        } catch (error) {
+            console.error('Error in Fear & Greed endpoint:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // Fear & Greed Chart - جدید
+    router.get("/insights/fear-greed-chart", async (req, res) => {
+        try {
+            const insightsAPI = new InsightsAPI();
+            const data = await insightsAPI.getFearGreedChart();
+        
+            res.json({
+                success: true,
+                data: data,
+                chart_type: "fear_greed_index_chart",
+                timestamp: new Date().toISOString()
+            });
+        
+        } catch (error) {
+            console.error('Error in Fear & Greed Chart endpoint:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // Rainbow Chart - جدید
+    router.get("/insights/rainbow-chart", async (req, res) => {
+        try {
+            const { coin = 'bitcoin' } = req.query;
+            const insightsAPI = new InsightsAPI();
+            const data = await insightsAPI.getRainbowChart(coin);
+        
+            res.json({
+                success: true,
+                data: data,
+                coin: coin,
+                chart_type: "rainbow_chart",
+                timestamp: new Date().toISOString()
+            });
+        
+        } catch (error) {
+            console.error('Error in Rainbow Chart endpoint:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // ========== ENDPOINT های اخبار ==========
+
+    // اخبار
+    router.get("/news", async (req, res) => {
+        try {
+            const { page = 1, limit = 20, from, to } = req.query;
+            const newsAPI = new NewsAPI();
+            const data = await newsAPI.getNews({
+                page: parseInt(page),
+                limit: parseInt(limit),
+                from,
+                to
+            });
+        
+            res.json({
+                success: true,
+                data: data,
+                pagination: {
+                    page: parseInt(page),
+                    limit: parseInt(limit),
+                    total: data.result?.length || 0
+                },
+                timestamp: new Date().toISOString()
+            });
+        
+        } catch (error) {
+            console.error('Error in news endpoint', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // منابع خبری
+    router.get("/news/sources", async (req, res) => {
+        try {
+            const newsAPI = new NewsAPI();
+            const data = await newsAPI.getNewsSources();
+        
+            res.json({
+                success: true,
+                data: data,
+                count: data.length || 0,
+                timestamp: new Date().toISOString()
+            });
+        
+        } catch (error) {
+            console.error('Error in news sources endpoint', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // اخبار ترند - جدید
+    router.get("/news/type/trending", async (req, res) => {
+        try {
+            const { page = 1, limit = 20 } = req.query;
+            const newsAPI = new NewsAPI();
+            const data = await newsAPI.getNewsByType('trending', {
+                page: parseInt(page),
+                limit: parseInt(limit)
+            });
+        
+            res.json({
+                success: true,
+                type: 'trending',
+                data: data,
+                pagination: {
+                    page: parseInt(page),
+                    limit: parseInt(limit),
+                    total: data.length || 0
+                },
+                timestamp: new Date().toISOString()
+            });
+        
+        } catch (error) {
+            console.error('Error in trending news endpoint', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // اخبار منتخب - جدید
+    router.get("/news/type/handpicked", async (req, res) => {
+        try {
+            const { page = 1, limit = 20 } = req.query;
+            const newsAPI = new NewsAPI();
+            const data = await newsAPI.getNewsByType('handpicked', {
+                page: parseInt(page),
+                limit: parseInt(limit)
+            });
+        
+            res.json({
+                success: true,
+                type: 'handpicked',
+                data: data,
+                pagination: {
+                    page: parseInt(page),
+                    limit: parseInt(limit),
+                    total: data.length || 0
+                },
+                timestamp: new Date().toISOString()
+            });
+        
+        } catch (error) {
+            console.error('Error in handpicked news endpoint', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // آخرین اخبار - جدید
+    router.get("/news/type/latest", async (req, res) => {
+        try {
+            const { page = 1, limit = 20 } = req.query;
+            const newsAPI = new NewsAPI();
+            const data = await newsAPI.getNewsByType('latest', {
+                page: parseInt(page),
+                limit: parseInt(limit)
+            });
+        
+            res.json({
+                success: true,
+                type: 'latest',
+                data: data,
+                pagination: {
+                    page: parseInt(page),
+                    limit: parseInt(limit),
+                    total: data.length || 0
+                },
+                timestamp: new Date().toISOString()
+            });
+        
+        } catch (error) {
+            console.error('Error in latest news endpoint', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
