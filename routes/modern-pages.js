@@ -1,549 +1,6 @@
 const express = require('express');
 const router = express.Router();
 
-// Generate navigation function
-function generateClassNavigation(currentPage = 'home') {
-    const allNavItems = [
-        { id: 'home', label: 'DASH', page: '/', icon: 'D', context: ['all'], quickPeek: 'داشبورد اصلی' },
-        { id: 'scan', label: 'SCAN', page: '/scan-page', icon: 'S', context: ['analysis', 'market'], quickPeek: 'اسکن بازار' },
-        { id: 'analyze', label: 'ANALYZE', page: '/analysis-page', icon: 'A', context: ['analysis', 'technical'], quickPeek: 'تحلیل تکنیکال' },
-        { id: 'ai', label: 'AI', page: 'https://ai-test-2nxq.onrender.com/', icon: 'AI', ai: true, external: true, context: ['all'], quickPeek: 'تحلیل هوش مصنوعی' },
-        { id: 'market', label: 'MARKET', page: '/markets-page', icon: 'M', context: ['market', 'overview'], quickPeek: 'بازار و سرمایه' },
-        { id: 'insights', label: 'INSIGHTS', page: '/insights-page', icon: 'I', context: ['analysis', 'sentiment'], quickPeek: 'بینش های بازار' },
-        { id: 'news', label: 'NEWS', page: '/news-page', icon: 'N', context: ['news', 'all'], quickPeek: 'اخبار زنده بازار' },
-        { id: 'health', label: 'HEALTH', page: '/health-page', icon: 'H', context: ['system', 'all'], quickPeek: 'وضعیت سرورها' },
-        { id: 'settings', label: 'SETTINGS', page: '/setting', icon: 'G', context: ['all'], quickPeek: 'تنظیمات کاربری' }
-    ];
-
-    function getContextAwareItems(allItems, currentPage) {
-        const contextMap = {
-            'home': ['all'], 
-            'scan': ['analysis', 'market', 'all'], 
-            'analyze': ['analysis', 'technical', 'all'],
-            'market': ['market', 'overview', 'all'], 
-            'insights': ['analysis', 'sentiment', 'all'], 
-            'news': ['news', 'all'],
-            'health': ['system', 'all'], 
-            'settings': ['all']
-        };
-        const currentContext = contextMap[currentPage] || ['all'];
-        return allItems.filter(item => item.context.some(context => currentContext.includes(context)));
-    }
-
-    const contextAwareItems = allNavItems;
-
-    return `
-<!-- هوشمند ناوبری شیشه‌ای -->
-<div id="glassNav" class="glass-navigation">
-    <!-- دکمه شناور مایع -->
-    <div class="nav-floater">
-        <div class="liquid-button">
-            <div class="nav-dot"></div>
-            <div class="nav-dot"></div>
-            <div class="nav-dot"></div>
-        </div>
-    </div>
-
-    <!-- کانتینر ناوبری -->
-    <div class="nav-container" style="display: none;">
-        <div class="nav-scroll" id="navScroll">
-            ${contextAwareItems.map(item => `
-                <div class="nav-item ${item.id === currentPage ? 'active' : ''}" 
-                     data-page="${item.page}" 
-                     data-external="${item.external || false}" 
-                     data-ai="${item.ai || false}"
-                     onmouseenter="showQuickPeek('${item.id}')"
-                     onmouseleave="hideQuickPeek()"
-                     ontouchstart="startPress('${item.id}')"
-                     ontouchend="endPress('${item.id}')">
-                    <div class="nav-icon animated-gradient">${item.icon}</div>
-                    <div class="nav-text">${item.label}</div>
-                </div>
-            `).join('')}
-        </div>
-
-        <!-- Command Palette -->
-        <div class="command-palette" id="commandPalette">
-            <input type="text" placeholder="...(s) btc analysis" onkeyup="searchCommands(event)">
-            <div class="command-results" id="commandResults"></div>
-        </div>
-    </div>
-
-    <!-- Quick Peek Overlay -->
-    <div class="quick-peek-overlay" id="quickPeekOverlay">
-        <div class="quick-peek-content" id="quickPeekContent"></div>
-    </div>
-</div>
-
-<style>
-.glass-navigation {
-    position: fixed; 
-    bottom: 20px; 
-    left: 50%; 
-    transform: translateX(-50%); 
-    z-index: 1000;
-    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-}
-
-.nav-floater {
-    width: 65px; 
-    height: 65px; 
-    background: linear-gradient(135deg, rgba(102,126,234,0.9), rgba(118,75,162,0.9));
-    backdrop-filter: blur(25px); 
-    border: 1px solid rgba(255,255,255,0.3); 
-    border-radius: 25px;
-    display: flex; 
-    align-items: center; 
-    justify-content: center; 
-    cursor: pointer;
-    box-shadow: 0 15px 35px rgba(102,126,234,0.5), inset 0 1px 0 rgba(255,255,255,0.2);
-    transition: all 0.4s ease; 
-    position: relative; 
-    overflow: hidden;
-}
-
-.nav-floater:hover {
-    transform: scale(1.1); 
-    box-shadow: 0 20px 45px rgba(102,126,234,0.7), inset 0 1px 0 rgba(255,255,255,0.3);
-}
-
-.liquid-button {
-    position: relative; 
-    width: 30px; 
-    height: 30px; 
-    display: flex; 
-    align-items: center;
-    justify-content: center; 
-    gap: 3px;
-}
-
-.nav-dot {
-    width: 5px; 
-    height: 5px; 
-    background: rgba(255,255,255,0.9); 
-    border-radius: 50%;
-    animation: dotPulse 2s infinite ease-in-out; 
-    box-shadow: 0 0 10px rgba(255,255,255,0.5);
-}
-
-.nav-dot:nth-child(1) { animation-delay: 0s; }
-.nav-dot:nth-child(2) { animation-delay: 0.3s; }
-.nav-dot:nth-child(3) { animation-delay: 0.6s; }
-
-@keyframes dotPulse {
-    0%,100% { transform: scale(1); opacity: 0.7; } 
-    50% { transform: scale(1.3); opacity: 1; }
-}
-
-.nav-container {
-    background: rgba(30,35,50,0.95); 
-    backdrop-filter: blur(30px); 
-    border: 1px solid rgba(255,255,255,0.15);
-    border-radius: 25px; 
-    padding: 20px; 
-    margin-bottom: 15px;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1); 
-    max-width: 400px;
-}
-
-.nav-scroll {
-    display: grid; 
-    grid-template-columns: repeat(3, 1fr); 
-    grid-template-rows: repeat(3, auto);
-    gap: 12px;
-    width: 100%; 
-    max-height: 250px; 
-    overflow-y: auto; 
-    scroll-behavior: smooth; 
-    scrollbar-width: none;
-}
-
-.nav-scroll::-webkit-scrollbar { display: none; }
-
-.nav-item {
-    display: flex; 
-    flex-direction: column; 
-    align-items: center; 
-    justify-content: center;
-    padding: 12px 8px; 
-    border-radius: 16px; 
-    cursor: pointer; 
-    transition: all 0.3s ease;
-    background: rgba(255,255,255,0.08); 
-    border: 1px solid transparent; 
-    position: relative;
-    overflow: hidden; 
-    min-height: 70px;
-}
-
-.nav-item::before {
-    content: ""; 
-    position: absolute; 
-    top: 50%; 
-    left: 50%; 
-    width: 0; 
-    height: 0; 
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
-    transform: translate(-50%, -50%); 
-    transition: all 0.6s ease; 
-    opacity: 0;
-}
-
-.nav-item:hover::before {
-    width: 120px; 
-    height: 120px; 
-    opacity: 1; 
-    animation: liquidWave 0.6s ease-out;
-}
-
-@keyframes liquidWave {
-    0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
-    100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
-}
-
-.nav-item:hover {
-    background: rgba(255,255,255,0.15); 
-    transform: translateY(-2px);
-    border: 1px solid rgba(255,255,255,0.2); 
-    box-shadow: 0 8px 25px rgba(0,0,0,0.2);
-}
-
-.nav-item.active {
-    background: linear-gradient(135deg, rgba(102,126,234,0.3), rgba(118,75,162,0.3));
-    border: 1px solid rgba(102,126,234,0.4); 
-    box-shadow: 0 8px 25px rgba(102,126,234,0.3);
-}
-
-.animated-gradient {
-    background: linear-gradient(45deg, #667eea, #764ba2, #f093fb); 
-    background-size: 200% 200%;
-    animation: gradientShift 3s ease infinite; 
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent; 
-    background-clip: text;
-}
-
-@keyframes gradientShift {
-    0% { background-position: 0% 50%; } 
-    50% { background-position: 100% 50%; } 
-    100% { background-position: 0% 50%; }
-}
-
-.nav-text {
-    font-size: 0.7rem; 
-    font-weight: 700; 
-    color: #f115f9; 
-    text-align: center; 
-    text-transform: uppercase;
-    letter-spacing: 0.5px; 
-    text-shadow: 0 1px 2px rgba(0,0,0,0.5), 0 0 20px rgba(255,255,255,0.3);
-    background: linear-gradient(135deg, #f115f9, #cbd5e1); 
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent; 
-    background-clip: text;
-}
-
-.nav-item:hover .nav-text {
-    background: linear-gradient(135deg, #ffffff, #e2e8f0); 
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-
-.nav-item.active .nav-text {
-    background: linear-gradient(135deg, #667eea, #a855f7); 
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-
-.command-palette {
-    display: none; 
-    position: absolute; 
-    top: -80px; 
-    left: 0; 
-    right: 0;
-    background: rgba(30,35,50,0.98); 
-    backdrop-filter: blur(30px); 
-    border: 1px solid rgba(255,255,255,0.2);
-    border-radius: 15px; 
-    padding: 15px; 
-    box-shadow: 0 15px 35px rgba(0,0,0,0.4);
-}
-
-.quick-peek-overlay {
-    display: none; 
-    position: fixed; 
-    bottom: 120px; 
-    left: 50%; 
-    transform: translateX(-50%);
-    background: rgba(30,35,50,0.95); 
-    backdrop-filter: blur(30px); 
-    border: 1px solid rgba(255,255,255,0.2);
-    border-radius: 15px; 
-    padding: 15px; 
-    max-width: 300px; 
-    z-index: 1001;
-    box-shadow: 0 15px 35px rgba(0,0,0,0.4);
-}
-
-.glass-navigation.expanded .nav-container {
-    display: block !important;
-    animation: slideUp 0.4s ease;
-}
-
-@keyframes slideUp {
-    from { opacity: 0; transform: translateY(30px) scale(0.9); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-@media (max-width: 400px) {
-    .nav-container { max-width: 320px; padding: 15px; }
-    .nav-scroll { gap: 10px; }
-    .nav-item { padding: 10px 6px; min-height: 60px; }
-    .nav-text { font-size: 0.65rem; }
-    .nav-floater { width: 60px; height: 60px; }
-}
-</style>
-
-<script>
-
-// ==================== 
-// COMPREHENSIVE NAVIGATION DEBUG
-// ====================
-
-function showDebugMessage(message, type = 'info') {
-    try {
-        const oldMsg = document.getElementById('visualDebugMsg');
-        if (oldMsg) oldMsg.remove();
-        
-        const debugMsg = document.createElement('div');
-        debugMsg.id = 'visualDebugMsg';
-        debugMsg.textContent = message;
-        debugMsg.style.position = 'fixed';
-        debugMsg.style.top = '10px';
-        debugMsg.style.left = '10px';
-        debugMsg.style.background = type === 'error' ? 'red' : (type === 'success' ? 'green' : 'blue');
-        debugMsg.style.color = 'white';
-        debugMsg.style.padding = '10px';
-        debugMsg.style.zIndex = '10000';
-        debugMsg.style.borderRadius = '5px';
-        debugMsg.style.fontSize = '14px';
-        debugMsg.style.fontFamily = 'Arial, sans-serif';
-        debugMsg.style.maxWidth = '400px';
-        
-        document.body.appendChild(debugMsg);
-        
-        setTimeout(function() {
-            if (debugMsg.parentNode) {
-                debugMsg.parentNode.removeChild(debugMsg);
-            }
-        }, 7000);
-    } catch (error) {}
-}
-
-// تست 1: بررسی وضعیت کلی navigation
-function testNavigationStructure() {
-    try {
-        const nav = document.getElementById('glassNav');
-        const container = document.querySelector('.nav-container');
-        const floater = document.querySelector('.nav-floater');
-        const items = document.querySelectorAll('.nav-item');
-        const scanItem = document.querySelector('[data-page="/scan-page"]');
-        const marketItem = document.querySelector('[data-page="/markets-page"]');
-        const commandPalette = document.getElementById('commandPalette');
-        const quickPeek = document.getElementById('quickPeekOverlay');
-        
-        let report = 'گزارش وضعیت navigation:\n';
-        report += '• المان اصلی: ' + (nav ? '✅' : '❌') + '\n';
-        report += '• کانتینر: ' + (container ? '✅' : '❌') + '\n';
-        report += '• دکمه شناور: ' + (floater ? '✅' : '❌') + '\n';
-        report += '• تعداد آیتم‌ها: ' + items.length + '\n';
-        report += '• آیتم اسکن: ' + (scanItem ? '✅' : '❌') + '\n';
-        report += '• آیتم مارکت: ' + (marketItem ? '✅' : '❌') + '\n';
-        report += '• Command Palette: ' + (commandPalette ? '✅' : '❌') + '\n';
-        report += '• Quick Peek: ' + (quickPeek ? '✅' : '❌');
-        
-        showDebugMessage(report, 'info');
-        
-        // تست overlay interference
-        if (commandPalette || quickPeek) {
-            showDebugMessage('⚠️ overlayها فعال هستند - ممکن است کلیک را block کنند', 'error');
-        }
-        
-    } catch (error) {
-        showDebugMessage('خطا در بررسی ساختار: ' + error.message, 'error');
-    }
-}
-
-// تست 2: بررسی routeها
-function testRoutePaths() {
-    try {
-        const items = document.querySelectorAll('.nav-item');
-        let routeReport = 'مسیرهای route:\n';
-        
-        items.forEach(function(item, index) {
-            const page = item.getAttribute('data-page');
-            const isExternal = item.getAttribute('data-external') === 'true';
-            routeReport += (index + 1) + '. ' + page + (isExternal ? ' (خارجی)' : '') + '\n';
-        });
-        
-        showDebugMessage(routeReport, 'info');
-        
-    } catch (error) {
-        showDebugMessage('خطا در بررسی مسیرها', 'error');
-    }
-}
-
-// تست 3: بررسی CSS interference
-function testCSSInterference() {
-    try {
-        const scanItem = document.querySelector('[data-page="/scan-page"]');
-        const marketItem = document.querySelector('[data-page="/markets-page"]');
-        
-        if (scanItem) {
-            const scanStyle = window.getComputedStyle(scanItem);
-            const marketStyle = marketItem ? window.getComputedStyle(marketItem) : null;
-            
-            let cssReport = 'بررسی CSS:\n';
-            cssReport += '• اسکن - pointer-events: ' + scanStyle.pointerEvents + '\n';
-            cssReport += '• اسکن - opacity: ' + scanStyle.opacity + '\n';
-            cssReport += '• اسکن - display: ' + scanStyle.display + '\n';
-            
-            if (marketStyle) {
-                cssReport += '• مارکت - pointer-events: ' + marketStyle.pointerEvents + '\n';
-                cssReport += '• مارکت - opacity: ' + marketStyle.opacity;
-            }
-            
-            showDebugMessage(cssReport, 'info');
-            
-            // علامت‌گذاری آیتم‌های مشکل‌دار
-            if (scanItem) {
-                scanItem.style.outline = '3px solid red';
-                scanItem.style.position = 'relative';
-            }
-            if (marketItem) {
-                marketItem.style.outline = '3px solid green';
-                marketItem.style.position = 'relative';
-            }
-        }
-        
-    } catch (error) {
-        showDebugMessage('خطا در بررسی CSS', 'error');
-    }
-}
-
-// تست 4: بررسی event propagation
-function testEventPropagation() {
-    try {
-        const scanItem = document.querySelector('[data-page="/scan-page"]');
-        const marketItem = document.querySelector('[data-page="/markets-page"]');
-        
-        if (scanItem) {
-            scanItem.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                showDebugMessage('✅ Event روی اسکن ثبت شد!', 'success');
-                
-                // تست هدایت
-                setTimeout(function() {
-                    showDebugMessage('🔄 در حال هدایت به /scan-page...', 'info');
-                    window.location.href = '/scan-page';
-                }, 1000);
-            }, true); // useCapture = true
-        }
-        
-        if (marketItem) {
-            marketItem.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                showDebugMessage('✅ Event روی مارکت ثبت شد!', 'success');
-                
-                // تست هدایت
-                setTimeout(function() {
-                    showDebugMessage('🔄 در حال هدایت به /markets-page...', 'info');
-                    window.location.href = '/markets-page';
-                }, 1000);
-            }, true); // useCapture = true
-        }
-        
-    } catch (error) {
-        showDebugMessage('خطا در ثبت eventها', 'error');
-    }
-}
-
-// اجرای تمام تست‌ها
-try {
-    if (typeof document !== 'undefined') {
-        document.addEventListener('DOMContentLoaded', function() {
-            setTimeout(function() {
-                showDebugMessage('🚀 شروع دیباگ navigation...', 'info');
-                
-                // اجرای تست‌ها با تأخیر
-                setTimeout(testNavigationStructure, 1000);
-                setTimeout(testRoutePaths, 3000);
-                setTimeout(testCSSInterference, 5000);
-                setTimeout(testEventPropagation, 7000);
-                
-            }, 1000);
-        });
-    }
-} catch (error) {}
-}
-
-// مدیریت کلیک روی دکمه شناور (ساده)
-document.querySelector('.nav-floater').addEventListener('click', function(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    const nav = document.getElementById('glassNav');
-    const container = document.querySelector('.nav-container');
-    
-    if (container.style.display === 'block') {
-        container.style.display = 'none';
-        nav.classList.remove('expanded');
-        showDebugMessage('منو بسته شد', 'info');
-    } else {
-        container.style.display = 'block';
-        nav.classList.add('expanded');
-        showDebugMessage('منو باز شد - حالا روی اسکن/مارکت کلیک کن', 'success');
-    }
-});
-
-// توابع کمکی موجود
-function showQuickPeek(itemId) {
-    try {
-        const overlay = document.getElementById('quickPeekOverlay');
-        const content = document.getElementById('quickPeekContent');
-        const navItems = {
-            'home': 'داشبورد اصلی - نمای کلی سیستم',
-            'scan': 'اسکن بازار - شناسایی فرصت‌های سرمایه‌گذاری', 
-            'analyze': 'تحلیل تکنیکال - نمودارها و شاخص‌های فنی',
-            'ai': 'تحلیل هوش مصنوعی - پیش‌بینی‌های پیشرفته',
-            'market': 'بازار و سرمایه - داده‌های جهانی بازار',
-            'insights': 'بینش‌های بازار - تحلیل احساسات و روندها',
-            'news': 'اخبار زنده - آخرین اخبار و به‌روزرسانی‌ها',
-            'health': 'وضعیت سرورها - مانیتورینگ سلامت سیستم',
-            'settings': 'تنظیمات کاربری - شخصی‌سازی محیط'
-        };
-        
-        if (overlay && content) {
-            content.textContent = navItems[itemId] || 'اطلاعات بیشتر';
-            overlay.style.display = 'block';
-        }
-    } catch (error) {}
-}
-
-function hideQuickPeek() {
-    try {
-        const overlay = document.getElementById('quickPeekOverlay');
-        if (overlay) {
-            overlay.style.display = 'none';
-        }
-    } catch (error) {}
-}
-
-</script>
-`;
-}
 // تابع تولید صفحه مدرن
 function generateModernPage(title, bodyContent, currentPage = 'home') {
     const baseStyles = `
@@ -758,11 +215,284 @@ header {
 </html>`;
 }
 
+// Generate navigation function
+function generateClassNavigation(currentPage = 'home') {
+    const allNavItems = [
+        { id: 'home', label: 'DASH', page: '/', icon: 'D', context: ['all'], quickPeek: 'داشبورد اصلی' },
+        { id: 'scan', label: 'SCAN', page: '/scan-page', icon: 'S', context: ['analysis', 'market'], quickPeek: 'اسکن بازار' },
+        { id: 'analyze', label: 'ANALYZE', page: '/analysis-page', icon: 'A', context: ['analysis', 'technical'], quickPeek: 'تحلیل تکنیکال' },
+        { id: 'ai', label: 'AI', page: 'https://ai-test-2nxq.onrender.com/', icon: 'AI', ai: true, external: true, context: ['all'], quickPeek: 'تحلیل هوش مصنوعی' },
+        { id: 'market', label: 'MARKET', page: '/markets-page', icon: 'M', context: ['market', 'overview'], quickPeek: 'بازار و سرمایه' },
+        { id: 'insights', label: 'INSIGHTS', page: '/insights-page', icon: 'I', context: ['analysis', 'sentiment'], quickPeek: 'بینش های بازار' },
+        { id: 'news', label: 'NEWS', page: '/news-page', icon: 'N', context: ['news', 'all'], quickPeek: 'اخبار زنده بازار' },
+        { id: 'health', label: 'HEALTH', page: '/health-page', icon: 'H', context: ['system', 'all'], quickPeek: 'وضعیت سرورها' },
+        { id: 'settings', label: 'SETTINGS', page: '/setting', icon: 'G', context: ['all'], quickPeek: 'تنظیمات کاربری' }
+    ];
+
+    return `
+<!-- هوشمند ناوبری شیشه‌ای -->
+<div id="glassNav" class="glass-navigation">
+    <!-- دکمه شناور مایع -->
+    <div class="nav-floater">
+        <div class="liquid-button">
+            <div class="nav-dot"></div>
+            <div class="nav-dot"></div>
+            <div class="nav-dot"></div>
+        </div>
+    </div>
+
+    <!-- کانتینر ناوبری -->
+    <div class="nav-container" style="display: none;">
+        <div class="nav-scroll" id="navScroll">
+            ${allNavItems.map(item => `
+                <div class="nav-item ${item.id === currentPage ? 'active' : ''}" 
+                     data-page="${item.page}" 
+                     data-external="${item.external || false}">
+                    <div class="nav-icon animated-gradient">${item.icon}</div>
+                    <div class="nav-text">${item.label}</div>
+                </div>
+            `).join('')}
+        </div>
+    </div>
+</div>
+
+<style>
+.glass-navigation {
+    position: fixed; 
+    bottom: 20px; 
+    left: 50%; 
+    transform: translateX(-50%); 
+    z-index: 1000;
+    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.nav-floater {
+    width: 65px; 
+    height: 65px; 
+    background: linear-gradient(135deg, rgba(102,126,234,0.9), rgba(118,75,162,0.9));
+    backdrop-filter: blur(25px); 
+    border: 1px solid rgba(255,255,255,0.3); 
+    border-radius: 25px;
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    cursor: pointer;
+    box-shadow: 0 15px 35px rgba(102,126,234,0.5), inset 0 1px 0 rgba(255,255,255,0.2);
+    transition: all 0.4s ease; 
+    position: relative; 
+    overflow: hidden;
+}
+
+.nav-floater:hover {
+    transform: scale(1.1); 
+    box-shadow: 0 20px 45px rgba(102,126,234,0.7), inset 0 1px 0 rgba(255,255,255,0.3);
+}
+
+.liquid-button {
+    position: relative; 
+    width: 30px; 
+    height: 30px; 
+    display: flex; 
+    align-items: center;
+    justify-content: center; 
+    gap: 3px;
+}
+
+.nav-dot {
+    width: 5px; 
+    height: 5px; 
+    background: rgba(255,255,255,0.9); 
+    border-radius: 50%;
+    animation: dotPulse 2s infinite ease-in-out; 
+    box-shadow: 0 0 10px rgba(255,255,255,0.5);
+}
+
+.nav-dot:nth-child(1) { animation-delay: 0s; }
+.nav-dot:nth-child(2) { animation-delay: 0.3s; }
+.nav-dot:nth-child(3) { animation-delay: 0.6s; }
+
+@keyframes dotPulse {
+    0%,100% { transform: scale(1); opacity: 0.7; } 
+    50% { transform: scale(1.3); opacity: 1; }
+}
+
+.nav-container {
+    background: rgba(30,35,50,0.95); 
+    backdrop-filter: blur(30px); 
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 25px; 
+    padding: 20px; 
+    margin-bottom: 15px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1); 
+    max-width: 400px;
+}
+
+.nav-scroll {
+    display: grid; 
+    grid-template-columns: repeat(3, 1fr); 
+    grid-template-rows: repeat(3, auto);
+    gap: 12px;
+    width: 100%; 
+    max-height: 250px; 
+    overflow-y: auto; 
+    scroll-behavior: smooth; 
+    scrollbar-width: none;
+}
+
+.nav-scroll::-webkit-scrollbar { display: none; }
+
+.nav-item {
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: center;
+    padding: 12px 8px; 
+    border-radius: 16px; 
+    cursor: pointer; 
+    transition: all 0.3s ease;
+    background: rgba(255,255,255,0.08); 
+    border: 1px solid transparent; 
+    position: relative;
+    overflow: hidden; 
+    min-height: 70px;
+}
+
+.nav-item:hover {
+    background: rgba(255,255,255,0.15); 
+    transform: translateY(-2px);
+    border: 1px solid rgba(255,255,255,0.2); 
+    box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+}
+
+.nav-item.active {
+    background: linear-gradient(135deg, rgba(102,126,234,0.3), rgba(118,75,162,0.3));
+    border: 1px solid rgba(102,126,234,0.4); 
+    box-shadow: 0 8px 25px rgba(102,126,234,0.3);
+}
+
+.animated-gradient {
+    background: linear-gradient(45deg, #667eea, #764ba2, #f093fb); 
+    background-size: 200% 200%;
+    animation: gradientShift 3s ease infinite; 
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent; 
+    background-clip: text;
+}
+
+@keyframes gradientShift {
+    0% { background-position: 0% 50%; } 
+    50% { background-position: 100% 50%; } 
+    100% { background-position: 0% 50%; }
+}
+
+.nav-text {
+    font-size: 0.7rem; 
+    font-weight: 700; 
+    color: #f115f9; 
+    text-align: center; 
+    text-transform: uppercase;
+    letter-spacing: 0.5px; 
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5), 0 0 20px rgba(255,255,255,0.3);
+    background: linear-gradient(135deg, #f115f9, #cbd5e1); 
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent; 
+    background-clip: text;
+}
+
+.nav-item:hover .nav-text {
+    background: linear-gradient(135deg, #ffffff, #e2e8f0); 
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.nav-item.active .nav-text {
+    background: linear-gradient(135deg, #667eea, #a855f7); 
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.glass-navigation.expanded .nav-container {
+    display: block !important;
+    animation: slideUp 0.4s ease;
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(30px) scale(0.9); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (max-width: 400px) {
+    .nav-container { max-width: 320px; padding: 15px; }
+    .nav-scroll { gap: 10px; }
+    .nav-item { padding: 10px 6px; min-height: 60px; }
+    .nav-text { font-size: 0.65rem; }
+    .nav-floater { width: 60px; height: 60px; }
+}
+</style>
+
+<script>
+// مدیریت navigation
+document.addEventListener('DOMContentLoaded', function() {
+    // کلیک روی دکمه شناور
+    document.querySelector('.nav-floater').addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const container = document.querySelector('.nav-container');
+        const nav = document.getElementById('glassNav');
+        
+        if (container.style.display === 'block') {
+            container.style.display = 'none';
+            nav.classList.remove('expanded');
+        } else {
+            container.style.display = 'block';
+            nav.classList.add('expanded');
+        }
+    });
+
+    // کلیک روی آیتم‌های navigation
+    document.querySelector('.nav-container').addEventListener('click', function(e) {
+        const navItem = e.target.closest('.nav-item');
+        
+        if (navItem) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const page = navItem.getAttribute('data-page');
+            const isExternal = navItem.getAttribute('data-external') === 'true';
+            
+            // بستن منو
+            document.querySelector('.nav-container').style.display = 'none';
+            document.getElementById('glassNav').classList.remove('expanded');
+            
+            // هدایت
+            if (isExternal) {
+                window.open(page, '_blank');
+            } else {
+                window.location.href = page;
+            }
+        }
+    });
+
+    // بستن منو با کلیک خارج
+    document.addEventListener('click', function(e) {
+        const nav = document.getElementById('glassNav');
+        const container = document.querySelector('.nav-container');
+        
+        if (!nav.contains(e.target) && container.style.display === 'block') {
+            container.style.display = 'none';
+            nav.classList.remove('expanded');
+        }
+    });
+});
+</script>
+`;
+}
+
 // Routes
 module.exports = (dependencies) => {
     const { gistManager, wsManager, apiClient } = dependencies;
 
-    // Route اصلی - نسخه ساده شده برای تست
+    // Route اصلی
     router.get("/", async (req, res) => {
         try {
             const bodyContent = `
@@ -801,6 +531,7 @@ module.exports = (dependencies) => {
             res.status(500).send('خطا: ' + error.message);
         }
     });
+
     // صفحه اسکن
     router.get('/scan-page', async (req, res) => {
         try {
@@ -903,8 +634,9 @@ module.exports = (dependencies) => {
             res.status(500).send('خطا در بارگذاری صفحه اسکن');
         }
     });
+
     // صفحه تحلیل تکنیکال
-    router.get('/analysis', async (req, res) => {
+    router.get('/analysis-page', async (req, res) => {
         const symbol = req.query.symbol || 'btc_usdt';
         const bodyContent = `
             <div class="header">
@@ -1096,7 +828,7 @@ module.exports = (dependencies) => {
         res.send(generateModernPage('اخبار کریپتو', bodyContent, 'news'));
     });
 
-        // صفحه سلامت سیستم
+    // صفحه سلامت سیستم
     router.get('/health-page', async (req, res) => {
         const bodyContent = `
             <div class="header">
