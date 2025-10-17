@@ -1225,5 +1225,41 @@ module.exports = ({ gistManager, wsManager, apiClient, exchangeAPI }) => {
         }
     });
 
+    router.get("/test-new-key", async (req, res) => {
+        try {
+            const testUrl = "https://openapiv1.coinstats.app/coins?limit=3";
+            console.log("🔍 Testing NEW API Key...");
+        
+            const response = await fetch(testUrl, {
+                headers: {
+                    'X-API-KEY': '40QRC4gdyzWIGwsvGkqWtcDOf0bk+FV217KmLxQ/Wmw=',
+                    'Accept': 'application/json'
+                }
+            });
+
+            const result = {
+                status: response.status,
+                statusText: response.statusText,
+                ok: response.ok,
+                headers: Object.fromEntries(response.headers)
+            };
+
+            if (response.ok) {
+                const data = await response.json();
+                result.data = data;
+            } else {
+                const text = await response.text();
+                result.error = text;
+            }
+
+            res.json(result);
+        
+        } catch (error) {
+            res.json({ 
+                error: error.message,
+                stack: error.stack 
+            });
+        }
+    });
     return router;
 };
