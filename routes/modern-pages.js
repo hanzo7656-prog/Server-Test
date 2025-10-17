@@ -308,16 +308,14 @@ function generateClassNavigation(currentPage = 'home') {
 <script>
 
 // ==================== 
-// VISUAL DEBUG - NO CONSOLE NEEDED
+// BASIC CLICK TEST
 // ====================
 
 function showDebugMessage(message) {
     try {
-        // حذف پیام قبلی اگر وجود داره
         const oldMsg = document.getElementById('visualDebugMsg');
         if (oldMsg) oldMsg.remove();
         
-        // ایجاد پیام جدید
         const debugMsg = document.createElement('div');
         debugMsg.id = 'visualDebugMsg';
         debugMsg.textContent = message;
@@ -334,42 +332,54 @@ function showDebugMessage(message) {
         
         document.body.appendChild(debugMsg);
         
-        // حذف خودکار بعد از 3 ثانیه
         setTimeout(function() {
             if (debugMsg.parentNode) {
                 debugMsg.parentNode.removeChild(debugMsg);
             }
-        }, 3000);
+        }, 5000);
         
     } catch (error) {
         // ignore
     }
 }
 
-// ==================== 
-// NAVIGATION HANDLERS  
-// ====================
+// تست اول: بررسی اینکه آیا المان‌ها وجود دارند
+try {
+    if (typeof document !== 'undefined') {
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                const container = document.querySelector('.nav-container');
+                const floater = document.querySelector('.nav-floater');
+                const items = document.querySelectorAll('.nav-item');
+                
+                showDebugMessage('تست: المان‌ها - منو:' + !!container + ' دکمه:' + !!floater + ' آیتم‌ها:' + items.length);
+            }, 1000);
+        });
+    }
+} catch (error) {
+    // ignore
+}
 
-// مدیریت کلیک روی دکمه شناور
+// تست دوم: کلیک روی دکمه شناور
 document.querySelector('.nav-floater').addEventListener('click', function(e) {
     e.preventDefault();
     e.stopPropagation();
+    showDebugMessage('دکمه شناور کلیک شد');
+    
     const nav = document.getElementById('glassNav');
     const container = document.querySelector('.nav-container');
     
     if (container.style.display === 'block') {
         container.style.display = 'none';
         nav.classList.remove('expanded');
-        showDebugMessage('منو بسته شد');
     } else {
         container.style.display = 'block';
         nav.classList.add('expanded');
-        showDebugMessage('منو باز شد');
     }
 });
 
-// مدیریت کلیک روی آیتم‌های نویگیشن
-document.querySelector('.nav-container').addEventListener('click', function(e) {
+// تست سوم: کلیک روی آیتم‌های نویگیشن
+document.addEventListener('click', function(e) {
     const navItem = e.target.closest('.nav-item');
     
     if (navItem) {
@@ -377,10 +387,7 @@ document.querySelector('.nav-container').addEventListener('click', function(e) {
         e.stopPropagation();
         
         const page = navItem.getAttribute('data-page');
-        const isExternal = navItem.getAttribute('data-external') === 'true';
-        
-        // نمایش پیام کلیک
-        showDebugMessage('کلیک روی: ' + page + (isExternal ? ' (صفحه خارجی)' : ''));
+        showDebugMessage('کلیک روی آیتم: ' + page);
         
         // بستن منو
         const container = document.querySelector('.nav-container');
@@ -389,6 +396,7 @@ document.querySelector('.nav-container').addEventListener('click', function(e) {
         nav.classList.remove('expanded');
         
         // هدایت به صفحه
+        const isExternal = navItem.getAttribute('data-external') === 'true';
         if (isExternal) {
             window.open(page, '_blank');
         } else {
@@ -396,30 +404,6 @@ document.querySelector('.nav-container').addEventListener('click', function(e) {
         }
     }
 });
-
-// بستن navigation وقتی خارج از آن کلیک شود
-document.addEventListener('click', function(e) {
-    const nav = document.getElementById('glassNav');
-    const container = document.querySelector('.nav-container');
-    
-    if (!nav.contains(e.target) && container.style.display === 'block') {
-        container.style.display = 'none';
-        nav.classList.remove('expanded');
-    }
-});
-
-// نمایش پیام وقتی صفحه لود شد
-try {
-    if (typeof document !== 'undefined') {
-        document.addEventListener('DOMContentLoaded', function() {
-            setTimeout(function() {
-                showDebugMessage('سیستم آماده است - منو را تست کنید');
-            }, 1000);
-        });
-    }
-} catch (error) {
-    // ignore
-}
 
 // توابع کمکی
 function showQuickPeek(itemId) {
@@ -469,7 +453,6 @@ function endPress(itemId) {
 function searchCommands(event) {
     // ignore for now
 }
-
 </script>
 `;
 }
