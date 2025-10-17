@@ -13,6 +13,7 @@ const { AdvancedCoinStatsAPIClient, HistoricalDataAPI, ExchangeAPI, InsightsAPI 
 // ✅ ایمپورت ماژول‌های روت که جا افتاده بود
 const apiRoutes = require('./routes/api');
 const modernRoutes = require('./routes/modern-pages');
+const navigationGenerator = require('./routes/navigation-generator');
 
 const app = express();
 const PORT = constants.PORT;
