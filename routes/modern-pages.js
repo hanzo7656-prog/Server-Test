@@ -306,56 +306,6 @@ function generateClassNavigation(currentPage = 'home') {
 </style>
 
 <script>
-// ==================== 
-// NAVIGATION DEBUGGER
-// ====================
-
-const NAV_DEBUG = true; // برای غیرفعال کردن: false
-
-function safeDebugNavigation() {
-    if (!NAV_DEBUG) return;
-    
-    // فقط در مرورگر اجرا شود
-    if (typeof document === 'undefined') return;
-    
-    try {
-        console.group('🧭 NAVIGATION DEBUG');
-        console.log('📍 Checking navigation elements...');
-        
-        const elements = {
-            nav: document.getElementById('glassNav'),
-            container: document.querySelector('.nav-container'),
-            floater: document.querySelector('.nav-floater'),
-            items: document.querySelectorAll('.nav-item')
-        };
-        
-        console.log('📊 Elements Status:');
-        Object.entries(elements).forEach(([key, element]) => {
-            if (key === 'items') {
-                console.log(`  - ${key}: ${element.length} found`);
-            } else {
-                console.log(`  - ${key}: ${element ? '✅' : '❌'}`);
-            }
-        });
-        
-        // نمایش آیتم‌های نویگیشن
-        if (elements.items.length > 0) {
-            console.log('📋 Navigation Items:');
-            elements.items.forEach((item, index) => {
-                console.log(`  ${index + 1}. ${item.getAttribute('data-page')} (external: ${item.getAttribute('data-external')})`);
-            });
-        }
-        
-        console.groupEnd();
-        
-    } catch (error) {
-        console.log('⚠️ Debug error (safe to ignore):', error.message);
-    }
-}
-
-// ==================== 
-// NAVIGATION HANDLERS  
-// ====================
 
 // مدیریت کلیک روی دکمه شناور
 document.querySelector('.nav-floater').addEventListener('click', function(e) {
@@ -384,9 +334,7 @@ document.querySelector('.nav-container').addEventListener('click', function(e) {
         const page = navItem.getAttribute('data-page');
         const isExternal = navItem.getAttribute('data-external') === 'true';
         
-        if (NAV_DEBUG) {
-            console.log('🚀 NAVIGATING TO:', page, 'External:', isExternal);
-        }
+        console.log('Navigating to:', page, 'External:', isExternal);
         
         // بستن منو
         const container = document.querySelector('.nav-container');
@@ -413,13 +361,6 @@ document.addEventListener('click', function(e) {
         nav.classList.remove('expanded');
     }
 });
-
-// اجرای دیباگ بعد از لود صفحه
-if (NAV_DEBUG && typeof document !== 'undefined') {
-    document.addEventListener('DOMContentLoaded', function() {
-        setTimeout(safeDebugNavigation, 1000);
-    });
-}
 
 // توابع کمکی
 function showQuickPeek(itemId) {
@@ -448,6 +389,18 @@ function hideQuickPeek() {
     if (overlay) {
         overlay.style.display = 'none';
     }
+}
+
+function startPress(itemId) {
+    console.log('Start press:', itemId);
+}
+
+function endPress(itemId) {
+    console.log('End press:', itemId);
+}
+
+function searchCommands(event) {
+    console.log('Search commands:', event.target.value);
 }
 </script>
 `;
