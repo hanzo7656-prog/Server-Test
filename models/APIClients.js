@@ -72,63 +72,106 @@ class AdvancedCoinStatsAPIClient {
   }
 
   async getCoins(limit = 100) {
-    await this._rateLimit();
+      await this._rateLimit();
     
-    try {
-      const url = `${this.base_url}/coins?limit=${limit}&currency=USD`;
-      console.log(`🌐 Fetching coins from: ${url}`);
+      try {
+          const url = `${this.base_url}/coins?limit=${limit}&currency=USD`;
+          console.log(`🌐 Fetching coins from: ${url}`);
 
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'X-API-KEY': this.api_key,
-          'Accept': 'application/json',
-          'User-Agent': 'VortexAI-Server/1.0'
-        },
-        signal: controller.signal
-      });
+          const response = await fetch(url, {
+              method: 'GET',
+              headers: {
+                  'X-API-KEY': this.api_key,
+                  'Accept': 'application/json',
+                  'User-Agent': 'VortexAI-Server/1.0'
+              },
+              signal: controller.signal
+          });
 
-      clearTimeout(timeoutId);
-      
-      console.log(`📨 Response status: ${response.status} ${response.statusText}`);
+          clearTimeout(timeoutId);
+        
+          console.log(`📨 Response status: ${response.status} ${response.statusText}`);
 
-      if (response.status === 429) {
-        console.log('🚫 Rate limit exceeded! Increasing delay...');
-        this.ratelimitDelay = 2000;
-        return { coins: [], error: 'Rate limit exceeded' };
+          if (response.status === 429) {
+              console.log('🚫 Rate limit exceeded! Increasing delay...');
+              this.ratelimitDelay = 2000;
+              return { coins: [], error: 'Rate limit exceeded' };
+          }
+
+          if (!response.ok) {
+              const errorText = await response.text();
+              console.log(`❌ HTTP error! status: ${response.status}, body:`, errorText);
+              return { coins: [], error: `HTTP ${response.status}: ${response.statusText}` };
+          }
+
+          const data = await response.json();
+          console.log('📦 Raw API response structure:', Object.keys(data));
+        
+          // بررسی همه حالت‌های ممکن برای ساختار داده
+          let coins = [];
+          if (data.result && Array.isArray(data.result)) {
+              coins = data.result;
+          } else if (data.coins && Array.isArray(data.coins)) {
+              coins = data.coins;
+          } else if (data.data && Array.isArray(data.data)) {
+              coins = data.data;
+          } else if (Array.isArray(data)) {
+              coins = data;
+          }
+
+          // 🔍 لاگ جزئیات اولین کوین برای دیباگ
+          if (coins.length > 0) {
+              console.log('🔬 First coin raw structure:', coins[0]);
+              console.log('🔑 All keys of first coin:', Object.keys(coins[0]));
+            
+              // پیدا کردن فیلد تغییرات قیمت
+              const firstCoin = coins[0];
+              const changeFields = Object.keys(firstCoin).filter(key => 
+                  key.toLowerCase().includes('change') || 
+                  key.toLowerCase().includes('percent')
+              );
+              console.log('💰 Change-related fields found:', changeFields);
+          }
+
+          // نرمالایز کردن ساختار داده‌ها
+          const normalizedCoins = coins.map(coin => {
+              // پیدا کردن فیلد تغییرات 24h
+              const priceChange24h = coin.priceChange24h || coin.price_change_24h || coin.change24h || 
+                                   coin.priceChangePercentage24h || coin.percent_change_24h || 0;
+
+              return {
+                  // فیلدهای اصلی
+                  id: coin.id,
+                  symbol: coin.symbol,
+                  name: coin.name,
+                  price: coin.price,
+                
+                  // فیلدهای تغییرات - نرمالایز شده
+                  priceChange24h: typeof priceChange24h === 'number' ? priceChange24h : parseFloat(priceChange24h) || 0,
+                  priceChange1h: coin.priceChange1h || coin.price_change_1h || coin.change1h || 0,
+                
+                  // فیلدهای حجم و مارکت کپ
+                  volume: coin.volume || coin.total_volume || 0,
+                  marketCap: coin.marketCap || coin.market_cap || 0,
+                  rank: coin.rank || coin.market_cap_rank || 0,
+                
+                  // نگهداری داده خام برای دیباگ
+                  _raw: coin // حذف این خط در production
+              };
+          });
+
+          console.log(`✅ Received ${normalizedCoins.length} coins from API (normalized)`);
+          console.log('📊 Sample normalized coin:', normalizedCoins[0]);
+        
+          return { coins: normalizedCoins };
+        
+      } catch (error) {
+          console.error('💥 API getCoins error:', error.message);
+          return { coins: [], error: error.message };
       }
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.log(`❌ HTTP error! status: ${response.status}, body:`, errorText);
-        return { coins: [], error: `HTTP ${response.status}: ${response.statusText}` };
-      }
-
-      const data = await response.json();
-      console.log('📦 Raw API response structure:', Object.keys(data));
-      
-      // بررسی همه حالت‌های ممکن برای ساختار داده
-      let coins = [];
-      if (data.result && Array.isArray(data.result)) {
-        coins = data.result;
-      } else if (data.coins && Array.isArray(data.coins)) {
-        coins = data.coins;
-      } else if (data.data && Array.isArray(data.data)) {
-        coins = data.data;
-      } else if (Array.isArray(data)) {
-        coins = data;
-      }
-      
-      console.log(`✅ Received ${coins.length} coins from API`);
-      return { coins };
-      
-    } catch (error) {
-      console.error('💥 API getCoins error:', error.message);
-      return { coins: [], error: error.message };
-    }
   }
 
   async getTopGainers(limit = 10) {
