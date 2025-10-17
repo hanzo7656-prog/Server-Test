@@ -10,10 +10,9 @@ const GistManager = require('./models/GistManager');
 const WebSocketManager = require('./models/WebSocketManager');
 const { AdvancedCoinStatsAPIClient, HistoricalDataAPI, ExchangeAPI, InsightsAPI } = require('./models/APIClients');
 
-// ایمپورت ماژول های روتر که جا افتاده بود
+// ایمپورت ماژول های روتر
 const apiRoutes = require('./routes/api');
 const modernRoutes = require('./routes/modern-pages');
-const navigationGenerator = require('./routes/navigation-generator');
 
 const app = express();
 const PORT = constants.PORT;
@@ -43,6 +42,15 @@ const wsManager = new WebSocketManager(gistManager);
 const apiClient = new AdvancedCoinStatsAPIClient();
 const exchangeAPI = new ExchangeAPI();
 const insightsAPI = new InsightsAPI();
+
+console.log('🚀 Initializing VortexAI Server...');
+console.log('📋 Dependencies status:', {
+  gistManager: !!gistManager,
+  wsManager: !!wsManager,
+  apiClient: !!apiClient,
+  exchangeAPI: !!exchangeAPI,
+  insightsAPI: !!insightsAPI
+});
 
 // --- REDIRECT ROUTES برای Frontend ---
 
@@ -95,7 +103,8 @@ app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'OK',
     timestamp: new Date().toISOString(),
-    service: 'VortexAI Crypto Scanner'
+    service: 'VortexAI Crypto Scanner',
+    version: '6.0'
   });
 });
 
@@ -137,6 +146,7 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   logger.info(`✅ Health: http://localhost:${PORT}/health`);
   logger.info(`✅ Scanner: http://localhost:${PORT}/scan-page`);
   logger.info(`✅ Analysis: http://localhost:${PORT}/analysis-page`);
+  logger.info(`✅ API Test: http://localhost:${PORT}/api/test-api`);
 });
 
 // -- Graceful Shutdown -- //
