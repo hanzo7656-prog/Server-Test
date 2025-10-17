@@ -306,75 +306,43 @@ function generateClassNavigation(currentPage = 'home') {
 </style>
 
 <script>
+
 // ==================== 
-// VISUAL DEBUG PANEL
+// VISUAL DEBUG - NO CONSOLE NEEDED
 // ====================
 
-function createDebugPanel() {
+function showDebugMessage(message) {
     try {
-        if (typeof document === 'undefined') return;
+        // حذف پیام قبلی اگر وجود داره
+        const oldMsg = document.getElementById('visualDebugMsg');
+        if (oldMsg) oldMsg.remove();
         
-        // اگر از قبل وجود داره، حذفش کن
-        const existingPanel = document.getElementById('navDebugPanel');
-        if (existingPanel) existingPanel.remove();
+        // ایجاد پیام جدید
+        const debugMsg = document.createElement('div');
+        debugMsg.id = 'visualDebugMsg';
+        debugMsg.textContent = message;
+        debugMsg.style.position = 'fixed';
+        debugMsg.style.top = '10px';
+        debugMsg.style.left = '10px';
+        debugMsg.style.background = 'red';
+        debugMsg.style.color = 'white';
+        debugMsg.style.padding = '10px';
+        debugMsg.style.zIndex = '10000';
+        debugMsg.style.borderRadius = '5px';
+        debugMsg.style.fontSize = '14px';
+        debugMsg.style.fontFamily = 'Arial, sans-serif';
         
-        // ایجاد پنل دیباگ
-        const debugPanel = document.createElement('div');
-        debugPanel.id = 'navDebugPanel';
-        debugPanel.style.cssText = `
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            background: rgba(0,0,0,0.8);
-            color: white;
-            padding: 10px;
-            border-radius: 5px;
-            font-size: 12px;
-            z-index: 10000;
-            max-width: 300px;
-            border: 2px solid red;
-        `;
+        document.body.appendChild(debugMsg);
         
-        debugPanel.innerHTML = `
-            <div style="color: #ff4444; font-weight: bold;">🧭 NAV DEBUG</div>
-            <div id="debugContent">Loading...</div>
-            <button onclick="document.getElementById('navDebugPanel').remove()" 
-                    style="background: red; color: white; border: none; padding: 2px 5px; margin-top: 5px; border-radius: 3px;">
-                X
-            </button>
-        `;
-        
-        document.body.appendChild(debugPanel);
-        updateDebugInfo();
+        // حذف خودکار بعد از 3 ثانیه
+        setTimeout(function() {
+            if (debugMsg.parentNode) {
+                debugMsg.parentNode.removeChild(debugMsg);
+            }
+        }, 3000);
         
     } catch (error) {
-        // خطا رو نادیده بگیر
-    }
-}
-
-function updateDebugInfo() {
-    try {
-        const debugContent = document.getElementById('debugContent');
-        if (!debugContent) return;
-        
-        const navItems = document.querySelectorAll('.nav-item');
-        const container = document.querySelector('.nav-container');
-        const floater = document.querySelector('.nav-floater');
-        
-        let html = `
-            <div>Items: ${navItems.length}</div>
-            <div>Container: ${container ? '✅' : '❌'}</div>
-            <div>Floater: ${floater ? '✅' : '❌'}</div>
-            <div style="margin-top: 5px; border-top: 1px solid #444; padding-top: 5px;">
-                <strong>Last Click:</strong>
-                <div id="lastClickInfo">None</div>
-            </div>
-        `;
-        
-        debugContent.innerHTML = html;
-        
-    } catch (error) {
-        // خطا رو نادیده بگیر
+        // ignore
     }
 }
 
@@ -392,12 +360,12 @@ document.querySelector('.nav-floater').addEventListener('click', function(e) {
     if (container.style.display === 'block') {
         container.style.display = 'none';
         nav.classList.remove('expanded');
+        showDebugMessage('منو بسته شد');
     } else {
         container.style.display = 'block';
         nav.classList.add('expanded');
+        showDebugMessage('منو باز شد');
     }
-    
-    updateDebugInfo();
 });
 
 // مدیریت کلیک روی آیتم‌های نویگیشن
@@ -411,21 +379,8 @@ document.querySelector('.nav-container').addEventListener('click', function(e) {
         const page = navItem.getAttribute('data-page');
         const isExternal = navItem.getAttribute('data-external') === 'true';
         
-        // نمایش اطلاعات کلیک در دیباگ
-        const lastClickInfo = document.getElementById('lastClickInfo');
-        if (lastClickInfo) {
-            lastClickInfo.innerHTML = `
-                <div style="color: ${isExternal ? '#ffaa00' : '#00ff00'}">
-                    ${page}
-                </div>
-                <div style="font-size: 10px;">
-                    External: ${isExternal ? 'Yes' : 'No'}
-                </div>
-                <div style="font-size: 10px; color: #888;">
-                    ${new Date().toLocaleTimeString()}
-                </div>
-            `;
-        }
+        // نمایش پیام کلیک
+        showDebugMessage('کلیک روی: ' + page + (isExternal ? ' (صفحه خارجی)' : ''));
         
         // بستن منو
         const container = document.querySelector('.nav-container');
@@ -439,8 +394,6 @@ document.querySelector('.nav-container').addEventListener('click', function(e) {
         } else {
             window.location.href = page;
         }
-        
-        updateDebugInfo();
     }
 });
 
@@ -452,22 +405,20 @@ document.addEventListener('click', function(e) {
     if (!nav.contains(e.target) && container.style.display === 'block') {
         container.style.display = 'none';
         nav.classList.remove('expanded');
-        updateDebugInfo();
     }
 });
 
-// اجرای دیباگ بعد از لود صفحه
+// نمایش پیام وقتی صفحه لود شد
 try {
     if (typeof document !== 'undefined') {
         document.addEventListener('DOMContentLoaded', function() {
             setTimeout(function() {
-                createDebugPanel();
-                updateDebugInfo();
-            }, 1500);
+                showDebugMessage('سیستم آماده است - منو را تست کنید');
+            }, 1000);
         });
     }
 } catch (error) {
-    // خطا رو نادیده بگیر
+    // ignore
 }
 
 // توابع کمکی
@@ -492,7 +443,7 @@ function showQuickPeek(itemId) {
             overlay.style.display = 'block';
         }
     } catch (error) {
-        // خطا رو نادیده بگیر
+        // ignore
     }
 }
 
@@ -503,21 +454,22 @@ function hideQuickPeek() {
             overlay.style.display = 'none';
         }
     } catch (error) {
-        // خطا رو نادیده بگیر
+        // ignore
     }
 }
 
 function startPress(itemId) {
-    console.log('Start press: ' + itemId);
+    // ignore for now
 }
 
 function endPress(itemId) {
-    console.log('End press: ' + itemId);
+    // ignore for now
 }
 
 function searchCommands(event) {
-    console.log('Search commands: ' + event.target.value);
+    // ignore for now
 }
+
 </script>
 `;
 }
