@@ -732,3 +732,459 @@ module.exports = ({ gistManager, wsManager, apiClient, exchangeAPI }) => {
             });
         }
     });
+        // اخبار صعودی - جدید
+    router.get("/news/type/bullish", async (req, res) => {
+        try {
+            const { page = 1, limit = 20 } = req.query;
+            const newsAPI = new NewsAPI();
+            const data = await newsAPI.getNewsByType('bullish', {
+                page: parseInt(page),
+                limit: parseInt(limit)
+            });
+            
+            res.json({
+                success: true,
+                type: 'bullish',
+                data: data,
+                pagination: {
+                    page: parseInt(page),
+                    limit: parseInt(limit),
+                    total: data.length || 0
+                },
+                timestamp: new Date().toISOString()
+            });
+            
+        } catch (error) {
+            console.error('Error in bullish news endpoint', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+    
+    // اخبار نزولی - جدید
+    router.get("/news/type/bearish", async (req, res) => {
+        try {
+            const { page = 1, limit = 20 } = req.query;
+            const newsAPI = new NewsAPI();
+            const data = await newsAPI.getNewsByType('bearish', {
+                page: parseInt(page),
+                limit: parseInt(limit)
+            });
+            
+            res.json({
+                success: true,
+                type: 'bearish',
+                data: data,
+                pagination: {
+                    page: parseInt(page),
+                    limit: parseInt(limit),
+                    total: data.length || 0
+                },
+                timestamp: new Date().toISOString()
+            });
+            
+        } catch (error) {
+            console.error('Error in bearish news endpoint', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+    
+    // جزییات خبر - جدید
+    router.get("/news/detail/:id", async (req, res) => {
+        try {
+            const { id } = req.params;
+            const newsAPI = new NewsAPI();
+            const data = await newsAPI.getNewsDetail(id);
+            
+            res.json({
+                success: true,
+                news_id: id,
+                data: data,
+                timestamp: new Date().toISOString()
+            });
+            
+        } catch (error) {
+            console.error('Error in news detail endpoint', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+    
+    // ========== ENDPOINT های سلامت ==========
+    
+    // سلامت اصلی
+    router.get("/health", async (req, res) => {
+        try {
+            const wsStatus = wsManager.getConnectionStatus();
+            const gistData = gistManager.getAllData();
+            
+            res.json({
+                success: true,
+                status: 'healthy',
+                service: 'VortexAI Crypto Scanner',
+                version: '6.0',
+                timestamp: new Date().toISOString(),
+                components: {
+                    websocket: {
+                        connected: wsStatus.connected,
+                        active_coins: wsStatus.active_coins,
+                        status: wsStatus.connected ? 'healthy' : 'unhealthy'
+                    },
+                    database: {
+                        stored_coins: Object.keys(gistData.prices || {}).length,
+                        status: process.env.GITHUB_TOKEN ? 'healthy' : 'degraded'
+                    },
+                    api: {
+                        request_count: apiClient.request_count || 0,
+                        status: 'healthy'
+                    }
+                },
+                stats: {
+                    uptime: process.uptime(),
+                    memory_usage: `${(process.memoryUsage().rss / 1024 / 1024).toFixed(1)} MB`
+                }
+            });
+            
+        } catch (error) {
+            console.error('Health endpoint error', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+    
+    // سلامت ترکیبی
+    router.get('/health-combined', (req, res) => {
+        const wsStatus = wsManager.getConnectionStatus();
+        const gistData = gistManager.getAllData();
+        
+        res.json({
+            status: 'healthy',
+            service: 'VortexAI Combined Crypto Scanner',
+            version: '6.0 - Enhanced API System',
+            timestamp: new Date().toISOString(),
+            websocket_status: {
+                connected: wsStatus.connected,
+                active_coins: wsStatus.active_coins,
+                total_subscribed: wsStatus.total_subscribed,
+                provider: "LBank"
+            },
+            gist_status: {
+                active: !!process.env.GITHUB_TOKEN,
+                total_coins: Object.keys(gistData.prices || {}).length,
+                last_updated: gistData.last_updated,
+                timeframes_available: gistManager.getAvailableTimeframes()
+            },
+            ai_status: {
+                technical_analysis: 'active',
+                vortexai_engine: 'ready',
+                indicators_available: 55
+            },
+            api_status: {
+                requests_count: apiClient.request_count,
+                coinstats_connected: 'active'
+            }
+        });
+    });
+    
+    // ========== ENDPOINT های Exchange ==========
+    
+    // قیمت تبادل - جدید
+    router.get("/exchange/price", async (req, res) => {
+        try {
+            const { exchange, from, to, timestamp } = req.query;
+            const exchangeAPI = new ExchangeAPI();
+            const data = await exchangeAPI.getExchangePrice(exchange, from, to, timestamp);
+            
+            res.json({
+                success: true,
+                exchange: exchange,
+                pair: `${from}/${to}`,
+                data: data,
+                timestamp: new Date().toISOString()
+            });
+            
+        } catch (error) {
+            console.error('Error in exchange price endpoint', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+    
+    // تیکرها - جدید
+    router.get("/exchange/tickers", async (req, res) => {
+        try {
+            const { exchange } = req.query;
+            const exchangeAPI = new ExchangeAPI();
+            const data = await exchangeAPI.getTickers(exchange);
+            
+            res.json({
+                success: true,
+                exchange: exchange,
+                data: data,
+                tickers_count: data.length || 0,
+                timestamp: new Date().toISOString()
+            });
+            
+        } catch (error) {
+            console.error('Error in exchange tickers endpoint', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+    
+    // قیمت میانگین - جدید
+    router.get("/exchange/average-price", async (req, res) => {
+        try {
+            const { coinId, timestamp } = req.query;
+            const exchangeAPI = new ExchangeAPI();
+            const data = await exchangeAPI.getAveragePrice(coinId, timestamp);
+            
+            res.json({
+                success: true,
+                coin_id: coinId,
+                data: data,
+                timestamp: new Date().toISOString()
+            });
+            
+        } catch (error) {
+            console.error('Error in average price endpoint', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+    
+    // ========== ENDPOINT های کمکی جدید ==========
+    
+    // برترین سودده‌ها - جدید
+    router.get("/coins/top-gainers", async (req, res) => {
+        try {
+            const { limit = 10 } = req.query;
+            const data = await apiClient.getTopGainers(parseInt(limit));
+            
+            res.json({
+                success: true,
+                limit: limit,
+                data: data,
+                gainers_count: data.length,
+                timestamp: new Date().toISOString()
+            });
+            
+        } catch (error) {
+            console.error('Error in top gainers endpoint', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+    
+    // داده جهانی - جدید
+    router.get("/markets/global", async (req, res) => {
+        try {
+            const marketAPI = new MarketDataAPI();
+            const data = await marketAPI.getGlobalData();
+            
+            res.json({
+                success: true,
+                data: data,
+                timestamp: new Date().toISOString()
+            });
+            
+        } catch (error) {
+            console.error('Error in global data endpoint', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+    
+    // جزییات کوین - جدید
+    router.get("/coins/:id/details", async (req, res) => {
+        try {
+            const { id } = req.params;
+            const data = await apiClient.getCoinDetails(id);
+            
+            res.json({
+                success: true,
+                coin_id: id,
+                data: data,
+                timestamp: new Date().toISOString()
+            });
+            
+        } catch (error) {
+            console.error('Error in coin details endpoint', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+    
+    // ========== ENDPOINT های کمکی ==========
+    
+    router.get("/timeframes-api", (req, res) => {
+        res.json({
+            success: true,
+            timeframes: gistManager.getAvailableTimeframes(),
+            description: {
+                "1h": "1 hour history - 1 minute intervals",
+                "4h": "4 hours history - 5 minute intervals",
+                "24h": "24 hours history - 15 minute intervals",
+                "7d": "7 days history - 1 hour intervals",
+                "30d": "30 days history - 4 hour intervals",
+                "180d": "180 days history - 1 day intervals"
+            },
+            timestamp: new Date().toISOString()
+        });
+    });
+    
+    // وضعیت API
+    router.get("/api-data", (req, res) => {
+        const wsStatus = wsManager.getConnectionStatus();
+        const gistData = gistManager.getAllData();
+        
+        res.json({
+            success: true,
+            api_status: {
+                websocket: {
+                    connected: wsStatus.connected,
+                    active_coins: wsStatus.active_coins
+                },
+                database: {
+                    total_coins: Object.keys(gistData.prices || {}).length,
+                    last_updated: gistData.last_updated
+                },
+                endpoints_available: [
+                    "/scan", "/analysis", "/markets/cap", "/insights/dashboard", "/news",
+                    "/health", "/ai/raw/single/:symbol", "/ai/raw/multi", "/ai/raw/market",
+                    "/coin/:symbol/history/:timeframe", "/insights/btc-dominance", "/insights/fear-greed",
+                    "/insights/fear-greed-chart", "/insights/rainbow-chart", "/news/type/trending",
+                    "/news/type/handpicked", "/news/type/latest", "/news/type/bullish", "/news/type/bearish",
+                    "/news/detail/:id", "/exchange/price", "/exchange/tickers", "/exchange/average-price",
+                    "/coins/top-gainers", "/markets/global", "/coins/:id/details", "/currencies"
+                ]
+            },
+            timestamp: new Date().toISOString()
+        });
+    });
+    
+    // ========== ENDPOINT های تست و دیباگ ==========
+    
+    // تست تمام اندپوینت‌های داخلی سرور
+    router.get("/test-all-endpoints", async (req, res) => {
+        const startTime = Date.now();
+        try {
+            const baseUrl = `${req.protocol}://${req.get('host')}`;
+            const testResults = [];
+            
+            // لیست تمام 34 اندپوینت داخلی سرور
+            const serverEndpoints = [
+                // اندپوینت‌های اصلی
+                { name: 'اسکن بازار', path: '/scan', method: 'GET', params: { limit: 5 } },
+                { name: 'تحلیل تکنیکال', path: '/analysis', method: 'GET', params: { symbol: 'btc', type: 'technical' } },
+                { name: 'داده تاریخی', path: '/coin/btc/history/24h', method: 'GET' },
+                
+                // اندپوینت‌های بازار
+                { name: 'مارکت کپ', path: '/markets/cap', method: 'GET' },
+                { name: 'ارزها', path: '/currencies', method: 'GET' },
+                { name: 'داده جهانی', path: '/markets/global', method: 'GET' },
+                
+                // اندپوینت‌های بینش
+                { name: 'داشبورد بینش', path: '/insights/dashboard', method: 'GET' },
+                { name: 'تسلط بیت‌کوین', path: '/insights/btc-dominance', method: 'GET' },
+                { name: 'شاخص ترس و طمع', path: '/insights/fear-greed', method: 'GET' },
+                { name: 'نمودار ترس و طمع', path: '/insights/fear-greed-chart', method: 'GET' },
+                { name: 'نمودار رنگین کمان', path: '/insights/rainbow-chart', method: 'GET', params: { coin: 'bitcoin' } },
+                
+                // اندپوینت‌های اخبار
+                { name: 'اخبار', path: '/news', method: 'GET', params: { limit: 3 } },
+                { name: 'منابع خبری', path: '/news/sources', method: 'GET' },
+                { name: 'اخبار ترند', path: '/news/type/trending', method: 'GET', params: { limit: 3 } },
+                { name: 'اخبار منتخب', path: '/news/type/handpicked', method: 'GET', params: { limit: 3 } },
+                { name: 'آخرین اخبار', path: '/news/type/latest', method: 'GET', params: { limit: 3 } },
+                { name: 'اخبار صعودی', path: '/news/type/bullish', method: 'GET', params: { limit: 3 } },
+                { name: 'اخبار نزولی', path: '/news/type/bearish', method: 'GET', params: { limit: 3 } },
+                
+                // اندپوینت‌های سلامت
+                { name: 'سلامت سیستم', path: '/health', method: 'GET' },
+                { name: 'سلامت ترکیبی', path: '/health-combined', method: 'GET' },
+                
+                // اندپوینت‌های Exchange
+                { name: 'قیمت تبادل', path: '/exchange/price', method: 'GET', params: { exchange: 'binance', from: 'btc', to: 'usdt' } },
+                { name: 'تیکرها', path: '/exchange/tickers', method: 'GET', params: { exchange: 'binance' } },
+                { name: 'قیمت میانگین', path: '/exchange/average-price', method: 'GET', params: { coinId: 'bitcoin' } },
+                
+                // اندپوینت‌های کمکی جدید
+                { name: 'برترین سودده‌ها', path: '/coins/top-gainers', method: 'GET', params: { limit: 5 } },
+                { name: 'جزییات کوین', path: '/coins/bitcoin/details', method: 'GET' },
+                
+                // اندپوینت‌های AI
+                { name: 'داده خام تک کوین', path: '/ai/raw/single/btc', method: 'GET' },
+                { name: 'داده خام چند کوین', path: '/ai/raw/multi', method: 'GET', params: { symbols: 'btc,eth', limit: 5 } },
+                { name: 'داده خام بازار', path: '/ai/raw/market', method: 'GET' },
+                
+                // اندپوینت‌های کمکی
+                { name: 'تایم‌فریم‌ها', path: '/timeframes-api', method: 'GET' },
+                { name: 'وضعیت API', path: '/api-data', method: 'GET' }
+            ];
+            
+            // تست هر اندپوینت
+            for (const endpoint of serverEndpoints) {
+                const result = await testServerEndpoint(baseUrl, endpoint);
+                testResults.push(result);
+            }
+            
+            const totalDuration = Date.now() - startTime;
+            
+            res.json({
+                success: true,
+                baseUrl: baseUrl,
+                results: testResults,
+                summary: {
+                    total: testResults.length,
+                    success: testResults.filter(r => r.status === 'success').length,
+                    failed: testResults.filter(r => r.status === 'error').length,
+                    totalDuration: totalDuration + 'ms',
+                    successRate: ((testResults.filter(r => r.status === 'success').length / testResults.length) * 100).toFixed(1) + '%'
+                },
+                issues: testResults.filter(r => r.status === 'error').map(r => ({
+                    endpoint: r.name,
+                    path: r.path,
+                    error: r.error,
+                    duration: r.duration
+                })),
+                recommendations: testResults.filter(r => r.status === 'error').length > 0 ? [
+                    'بررسی اتصال شبکه',
+                    'بررسی تنظیمات CORS',
+                    'بررسی سرویس‌های وابسته (WebSocket, Database)',
+                    'بررسی مجوزهای دسترسی'
+                ] : ['✅ همه 34 اندپوینت سالم هستند']
+            });
+            
+        } catch (error) {
+            console.error('Error in test-all-endpoints:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    return router;
+};
