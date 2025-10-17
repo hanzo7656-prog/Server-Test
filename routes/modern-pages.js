@@ -505,137 +505,289 @@ module.exports = (dependencies) => {
     }
   });
 
-  // صفحه اسکن
+  // صفحه اسکن - کاملاً اصلاح شده
   router.get('/scan-page', async (req, res) => {
-    try {
-      const limit = parseInt(req.query.limit) || 50;
-      const filter = req.query.filter || 'volume';
-      let coins = [];
+      try {
+          const limit = parseInt(req.query.limit) || 200; // افزایش limit پیشفرض
+          const filter = req.query.filter || 'all';
+          let coins = [];
 
-      console.log('🔍 Scan page requested - Checking API client...');
-      console.log('📋 API Client status:', {
-        exists: !!apiClient,
-        hasGetCoins: !!apiClient?.getCoins,
-        base_url: apiClient?.base_url,
-        api_key: apiClient?.api_key ? '***' + apiClient.api_key.slice(-10) : 'none'
-      });
-
-      if (apiClient && typeof apiClient.getCoins === 'function') {
-        try {
-          console.log('📡 Calling apiClient.getCoins...');
-          const scanData = await apiClient.getCoins(limit);
-          console.log('📦 API Response:', {
-            success: !!scanData,
-            hasCoins: !!scanData.coins,
-            coinsCount: scanData.coins?.length,
-            hasError: !!scanData.error,
-            error: scanData.error
+          console.log('🔍 Scan page requested - Checking API client...');
+          console.log('📋 API Client status:', {
+              exists: !!apiClient,
+              hasGetCoins: !!apiClient?.getCoins,
+              base_url: apiClient?.base_url,
+              api_key: apiClient?.api_key ? '***' + apiClient.api_key.slice(-10) : 'none'
           });
-          
-          coins = scanData.coins || [];
-        } catch (apiError) {
-          console.error('❌ API Call Failed:', {
-            message: apiError.message,
-            stack: apiError.stack
-          });
-          coins = [];
-        }
-      } else {
-        console.error('❌ API Client not available or missing getCoins method');
-      }
 
-      const bodyContent = `
-        <div class="header">
-          <h1>اسکن بازار</h1>
-          <p>شناسایی فرصت‌های سرمایه‌گذاری - تحلیل ارزهای دیجیتال بازار زنده</p>
-        </div>
-
-        <div class="glass-card">
-          <h2 style="color: #f115f9; text-align: center; margin-bottom: 25px;">پارامترهای اسکن</h2>
-          <div class="stats-grid">
-            <div class="stat-card">
-              <div class="stat-number">${limit}</div>
-              <div class="stat-label">تعداد ارز</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-number">${filter.toUpperCase()}</div>
-              <div class="stat-label">فیلتر فعلی</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-number">${coins.length}</div>
-              <div class="stat-label">ارزهای یافت شده</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-number">${coins.length > 0 ? 'فعال' : 'غیرفعال'}</div>
-              <div class="stat-label">وضعیت</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="glass-card">
-          <h2 style="color: #f115f9; text-align: center; margin-bottom: 25px;">نتایج اسکن</h2>
-          ${coins.length > 0 ? `
-            <div style="max-height: 400px; overflow-y: auto">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>نماد</th>
-                    <th>قیمت (USDT)</th>
-                    <th>تغییرات 24h</th>
-                    <th>حجم</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${coins.slice(0, 15).map((coin, index) => `
-                    <tr>
-                      <td>${index + 1}</td>
-                      <td><strong>${coin.symbol || 'N/A'}</strong></td>
-                      <td>${coin.price ? parseFloat(coin.price).toFixed(4) : '0.0000'}</td>
-                      <td style="color: ${(coin.priceChange24h || 0) >= 0 ? '#10b981' : '#ef4444'}">
-                        ${coin.priceChange24h ? parseFloat(coin.priceChange24h).toFixed(2) + '%' : '0.00%'}
-                      </td>
-                      <td>${coin.volume ? (coin.volume / 1e6).toFixed(1) + 'M' : '0'}</td>
-                    </tr>
-                  `).join('')}
-                </tbody>
-              </table>
-            </div>
-          ` : `
-            <div style="text-align: center; padding: 40px; color: #94a3b8;">
-              <div style="font-size: 3rem; margin-bottom: 20px;">📡</div>
-              <h3>در حال بارگذاری داده ها</h3>
-              <p>لطفا چند لحظه صبر کنید یا پارامترهای جستجو را تغییر دهید</p>
-              <div style="margin-top: 20px;">
-                <button class="btn" onclick="location.reload()">تلاش مجدد</button>
-                <button class="btn" onclick="window.location.href='/api/test-api'" style="margin-left: 10px;">تست API</button>
-              </div>
-            </div>
-          `}
-        </div>
-
-        <div class="glass-card">
-          <h2 style="color: #f115f9; text-align: center; margin-bottom: 25px;">فیلترهای پیشرفته</h2>
-          <div class="stats-grid">
-            <button class="btn" onclick="applyFilter('volume')">حجم معاملات</button>
-            <button class="btn" onclick="applyFilter('gainers')">بازدهی مثبت</button>
-            <button class="btn" onclick="applyFilter('losers')">بازدهی منفی</button>
-            <button class="btn" onclick="applyFilter('trending')">پرطرفدار</button>
-          </div>
-        </div>
-
-        <script>
-          function applyFilter(filter) {
-            window.location.href = '/scan-page?filter=' + filter;
+          if (apiClient && typeof apiClient.getCoins === 'function') {
+              try {
+                  console.log('📡 Calling apiClient.getCoins...');
+                  const scanData = await apiClient.getCoins(limit);
+                  console.log('📦 API Response:', {
+                      success: !!scanData,
+                      hasCoins: !!scanData.coins,
+                      coinsCount: scanData.coins?.length,
+                      hasError: !!scanData.error,
+                      error: scanData.error
+                  });
+                
+                  coins = scanData.coins || [];
+              } catch (apiError) {
+                  console.error('❌ API Call Failed:', {
+                      message: apiError.message,
+                      stack: apiError.stack
+                  });
+                  coins = [];
+              }
+          } else {
+              console.error('❌ API Client not available or missing getCoins method');
           }
-        </script>
-      `;
 
-      res.send(generateModernPage("اسکن بازار", bodyContent, 'scan'));
-    } catch (error) {
-      console.error('❌ Scan page error:', error);
-      res.status(500).send('خطا در بارگذاری صفحه اسکن');
-    }
+          // لاگ دیباگ برای ساختار داده‌ها
+          console.log('🔍 Scan Data Debug Info:');
+          console.log('📊 Total coins received:', coins.length);
+          if (coins.length > 0) {
+              console.log('🔬 First coin structure:', {
+                  symbol: coins[0].symbol,
+                  price: coins[0].price,
+                  // همه فیلدهای ممکن برای تغییرات قیمت
+                  priceChange24h: coins[0].priceChange24h,
+                  price_change_24h: coins[0].price_change_24h,
+                  priceChange1h: coins[0].priceChange1h,
+                  price_change_1h: coins[0].price_change_1h,
+                  priceChange: coins[0].priceChange,
+                  change: coins[0].change,
+                  // همه فیلدهای ممکن برای حجم
+                  volume: coins[0].volume,
+                  total_volume: coins[0].total_volume,
+                  marketCap: coins[0].marketCap,
+                  market_cap: coins[0].market_cap,
+                  // لیست تمام کلیدهای موجود
+                  allKeys: Object.keys(coins[0])
+              });
+             
+              // لاگ ۳ کوین اول برای نمونه
+              console.log('📋 Sample of first 3 coins:');
+              coins.slice(0, 3).forEach((coin, idx) => {
+                  console.log(`   ${idx + 1}. ${coin.symbol}:`, {
+                      price: coin.price,
+                      change24h: coin.priceChange24h || coin.price_change_24h,
+                      volume: coin.volume || coin.total_volume,
+                      marketCap: coin.marketCap || coin.market_cap
+                  });
+              });
+          }
+
+          // اعمال فیلترها
+          let filteredCoins = [...coins];
+          switch (filter) {
+              case 'gainers':
+                  filteredCoins = coins.filter(coin => {
+                      const change = coin.priceChange24h || coin.price_change_24h || coin.change || 0;
+                      return change > 0;
+                  }).sort((a, b) => {
+                      const changeA = a.priceChange24h || a.price_change_24h || a.change || 0;
+                      const changeB = b.priceChange24h || b.price_change_24h || b.change || 0;
+                      return changeB - changeA;
+                  });
+                  break;
+              case 'losers':
+                  filteredCoins = coins.filter(coin => {
+                      const change = coin.priceChange24h || coin.price_change_24h || coin.change || 0;
+                      return change < 0;
+                  }).sort((a, b) => {
+                      const changeA = a.priceChange24h || a.price_change_24h || a.change || 0;
+                      const changeB = b.priceChange24h || b.price_change_24h || b.change || 0;
+                      return changeA - changeB;
+                  });
+                  break;
+              case 'volume':
+                  filteredCoins = [...coins].sort((a, b) => {
+                      const volumeA = a.volume || a.total_volume || 0;
+                      const volumeB = b.volume || b.total_volume || 0;
+                      return volumeB - volumeA;
+                  });
+                  break;
+              case 'marketcap':
+                  filteredCoins = [...coins].sort((a, b) => {
+                      const capA = a.marketCap || a.market_cap || 0;
+                      const capB = b.marketCap || b.market_cap || 0;
+                      return capB - capA;
+                  });
+                  break;
+              default:
+                  // همه کوین‌ها - بدون فیلتر
+                  filteredCoins = coins;
+          }
+
+          const bodyContent = `
+          <div class="header">
+              <h1>اسکن بازار کریپتو</h1>
+              <p>تحلیل لحظه‌ای ${filteredCoins.length} ارز دیجیتال - داده‌های زنده از صرافی‌های معتبر</p>
+          </div>
+
+          <div class="glass-card">
+              <h2 style="color: #f115f9; text-align: center; margin-bottom: 25px;">📊 آمار و پارامترهای اسکن</h2>
+              <div class="stats-grid">
+                  <div class="stat-card">
+                      <div class="stat-number">${coins.length}</div>
+                      <div class="stat-label">کل ارزهای دریافت شده</div>
+                  </div>
+                  <div class="stat-card">
+                      <div class="stat-number">${filteredCoins.length}</div>
+                      <div class="stat-label">ارزهای فیلتر شده</div>
+                  </div>
+                  <div class="stat-card">
+                      <div class="stat-number">${filter.toUpperCase()}</div>
+                      <div class="stat-label">فیلتر فعلی</div>
+                  </div>
+                  <div class="stat-card">
+                      <div class="stat-number">${coins.length > 0 ? '✅' : '❌'}</div>
+                      <div class="stat-label">وضعیت داده‌ها</div>
+                  </div>
+              </div>
+          </div>
+
+          <div class="glass-card">
+              <h2 style="color: #f115f9; text-align: center; margin-bottom: 25px;">🎯 فیلترهای پیشرفته بازار</h2>
+              <div class="stats-grid">
+                  <button class="btn ${filter === 'all' ? 'active' : ''}" onclick="applyFilter('all')" style="${filter === 'all' ? 'background: linear-gradient(135deg, #f115f9, #a855f7);' : ''}">همه ارزها</button>
+                  <button class="btn ${filter === 'gainers' ? 'active' : ''}" onclick="applyFilter('gainers')" style="${filter === 'gainers' ? 'background: linear-gradient(135deg, #10b981, #059669);' : ''}">📈 بازدهی مثبت</button>
+                  <button class="btn ${filter === 'losers' ? 'active' : ''}" onclick="applyFilter('losers')" style="${filter === 'losers' ? 'background: linear-gradient(135deg, #ef4444, #dc2626);' : ''}">📉 بازدهی منفی</button>
+                  <button class="btn ${filter === 'volume' ? 'active' : ''}" onclick="applyFilter('volume')" style="${filter === 'volume' ? 'background: linear-gradient(135deg, #3b82f6, #1d4ed8);' : ''}">💎 حجم معاملات</button>
+                  <button class="btn ${filter === 'marketcap' ? 'active' : ''}" onclick="applyFilter('marketcap')" style="${filter === 'marketcap' ? 'background: linear-gradient(135deg, #8b5cf6, #7c3aed);' : ''}">🏆 مارکت کپ</button>
+              </div>
+          </div>
+
+          <div class="glass-card">
+              <h2 style="color: #f115f9; text-align: center; margin-bottom: 25px;">💰 کنترل‌های نمایش داده‌ها</h2>
+              <div class="stats-grid">
+                  <button class="btn" onclick="setLimit(50)">۵۰ ارز</button>
+                  <button class="btn" onclick="setLimit(100)">۱۰۰ ارز</button>
+                  <button class="btn" onclick="setLimit(200)">۲۰۰ ارز</button>
+                  <button class="btn" onclick="setLimit(500)">۵۰۰ ارز</button>
+                  <button class="btn" onclick="location.reload()" style="background: linear-gradient(135deg, #f59e0b, #d97706);">🔄 بروزرسانی</button>
+              </div>
+          </div>
+
+          <div class="glass-card">
+              <h2 style="color: #f115f9; text-align: center; margin-bottom: 25px;">📈 نتایج اسکن بازار - ${filteredCoins.length} ارز</h2>
+              ${filteredCoins.length > 0 ? `
+                  <div style="max-height: 800px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; background: rgba(0,0,0,0.2);">
+                      <table class="data-table">
+                          <thead style="position: sticky; top: 0; background: rgba(30,35,50,0.95); z-index: 10; backdrop-filter: blur(20px);">
+                              <tr>
+                                  <th>#</th>
+                                  <th>نماد</th>
+                                  <th>نام</th>
+                                  <th>قیمت (USDT)</th>
+                                  <th>تغییرات 24h</th>
+                                  <th>حجم معاملات</th>
+                                  <th>مارکت کپ</th>
+                                  <th>رتبه</th>
+                              </tr>
+                          </thead>
+                          <tbody>
+                              ${filteredCoins.map((coin, index) => {
+                                  // پیدا کردن فیلد تغییرات قیمت
+                                  const priceChange = coin.priceChange24h || coin.price_change_24h || coin.change24h || coin.change || coin.priceChange || 0;
+                                  const changeValue = typeof priceChange === 'number' ? priceChange : parseFloat(priceChange) || 0;
+                                
+                                  // پیدا کردن فیلد حجم
+                                  const volumeValue = coin.volume || coin.total_volume || 0;
+                                  const volumeDisplay = volumeValue >= 1e9 ? (volumeValue / 1e9).toFixed(2) + 'B' : 
+                                                      volumeValue >= 1e6 ? (volumeValue / 1e6).toFixed(1) + 'M' : 
+                                                      volumeValue >= 1e3 ? (volumeValue / 1e3).toFixed(0) + 'K' : '0';
+                                
+                                  // مارکت کپ
+                                  const marketCapValue = coin.marketCap || coin.market_cap || 0;
+                                  const marketCapDisplay = marketCapValue >= 1e9 ? (marketCapValue / 1e9).toFixed(2) + 'B' : 
+                                                         marketCapValue >= 1e6 ? (marketCapValue / 1e6).toFixed(1) + 'M' : 
+                                                         marketCapValue >= 1e3 ? (marketCapValue / 1e3).toFixed(0) + 'K' : '0';
+                                
+                                  // رتبه
+                                  const rank = coin.rank || index + 1;
+                                
+                                  // رنگ‌بندی تغییرات
+                                  const changeColor = changeValue > 5 ? '#10b981' : 
+                                                    changeValue > 0 ? '#22c55e' : 
+                                                    changeValue < -5 ? '#ef4444' : 
+                                                    changeValue < 0 ? '#f87171' : '#94a3b8';
+                                
+                                  const changeIcon = changeValue > 0 ? '📈' : changeValue < 0 ? '📉' : '➡️';
+                                
+                                  return `
+                                  <tr>
+                                      <td style="font-weight: bold; color: #f115f9;">${rank}</td>
+                                      <td><strong style="color: #e2e8f0;">${coin.symbol || 'N/A'}</strong></td>
+                                      <td style="color: #cbd5e1; font-size: 0.9rem;">${coin.name || 'Unknown'}</td>
+                                      <td style="font-weight: bold; color: #f8fafc;">$${coin.price ? parseFloat(coin.price).toFixed(4) : '0.0000'}</td>
+                                      <td style="color: ${changeColor}; font-weight: bold; font-size: 0.95rem;">
+                                          ${changeIcon} ${changeValue.toFixed(2)}%
+                                      </td>
+                                      <td style="color: #60a5fa;">${volumeDisplay}</td>
+                                      <td style="color: #c084fc; font-weight: bold;">${marketCapDisplay}</td>
+                                      <td style="color: #94a3b8; text-align: center;">#${rank}</td>
+                                  </tr>
+                                  `;
+                              }).join('')}
+                          </tbody>
+                      </table>
+                  </div>
+                
+                  <!-- نمایش خلاصه -->
+                  <div style="margin-top: 20px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 10px; text-align: center; color: #94a3b8;">
+                      <p>🎯 نمایش <strong style="color: #f115f9;">${filteredCoins.length}</strong> ارز از <strong style="color: #10b981;">${coins.length}</strong> ارز دریافت شده | 
+                      برای اسکرول از ماوس استفاده کنید | 
+                      آخرین بروزرسانی: ${new Date().toLocaleString('fa-IR')}</p>
+                  </div>
+              ` : `
+                  <div style="text-align: center; padding: 60px; color: #94a3b8; background: rgba(255,255,255,0.03); border-radius: 15px;">
+                      <div style="font-size: 4rem; margin-bottom: 20px;">📡</div>
+                      <h3 style="color: #f115f9; margin-bottom: 15px;">در حال بارگذاری داده‌ها</h3>
+                      <p>سیستم در حال دریافت اطلاعات از API بازار است...</p>
+                      <div style="margin-top: 30px;">
+                          <button class="btn" onclick="location.reload()" style="margin: 5px;">🔄 تلاش مجدد</button>
+                          <button class="btn" onclick="window.location.href='/api/test-api'" style="margin: 5px; background: linear-gradient(135deg, #8b5cf6, #7c3aed);">🧪 تست API</button>
+                          <button class="btn" onclick="window.location.href='/api/health'" style="margin: 5px; background: linear-gradient(135deg, #10b981, #059669);">❤️ سلامت سیستم</button>
+                      </div>
+                  </div>
+              `}
+          </div>
+
+          <script>
+              function applyFilter(filterType) {
+                  const currentUrl = new URL(window.location.href);
+                  currentUrl.searchParams.set('filter', filterType);
+                  window.location.href = currentUrl.toString();
+              }
+            
+              function setLimit(limitCount) {
+                  const currentUrl = new URL(window.location.href);
+                  currentUrl.searchParams.set('limit', limitCount);
+                  window.location.href = currentUrl.toString();
+              }
+            
+              // اتو اسکرول به بالا وقتی فیلتر تغییر می‌کند
+              function applyFilterWithScroll(filterType) {
+                  applyFilter(filterType);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+              }
+            
+              // رفرش با اسکرول به بالا
+              function refreshPage() {
+                  location.reload();
+                  window.scrollTo(0, 0);
+              }
+          </script>
+          `;
+
+          res.send(generateModernPage(`اسکن بازار - ${filteredCoins.length} ارز`, bodyContent, 'scan'));
+      } catch (error) {
+          console.error('❌ Scan page error:', error);
+          res.status(500).send('خطا در بارگذاری صفحه اسکن');
+      }
   });
 
   // صفحه تحلیل تکنیکال
