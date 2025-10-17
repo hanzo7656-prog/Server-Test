@@ -500,7 +500,7 @@ module.exports = (dependencies) => {
 
       res.send(generateModernPage("داشبورد", bodyContent, 'home'));
     } catch (error) {
-      console.error('Dashboard error', error);
+      console.error('❌ Dashboard error:', error);
       res.status(500).send('خطا: ' + error.message);
     }
   });
@@ -512,19 +512,36 @@ module.exports = (dependencies) => {
       const filter = req.query.filter || 'volume';
       let coins = [];
 
-      console.log('🔍 Scan page requested - Fetching data from API...');
+      console.log('🔍 Scan page requested - Checking API client...');
+      console.log('📋 API Client status:', {
+        exists: !!apiClient,
+        hasGetCoins: !!apiClient?.getCoins,
+        base_url: apiClient?.base_url,
+        api_key: apiClient?.api_key ? '***' + apiClient.api_key.slice(-10) : 'none'
+      });
 
       if (apiClient && typeof apiClient.getCoins === 'function') {
         try {
+          console.log('📡 Calling apiClient.getCoins...');
           const scanData = await apiClient.getCoins(limit);
+          console.log('📦 API Response:', {
+            success: !!scanData,
+            hasCoins: !!scanData.coins,
+            coinsCount: scanData.coins?.length,
+            hasError: !!scanData.error,
+            error: scanData.error
+          });
+          
           coins = scanData.coins || [];
-          console.log(`✅ Received ${coins.length} coins from API`);
         } catch (apiError) {
-          console.error('❌ API Error:', apiError.message);
+          console.error('❌ API Call Failed:', {
+            message: apiError.message,
+            stack: apiError.stack
+          });
           coins = [];
         }
       } else {
-        console.error('❌ API Client not available');
+        console.error('❌ API Client not available or missing getCoins method');
       }
 
       const bodyContent = `
@@ -591,6 +608,7 @@ module.exports = (dependencies) => {
               <p>لطفا چند لحظه صبر کنید یا پارامترهای جستجو را تغییر دهید</p>
               <div style="margin-top: 20px;">
                 <button class="btn" onclick="location.reload()">تلاش مجدد</button>
+                <button class="btn" onclick="window.location.href='/api/test-api'" style="margin-left: 10px;">تست API</button>
               </div>
             </div>
           `}
@@ -615,7 +633,7 @@ module.exports = (dependencies) => {
 
       res.send(generateModernPage("اسکن بازار", bodyContent, 'scan'));
     } catch (error) {
-      console.error('Scan page error', error);
+      console.error('❌ Scan page error:', error);
       res.status(500).send('خطا در بارگذاری صفحه اسکن');
     }
   });
@@ -659,7 +677,7 @@ module.exports = (dependencies) => {
 
       res.send(generateModernPage(`تحلیل تکنیکال ${symbol.toUpperCase()}`, bodyContent, 'analyze'));
     } catch (error) {
-      console.error('Analysis page error', error);
+      console.error('❌ Analysis page error:', error);
       res.status(500).send('خطا در بارگذاری صفحه تحلیل');
     }
   });
@@ -736,7 +754,7 @@ module.exports = (dependencies) => {
 
       res.send(generateModernPage("بازار سرمایه", bodyContent, 'market'));
     } catch (error) {
-      console.error('Markets page error', error);
+      console.error('❌ Markets page error:', error);
       res.status(500).send('خطا در بارگذاری صفحه بازار');
     }
   });
@@ -792,7 +810,7 @@ module.exports = (dependencies) => {
 
       res.send(generateModernPage("بینش‌های بازار", bodyContent, 'insights'));
     } catch (error) {
-      console.error('Insights page error', error);
+      console.error('❌ Insights page error:', error);
       res.status(500).send('خطا در بارگذاری صفحه بینش‌ها');
     }
   });
@@ -840,7 +858,7 @@ module.exports = (dependencies) => {
 
       res.send(generateModernPage("اخبار کریپتو", bodyContent, 'news'));
     } catch (error) {
-      console.error('News page error', error);
+      console.error('❌ News page error:', error);
       res.status(500).send('خطا در بارگذاری صفحه اخبار');
     }
   });
@@ -911,7 +929,7 @@ module.exports = (dependencies) => {
 
       res.send(generateModernPage("سلامت سیستم", bodyContent, "health"));
     } catch (error) {
-      console.error('Health page error', error);
+      console.error('❌ Health page error:', error);
       res.status(500).send('خطا در بارگذاری صفحه سلامت');
     }
   });
@@ -965,7 +983,7 @@ module.exports = (dependencies) => {
 
       res.send(generateModernPage("تنظیمات پیشرفته", bodyContent, 'settings'));
     } catch (error) {
-      console.error('Settings page error', error);
+      console.error('❌ Settings page error:', error);
       res.status(500).send('خطا در بارگذاری صفحه تنظیمات');
     }
   });
