@@ -1165,3 +1165,639 @@ module.exports = (dependencies) => {
       res.status(500).send('خطا در بارگذاری صفحه دیباگ');
     }
   });
+  // صفحه تحلیل تکنیکال
+  router.get('/analysis-page', async (req, res) => {
+    try {
+      const symbol = req.query.symbol || 'btc_usdt';
+      debugSystem.log('INFO', 'Analysis page requested', { symbol });
+      
+      const bodyContent = `
+        <div class="header">
+          <h1>تحلیل تکنیکال</h1>
+          <p>شاخص‌های فنی پیشرفته برای تحلیل بازار</p>
+        </div>
+
+        <div class="glass-card">
+          <h2 style="color: #f115f9; text-align: center; margin-bottom: 25px;">تحلیل نماد ${symbol.toUpperCase()}</h2>
+          <p style="text-align: center;">سیستم تحلیل تکنیکال در حال توسعه است</p>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-number">RSI</div>
+              <div class="stat-label">شاخص قدرت</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">MACD</div>
+              <div class="stat-label">واگرایی</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">Bollinger</div>
+              <div class="stat-label">باندها</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">Fibonacci</div>
+              <div class="stat-label">سطوح</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass-card">
+          <h2 style="color: #f115f9; text-align: center; margin-bottom: 25px;">اطلاعات دیباگ</h2>
+          <div class="debug-info">
+            <strong>نماد درخواستی:</strong> ${symbol}<br>
+            <strong>زمان تحلیل:</strong> ${new Date().toLocaleString('fa-IR')}<br>
+            <strong>وضعیت API:</strong> ${debugSystem.apiHealth.successRate}
+          </div>
+        </div>
+      `;
+
+      res.send(generateModernPage(`تحلیل تکنیکال ${symbol.toUpperCase()}`, bodyContent, 'analyze'));
+    } catch (error) {
+      debugSystem.log('ERROR', 'Analysis page error', error.message);
+      res.status(500).send('خطا در بارگذاری صفحه تحلیل');
+    }
+  });
+
+  // صفحه بازار سرمایه
+  router.get('/markets-page', async (req, res) => {
+    try {
+      debugSystem.log('INFO', 'Markets page requested');
+      
+      const bodyContent = `
+        <div class="header">
+          <h1>بازار سرمایه</h1>
+          <p>داده‌های جهانی بازار ارزهای دیجیتال</p>
+        </div>
+
+        <div class="glass-card">
+          <h2 style="color: #f115f9; text-align: center; margin-bottom: 25px;">آمار بازار</h2>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-number">$2.1T</div>
+              <div class="stat-label">سرمایه کل بازار</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">$85.4B</div>
+              <div class="stat-label">حجم معاملات</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">52.8%</div>
+              <div class="stat-label">تسلط بیت‌کوین</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">17.2%</div>
+              <div class="stat-label">تسلط اتریوم</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass-card">
+          <h2 style="color: #f115f9; text-align: center; margin-bottom: 25px;">ارزهای برتر</h2>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>نام</th>
+                <th>قیمت</th>
+                <th>تغییرات</th>
+                <th>سرمایه</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>1</td>
+                <td><strong>Bitcoin (BTC)</strong></td>
+                <td>$42,150</td>
+                <td style="color: #10b981">+2.3%</td>
+                <td>$825B</td>
+              </tr>
+              <tr>
+                <td>2</td>
+                <td><strong>Ethereum (ETH)</strong></td>
+                <td>$2,850</td>
+                <td style="color: #10b981">+1.8%</td>
+                <td>$342B</td>
+              </tr>
+              <tr>
+                <td>3</td>
+                <td><strong>Binance Coin (BNB)</strong></td>
+                <td>$315</td>
+                <td style="color: #ef4444">-0.5%</td>
+                <td>$47B</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="glass-card">
+          <h2 style="color: #f115f9; text-align: center; margin-bottom: 25px;">وضعیت سیستم</h2>
+          <div class="debug-info">
+            <strong>درخواست‌های API:</strong> ${debugSystem.apiStats.totalRequests}<br>
+            <strong>خطاهای API:</strong> ${debugSystem.apiStats.failedRequests}<br>
+            <strong>مشکلات شناسایی شده:</strong> ${debugSystem.detectIssues().length}
+          </div>
+        </div>
+      `;
+
+      res.send(generateModernPage("بازار سرمایه", bodyContent, 'market'));
+    } catch (error) {
+      debugSystem.log('ERROR', 'Markets page error', error.message);
+      res.status(500).send('خطا در بارگذاری صفحه بازار');
+    }
+  });
+
+  // صفحه بینش‌های بازار
+  router.get('/insights-page', async (req, res) => {
+    try {
+      debugSystem.log('INFO', 'Insights page requested');
+      
+      const bodyContent = `
+        <div class="header">
+          <h1>بینش‌های بازار</h1>
+          <p>تحلیل‌های پیشرفته و بینش‌های هوشمند</p>
+        </div>
+
+        <div class="glass-card">
+          <h2 style="color: #f115f9; text-align: center; margin-bottom: 25px;">احساسات بازار</h2>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-number">65</div>
+              <div class="stat-label">شاخص ترس و طمع</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">78%</div>
+              <div class="stat-label">احساسات مثبت</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">22%</div>
+              <div class="stat-label">احساسات منفی</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">📈</div>
+              <div class="stat-label">روند صعودی</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass-card">
+          <h2 style="color: #f115f9; text-align: center; margin-bottom: 25px;">پیش‌بینی‌های هوشمند</h2>
+          <div style="text-align: center; color: #94a3b8;">
+            <p>الگوریتم‌های هوش مصنوعی در حال تحلیل داده‌های بازار</p>
+          </div>
+          <div style="margin-top: 20px;">
+            <div class="stat-card" style="display: inline-block; margin: 10px;">
+              <div class="stat-number">87%</div>
+              <div class="stat-label">دقت پیش‌بینی</div>
+            </div>
+            <div class="stat-card" style="display: inline-block; margin: 10px;">
+              <div class="stat-number">24h</div>
+              <div class="stat-label">افق تحلیل</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass-card">
+          <h2 style="color: #f115f9; text-align: center; margin-bottom: 25px;">لاگ‌های تحلیلی</h2>
+          <div class="debug-info">
+            ${debugSystem.logs.filter(log => log.message.includes('analysis') || log.message.includes('insight')).slice(-3).map(log => `
+              <div>${new Date(log.timestamp).toLocaleTimeString('fa-IR')}: ${log.message}</div>
+            `).join('')}
+            ${debugSystem.logs.filter(log => log.message.includes('analysis') || log.message.includes('insight')).length === 0 ? 
+              'هنوز لاگ تحلیلی ثبت نشده' : ''}
+          </div>
+        </div>
+      `;
+
+      res.send(generateModernPage("بینش‌های بازار", bodyContent, 'insights'));
+    } catch (error) {
+      debugSystem.log('ERROR', 'Insights page error', error.message);
+      res.status(500).send('خطا در بارگذاری صفحه بینش‌ها');
+    }
+  });
+
+  // صفحه اخبار
+  router.get('/news-page', async (req, res) => {
+    try {
+      debugSystem.log('INFO', 'News page requested');
+      
+      const bodyContent = `
+        <div class="header">
+          <h1>اخبار کریپتو</h1>
+          <p>آخرین اخبار و به‌روزرسانی‌های بازار</p>
+        </div>
+
+        <div class="glass-card">
+          <h2 style="color: #f115f9; text-align: center; margin-bottom: 25px;">آخرین اخبار</h2>
+          <div style="text-align: center; padding: 40px; color: #94a3b8;">
+            <div style="font-size: 3rem; margin-bottom: 20px;">📰</div>
+            <h3>در حال بارگذاری اخبار</h3>
+            <p>اخبار زنده به زودی در دسترس خواهد بود</p>
+          </div>
+        </div>
+
+        <div class="glass-card">
+          <h2 style="color: #f115f9; text-align: center; margin-bottom: 25px;">دسته‌بندی‌ها</h2>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-number">📊</div>
+              <div class="stat-label">تحلیل بازار</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">🔔</div>
+              <div class="stat-label">هشدارها</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">🌍</div>
+              <div class="stat-label">اخبار جهانی</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">🔮</div>
+              <div class="stat-label">پیش‌بینی</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass-card">
+          <h2 style="color: #f115f9; text-align: center; margin-bottom: 25px;">وضعیت دریافت داده</h2>
+          <div class="debug-info">
+            <strong>آخرین به‌روزرسانی:</strong> ${new Date().toLocaleString('fa-IR')}<br>
+            <strong>وضعیت API اخبار:</strong> ${debugSystem.apiHealth.lastResponse ? 'فعال' : 'غیرفعال'}<br>
+            <strong>خطاهای اخیر:</strong> ${debugSystem.logs.filter(log => log.level === 'ERROR').slice(-2).map(log => log.message).join(', ') || 'ندارد'}
+          </div>
+        </div>
+      `;
+
+      res.send(generateModernPage("اخبار کریپتو", bodyContent, 'news'));
+    } catch (error) {
+      debugSystem.log('ERROR', 'News page error', error.message);
+      res.status(500).send('خطا در بارگذاری صفحه اخبار');
+    }
+  });
+
+  // صفحه سلامت سیستم
+  router.get('/health-page', async (req, res) => {
+    try {
+      debugSystem.log('INFO', 'Health page requested');
+      
+      const bodyContent = `
+        <div class="header">
+          <h1>سلامت سیستم</h1>
+          <p>مانیتورینگ سرویس‌ها و عملکرد سیستم</p>
+        </div>
+
+        <div class="glass-card">
+          <h2 style="color: #f115f9; text-align: center; margin-bottom: 25px;">وضعیت سرویس‌ها</h2>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-number">${debugSystem.apiHealth.successRate}</div>
+              <div class="stat-label">API</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">✔</div>
+              <div class="stat-label">WebSocket</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">✔</div>
+              <div class="stat-label">دیتابیس</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">✔</div>
+              <div class="stat-label">سیستم کش</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass-card">
+          <h2 style="color: #f115f9; text-align: center; margin-bottom: 25px;">مصرف منابع</h2>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-number">${(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(1)}MB</div>
+              <div class="stat-label">مصرف RAM</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">${Math.round(process.uptime() / 3600)}h</div>
+              <div class="stat-label">آپ‌تایم سرور</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">${process.uptime().toFixed(0)}s</div>
+              <div class="stat-label">زمان فعالیت</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">Node.js</div>
+              <div class="stat-label">پلتفرم</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass-card">
+          <h2 style="color: #f115f9; text-align: center; margin-bottom: 25px;">لاگ‌های سیستم</h2>
+          <div style="background: rgba(0,0,0,0.3); border-radius: 10px; padding: 15px; font-family: monospace; font-size: 0.8rem; max-height: 200px; overflow-y: auto;">
+            <div style="color: #10b981;">[INFO] سیستم با موفقیت راه‌اندازی شد</div>
+            <div style="color: #10b981;">[INFO] WebSocket برقرار شد</div>
+            <div style="color: #f59e0b;">[WARN] API در حال به‌روزرسانی است</div>
+            <div style="color: #10b981;">[INFO] ${new Date().toLocaleString('fa-IR')} (سیستم فعال)</div>
+            ${debugSystem.logs.slice(-5).map(log => `
+              <div style="color: ${log.level === 'ERROR' ? '#ef4444' : log.level === 'WARN' ? '#f59e0b' : '#10b981'};">
+                [${log.level}] ${log.message}
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <div class="glass-card">
+          <h2 style="color: #f115f9; text-align: center; margin-bottom: 25px;">آنالیز سلامت</h2>
+          <div style="text-align: center;">
+            <button class="btn" onclick="runHealthCheck()" style="background: linear-gradient(135deg, #10b981, #059669);">اجرای چک سلامت</button>
+            <button class="btn" onclick="window.location.href='/debug'">صفحه دیباگ پیشرفته</button>
+          </div>
+          <div id="healthResult" style="margin-top: 15px;"></div>
+        </div>
+
+        <script>
+          function runHealthCheck() {
+            const resultDiv = document.getElementById('healthResult');
+            resultDiv.innerHTML = '<div style="color: #f59e0b; text-align: center;">🔍 در حال بررسی سلامت سیستم...</div>';
+            
+            setTimeout(() => {
+              const issues = ${debugSystem.detectIssues().length};
+              if (issues === 0) {
+                resultDiv.innerHTML = '<div style="color: #10b981; text-align: center;">✅ سیستم در وضعیت سالم قرار دارد</div>';
+              } else {
+                resultDiv.innerHTML = '<div style="color: #ef4444; text-align: center;">⚠️ ' + issues + ' مشکل شناسایی شد. <a href="/debug" style="color: #f115f9;">بررسی کنید</a></div>';
+              }
+            }, 2000);
+          }
+
+          // اتورفرش هر 30 ثانیه
+          setInterval(() => {
+            location.reload();
+          }, 30000);
+        </script>
+      `;
+
+      res.send(generateModernPage("سلامت سیستم", bodyContent, "health"));
+    } catch (error) {
+      debugSystem.log('ERROR', 'Health page error', error.message);
+      res.status(500).send("خطا در بارگذاری صفحه سلامت");
+    }
+  });
+
+  // صفحه تنظیمات
+  router.get('/settings', async (req, res) => {
+    try {
+      debugSystem.log('INFO', 'Settings page requested');
+      
+      const bodyContent = `
+        <div class="header">
+          <h1>تنظیمات پیشرفته</h1>
+          <p>شخصی‌سازی محیط و تنظیمات کاربری</p>
+        </div>
+
+        <div class="glass-card">
+          <h2 style="color: #f115f9; text-align: center; margin-bottom: 25px;">تنظیمات نمایش</h2>
+          <div style="text-align: center; color: #94a3b8; padding: 20px;">
+            <p>صفحه تنظیمات در حال توسعه است</p>
+            
+            <div style="margin-top: 30px;">
+              <div class="stats-grid">
+                <div class="stat-card">
+                  <div class="stat-number">🌙</div>
+                  <div class="stat-label">تم رنگی</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-number">📱</div>
+                  <div class="stat-label">نمایش</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-number">📊</div>
+                  <div class="stat-label">نمودارها</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-number">🔔</div>
+                  <div class="stat-label">اعلان‌ها</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass-card">
+          <h2 style="color: #f115f9; text-align: center; margin-bottom: 25px;">تنظیمات امنیتی</h2>
+          <div style="text-align: center;">
+            <button class="btn" style="margin: 5px;">تغییر رمز عبور</button>
+            <button class="btn" style="margin: 5px;">احراز هویت دو مرحله</button>
+            <button class="btn" style="margin: 5px;">مدیریت دستگاه</button>
+            <button class="btn" style="margin: 5px;">پیشنهادات</button>
+          </div>
+        </div>
+
+        <div class="glass-card">
+          <h2 style="color: #f115f9; text-align: center; margin-bottom: 25px;">سیستم دیباگ و مانیتورینگ</h2>
+          <div class="stats-grid">
+            <div class="stat-card" onclick="toggleDebugSystem()" style="cursor: pointer;">
+              <div class="stat-number">${debugSystem.enabled ? '🔴' : '🟢'}</div>
+              <div class="stat-label">سیستم دیباگ</div>
+              <small style="color: #94a3b8;">${debugSystem.enabled ? 'فعال' : 'غیرفعال'}</small>
+            </div>
+            <div class="stat-card" onclick="clearLogs()" style="cursor: pointer;">
+              <div class="stat-number">🗑️</div>
+              <div class="stat-label">پاک کردن لاگ‌ها</div>
+              <small style="color: #94a3b8;">${debugSystem.logs.length} لاگ</small>
+            </div>
+            <div class="stat-card" onclick="runQuickAnalysis()" style="cursor: pointer;">
+              <div class="stat-number">🔧</div>
+              <div class="stat-label">آنالیز فوری</div>
+              <small style="color: #94a3b8;">5 ثانیه</small>
+            </div>
+            <div class="stat-card" onclick="exportLogs()" style="cursor: pointer;">
+              <div class="stat-number">📤</div>
+              <div class="stat-label">خروجی لاگ</div>
+              <small style="color: #94a3b8;">JSON</small>
+            </div>
+          </div>
+          
+          <div id="debugSettingsResult" style="margin-top: 15px;"></div>
+        </div>
+
+        <div class="glass-card">
+          <h2 style="color: #f115f9; text-align: center; margin-bottom: 25px;">اطلاعات سیستم</h2>
+          <div class="debug-info">
+            <strong>نسخه سیستم:</strong> VortexAI 1.0.0<br>
+            <strong>زمان راه‌اندازی:</strong> ${new Date(Date.now() - process.uptime() * 1000).toLocaleString('fa-IR')}<br>
+            <strong>حافظه استفاده شده:</strong> ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB<br>
+            <strong>تعداد درخواست‌ها:</strong> ${debugSystem.apiStats.totalRequests}<br>
+            <strong>مشکلات فعال:</strong> ${debugSystem.detectIssues().length}
+          </div>
+        </div>
+
+        <script>
+          function toggleDebugSystem() {
+            fetch('/api/toggle-debug', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              }
+            })
+            .then(response => response.json())
+            .then(data => {
+              const resultDiv = document.getElementById('debugSettingsResult');
+              if (data.success) {
+                resultDiv.innerHTML = '<div style="color: #10b981; text-align: center;">✅ سیستم دیباگ ' + (data.debugEnabled ? 'فعال' : 'غیرفعال') + ' شد</div>';
+                setTimeout(() => location.reload(), 1000);
+              } else {
+                resultDiv.innerHTML = '<div style="color: #ef4444; text-align: center;">❌ خطا در تغییر وضعیت دیباگ</div>';
+              }
+            })
+            .catch(error => {
+              document.getElementById('debugSettingsResult').innerHTML = '<div style="color: #ef4444; text-align: center;">❌ خطا در ارتباط با سرور</div>';
+            });
+          }
+
+          function clearLogs() {
+            if (confirm('آیا از پاک کردن تمام لاگ‌های سیستم مطمئن هستید؟')) {
+              fetch('/api/clear-logs', {
+                method: 'POST'
+              })
+              .then(response => response.json())
+              .then(data => {
+                const resultDiv = document.getElementById('debugSettingsResult');
+                if (data.success) {
+                  resultDiv.innerHTML = '<div style="color: #10b981; text-align: center;">✅ لاگ‌ها با موفقیت پاک شدند</div>';
+                  setTimeout(() => location.reload(), 1000);
+                }
+              });
+            }
+          }
+
+          function runQuickAnalysis() {
+            window.location.href = '/debug';
+          }
+
+          function exportLogs() {
+            const logs = ${JSON.stringify(debugSystem.logs)};
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(logs, null, 2));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", "vortexai_logs_" + new Date().toISOString() + ".json");
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+            
+            document.getElementById('debugSettingsResult').innerHTML = '<div style="color: #10b981; text-align: center;">✅ لاگ‌ها با موفقیت دانلود شدند</div>';
+          }
+
+          // رفرش اتوماتیک هر دقیقه
+          setInterval(() => {
+            if (${debugSystem.detectIssues().length} > 0) {
+              location.reload();
+            }
+          }, 60000);
+        </script>
+      `;
+
+      res.send(generateModernPage("تنظیمات پیشرفته", bodyContent, 'settings'));
+    } catch (error) {
+      debugSystem.log('ERROR', 'Settings page error', error.message);
+      res.status(500).send("خطا در بارگذاری صفحه تنظیمات");
+    }
+  });
+
+  // API Routes برای مدیریت دیباگ
+  router.post('/api/toggle-debug', async (req, res) => {
+    try {
+      debugSystem.enabled = !debugSystem.enabled;
+      debugSystem.log('INFO', `Debug system ${debugSystem.enabled ? 'enabled' : 'disabled'}`);
+      
+      res.json({
+        success: true,
+        debugEnabled: debugSystem.enabled,
+        message: `سیستم دیباگ ${debugSystem.enabled ? 'فعال' : 'غیرفعال'} شد`
+      });
+    } catch (error) {
+      res.json({
+        success: false,
+        error: error.message
+      });
+    }
+  });
+
+  router.post('/api/clear-logs', async (req, res) => {
+    try {
+      const previousCount = debugSystem.logs.length;
+      debugSystem.logs = [];
+      debugSystem.log('INFO', 'All logs cleared', { previousCount });
+      
+      res.json({
+        success: true,
+        clearedCount: previousCount,
+        message: `${previousCount} لاگ پاک شد`
+      });
+    } catch (error) {
+      res.json({
+        success: false,
+        error: error.message
+      });
+    }
+  });
+
+  router.get('/api/debug-info', async (req, res) => {
+    try {
+      const analysis = debugSystem.analyzeServer();
+      res.json(analysis);
+    } catch (error) {
+      res.json({
+        error: error.message,
+        basicInfo: {
+          memory: process.memoryUsage(),
+          uptime: process.uptime(),
+          timestamp: new Date().toISOString()
+        }
+      });
+    }
+  });
+
+  // Route 404 برای مدیریت خطاها
+  router.use('*', (req, res) => {
+    debugSystem.log('WARN', '404 Page not found', { url: req.originalUrl });
+    
+    const bodyContent = `
+      <div class="header">
+        <h1>صفحه یافت نشد</h1>
+        <p>صفحه‌ای که به دنبال آن هستید وجود ندارد</p>
+      </div>
+      
+      <div class="glass-card" style="text-align: center">
+        <div style="font-size: 4rem; margin-bottom: 20px;">❌</div>
+        <h2 style="color: #f115f9; margin-bottom: 20px;">خطای 404</h2>
+        <p style="color: #94a3b8; margin-bottom: 30px;">آدرس درخواستی معتبر نیست یا صفحه حذف شده است</p>
+        <a href="/" class="btn">بازگشت به داشبورد</a>
+        <a href="/debug" class="btn" style="background: linear-gradient(135deg, #ef4444, #dc2626); margin-right: 10px;">بررسی خطا</a>
+      </div>
+
+      <div class="glass-card">
+        <h2 style="color: #f115f9; text-align: center; margin-bottom: 25px;">راه‌حل‌های پیشنهادی</h2>
+        <div class="stats-grid">
+          <div class="stat-card" onclick="window.location.href='/'" style="cursor: pointer;">
+            <div class="stat-number">🏠</div>
+            <div class="stat-label">بازگشت به خانه</div>
+          </div>
+          <div class="stat-card" onclick="window.location.href='/scan-page'" style="cursor: pointer;">
+            <div class="stat-number">🔍</div>
+            <div class="stat-label">صفحه اسکن</div>
+          </div>
+          <div class="stat-card" onclick="window.location.href='/health-page'" style="cursor: pointer;">
+            <div class="stat-number">❤️</div>
+            <div class="stat-label">سلامت سیستم</div>
+          </div>
+          <div class="stat-card" onclick="window.location.href='/debug'" style="cursor: pointer;">
+            <div class="stat-number">🔧</div>
+            <div class="stat-label">دیباگ سیستم</div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    res.status(404).send(generateModernPage("صفحه یافت نشد", bodyContent, 'home'));
+  });
+
+  return router;
+};
