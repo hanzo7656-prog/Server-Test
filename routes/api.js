@@ -84,20 +84,6 @@ module.exports = ({ gistManager, wsManager, apiClient, exchangeAPI }) => {
                 
                 coins = apiData.coins || [];
                 
-                if (coins.length == 0) {
-                    coins = Object.entries(realtimeData || {}).slice(0, limit).map(([symbol, data], index) => ({
-                        id: 'coin_' + index,
-                        name: 'Crypto' + index,
-                        symbol: symbol.replace("_usdt", "").toUpperCase(),
-                        price: data.price || 0,
-                        priceChange1h: data.change || 0,
-                        priceChange24h: data.change || 0,
-                        volume: data.volume || 0,
-                        marketCap: (data.price || 0) * 1000000,
-                        rank: index + 1
-                    }));
-                }
-                
                 // تحلیل پیشرفته
                 const enhancedCoins = coins.map((coin) => {
                     const symbol = `${coin.symbol.toLowerCase()}_usdt`;
