@@ -552,12 +552,41 @@ module.exports = (dependencies) => {
                   symbol: coins[0].symbol,
                   price: coins[0].price,
                   // همه فیلدهای ممکن برای تغییرات قیمت
-                  priceChange24h: coins[0].priceChange24h,
-                  price_change_24h: coins[0].price_change_24h,
-                  priceChange1h: coins[0].priceChange1h,
-                  price_change_1h: coins[0].price_change_1h,
-                  priceChange: coins[0].priceChange,
-                  change: coins[0].change,
+                  
+                  // جستجوی هوشمند برای فیلد تغییرات قیمت
+                  let priceChange = 0;
+                  let priceChangeField = 'unknown';
+            
+                  // بررسی تمام فیلدهای ممکن برای تغییرات قیمت
+                  const possibleChangeFields = [
+                      'priceChange24h', 'price_change_24h', 'change24h', 'changePercentage24h',
+                      'priceChangePercentage24h', 'priceChange', 'change', 'changePercentage',
+                      'price_change', 'percent_change_24h', 'percentChange24h'
+                  ];
+          
+                  for (const field of possibleChangeFields) {
+                      if (coin[field] !== undefined && coin[field] !== null) {
+                          priceChange = typeof coin[field] === 'number' ? coin[field] : parseFloat(coin[field]) || 0;
+                          priceChangeField = field;
+                          break;
+                      }
+                  }
+        
+                  // اگر هنوز پیدا نکردیم، سعی می‌کنیم از نام‌های مشابه پیدا کنیم
+                  if (priceChange === 0) {
+                      Object.keys(coin).forEach(key => {
+                          if ((key.toLowerCase().includes('change') || key.toLowerCase().includes('percent')) && 
+                              !key.toLowerCase().includes('price') && !key.toLowerCase().includes('1h')) {
+                              const value = coin[key];
+                              if (value !== undefined && value !== null) {
+                                  priceChange = typeof value === 'number' ? value : parseFloat(value) || 0;
+                                  priceChangeField = key;
+                              }
+                          }
+                      });
+                  }
+        
+                  console.log(`🎯 ${coin.symbol}: Using field "${priceChangeField}" with value ${priceChange}`);
                   // همه فیلدهای ممکن برای حجم
                   volume: coins[0].volume,
                   total_volume: coins[0].total_volume,
