@@ -1741,10 +1741,6 @@ module.exports = (dependencies) => {
             `, 'scan'));
         }
     });
-// تست route ساده
-app.get('/test-simple', (req, res) => {
-    res.send('✅ Route Test Works!');
-});
 
     return router;
 };
