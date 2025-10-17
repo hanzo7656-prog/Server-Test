@@ -307,43 +307,51 @@ function generateClassNavigation(currentPage = 'home') {
 
 <script>
 
-// مدیریت کلیک روی دکمه شناور
+// مدیریت کلیک روی دکمه شناور - نسخه بهبود یافته
 document.querySelector('.nav-floater').addEventListener('click', function(e) {
     e.preventDefault();
     e.stopPropagation();
     const nav = document.getElementById('glassNav');
     const container = document.querySelector('.nav-container');
     
-    if (container.style.display === 'block') {
-        container.style.display = 'none';
-        nav.classList.remove('expanded');
-    } else {
-        container.style.display = 'block';
-        nav.classList.add('expanded');
-    }
+    const isExpanded = container.style.display === 'block';
+    container.style.display = isExpanded ? 'none' : 'block';
+    nav.classList.toggle('expanded', !isExpanded);
 });
 
-// مدیریت کلیک روی آیتم‌های نویگیشن
-document.addEventListener('DOMContentLoaded', function() {
-    const navItems = document.querySelectorAll('.nav-item');
+// روش EVENT DELEGATION - بهترین راه حل
+document.querySelector('.nav-container').addEventListener('click', function(e) {
+    // پیدا کردن نزدیکترین .nav-item که کلیک شده
+    const navItem = e.target.closest('.nav-item');
     
-    navItems.forEach(item => {
-        item.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            const page = this.getAttribute('data-page');
-            const isExternal = this.getAttribute('data-external') === 'true';
-            
-            console.log('Navigation clicked:', page, 'External:', isExternal);
-            
-            if (isExternal) {
-                window.open(page, '_blank');
-            } else {
-                window.location.href = page;
-            }
+    if (navItem && !navItem.classList.contains('disabled')) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const page = navItem.getAttribute('data-page');
+        const isExternal = navItem.getAttribute('data-external') === 'true';
+        const isAi = navItem.getAttribute('data-ai') === 'true';
+        
+        console.log('🔄 Navigation clicked:', {
+            page: page,
+            external: isExternal,
+            ai: isAi,
+            element: navItem
         });
-    });
+        
+        // بستن منو بعد از کلیک
+        const container = document.querySelector('.nav-container');
+        const nav = document.getElementById('glassNav');
+        container.style.display = 'none';
+        nav.classList.remove('expanded');
+        
+        // هدایت به صفحه مقصد
+        if (isExternal || isAi) {
+            window.open(page, '_blank');
+        } else {
+            window.location.href = page;
+        }
+    }
 });
 
 // بستن navigation وقتی خارج از آن کلیک شود
@@ -387,13 +395,26 @@ function hideQuickPeek() {
     }
 }
 
-function startPress(itemId) {
-    console.log('Start press:', itemId);
+// تابع دیباگ برای بررسی وضعیت navigation
+function debugNavigation() {
+    console.log('🔍 Debug Navigation:');
+    console.log('- Nav items:', document.querySelectorAll('.nav-item').length);
+    console.log('- Container:', document.querySelector('.nav-container'));
+    console.log('- Floater:', document.querySelector('.nav-floater'));
+    
+    document.querySelectorAll('.nav-item').forEach((item, index) => {
+        console.log(`Item ${index}:`, {
+            id: item.getAttribute('data-page'),
+            href: item.getAttribute('data-page'),
+            external: item.getAttribute('data-external')
+        });
+    });
 }
 
-function endPress(itemId) {
-    console.log('End press:', itemId);
-}
+// اجرای دیباگ بعد از لود صفحه
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(debugNavigation, 1000);
+});
 </script>
 `;
 }
