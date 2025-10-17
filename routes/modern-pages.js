@@ -307,6 +307,42 @@ function generateClassNavigation(currentPage = 'home') {
 
 <script>
 
+// ==================== 
+// NAVIGATION DEBUGGER - SAFE VERSION
+// ====================
+
+function safeDebugNavigation() {
+    try {
+        // فقط در مرورگر اجرا بشه
+        if (typeof document === 'undefined') return;
+        
+        console.log('=== 🧭 NAVIGATION DEBUG ===');
+        
+        const navItems = document.querySelectorAll('.nav-item');
+        const container = document.querySelector('.nav-container');
+        const floater = document.querySelector('.nav-floater');
+        
+        console.log('Navigation items found: ' + navItems.length);
+        console.log('Container exists: ' + !!container);
+        console.log('Floater exists: ' + !!floater);
+        
+        // نمایش اطلاعات هر آیتم
+        navItems.forEach(function(item, index) {
+            const page = item.getAttribute('data-page');
+            const external = item.getAttribute('data-external');
+            console.log('Item ' + (index + 1) + ': ' + page + ' (external: ' + external + ')');
+        });
+        
+    } catch (error) {
+        // خطا رو نادیده بگیر - یعنی در Node.js هستیم
+        console.log('Debug skipped - not in browser');
+    }
+}
+
+// ==================== 
+// NAVIGATION HANDLERS  
+// ====================
+
 // مدیریت کلیک روی دکمه شناور
 document.querySelector('.nav-floater').addEventListener('click', function(e) {
     e.preventDefault();
@@ -334,7 +370,10 @@ document.querySelector('.nav-container').addEventListener('click', function(e) {
         const page = navItem.getAttribute('data-page');
         const isExternal = navItem.getAttribute('data-external') === 'true';
         
-        console.log('Navigating to:', page, 'External:', isExternal);
+        console.log('=== 🚀 NAVIGATION CLICK ===');
+        console.log('Page: ' + page);
+        console.log('External: ' + isExternal);
+        console.log('======================');
         
         // بستن منو
         const container = document.querySelector('.nav-container');
@@ -362,46 +401,66 @@ document.addEventListener('click', function(e) {
     }
 });
 
+// اجرای دیباگ بعد از لود صفحه
+try {
+    if (typeof document !== 'undefined') {
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(safeDebugNavigation, 1000);
+        });
+    }
+} catch (error) {
+    // خطا رو نادیده بگیر
+}
+
 // توابع کمکی
 function showQuickPeek(itemId) {
-    const overlay = document.getElementById('quickPeekOverlay');
-    const content = document.getElementById('quickPeekContent');
-    const navItems = {
-        'home': 'داشبورد اصلی - نمای کلی سیستم',
-        'scan': 'اسکن بازار - شناسایی فرصت‌های سرمایه‌گذاری', 
-        'analyze': 'تحلیل تکنیکال - نمودارها و شاخص‌های فنی',
-        'ai': 'تحلیل هوش مصنوعی - پیش‌بینی‌های پیشرفته',
-        'market': 'بازار و سرمایه - داده‌های جهانی بازار',
-        'insights': 'بینش‌های بازار - تحلیل احساسات و روندها',
-        'news': 'اخبار زنده - آخرین اخبار و به‌روزرسانی‌ها',
-        'health': 'وضعیت سرورها - مانیتورینگ سلامت سیستم',
-        'settings': 'تنظیمات کاربری - شخصی‌سازی محیط'
-    };
-    
-    if (overlay && content) {
-        content.textContent = navItems[itemId] || 'اطلاعات بیشتر';
-        overlay.style.display = 'block';
+    try {
+        const overlay = document.getElementById('quickPeekOverlay');
+        const content = document.getElementById('quickPeekContent');
+        const navItems = {
+            'home': 'داشبورد اصلی - نمای کلی سیستم',
+            'scan': 'اسکن بازار - شناسایی فرصت‌های سرمایه‌گذاری', 
+            'analyze': 'تحلیل تکنیکال - نمودارها و شاخص‌های فنی',
+            'ai': 'تحلیل هوش مصنوعی - پیش‌بینی‌های پیشرفته',
+            'market': 'بازار و سرمایه - داده‌های جهانی بازار',
+            'insights': 'بینش‌های بازار - تحلیل احساسات و روندها',
+            'news': 'اخبار زنده - آخرین اخبار و به‌روزرسانی‌ها',
+            'health': 'وضعیت سرورها - مانیتورینگ سلامت سیستم',
+            'settings': 'تنظیمات کاربری - شخصی‌سازی محیط'
+        };
+        
+        if (overlay && content) {
+            content.textContent = navItems[itemId] || 'اطلاعات بیشتر';
+            overlay.style.display = 'block';
+        }
+    } catch (error) {
+        // خطا رو نادیده بگیر
     }
 }
 
 function hideQuickPeek() {
-    const overlay = document.getElementById('quickPeekOverlay');
-    if (overlay) {
-        overlay.style.display = 'none';
+    try {
+        const overlay = document.getElementById('quickPeekOverlay');
+        if (overlay) {
+            overlay.style.display = 'none';
+        }
+    } catch (error) {
+        // خطا رو نادیده بگیر
     }
 }
 
 function startPress(itemId) {
-    console.log('Start press:', itemId);
+    console.log('Start press: ' + itemId);
 }
 
 function endPress(itemId) {
-    console.log('End press:', itemId);
+    console.log('End press: ' + itemId);
 }
 
 function searchCommands(event) {
-    console.log('Search commands:', event.target.value);
+    console.log('Search commands: ' + event.target.value);
 }
+
 </script>
 `;
 }
