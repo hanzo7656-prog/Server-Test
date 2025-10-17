@@ -306,11 +306,12 @@ function generateClassNavigation(currentPage = 'home') {
 </style>
 
 <script>
+
 // ==================== 
-// SPECIFIC ITEMS DEBUG
+// COMPREHENSIVE NAVIGATION DEBUG
 // ====================
 
-function showDebugMessage(message) {
+function showDebugMessage(message, type = 'info') {
     try {
         const oldMsg = document.getElementById('visualDebugMsg');
         if (oldMsg) oldMsg.remove();
@@ -321,13 +322,14 @@ function showDebugMessage(message) {
         debugMsg.style.position = 'fixed';
         debugMsg.style.top = '10px';
         debugMsg.style.left = '10px';
-        debugMsg.style.background = 'red';
+        debugMsg.style.background = type === 'error' ? 'red' : (type === 'success' ? 'green' : 'blue');
         debugMsg.style.color = 'white';
         debugMsg.style.padding = '10px';
         debugMsg.style.zIndex = '10000';
         debugMsg.style.borderRadius = '5px';
         debugMsg.style.fontSize = '14px';
         debugMsg.style.fontFamily = 'Arial, sans-serif';
+        debugMsg.style.maxWidth = '400px';
         
         document.body.appendChild(debugMsg);
         
@@ -335,126 +337,178 @@ function showDebugMessage(message) {
             if (debugMsg.parentNode) {
                 debugMsg.parentNode.removeChild(debugMsg);
             }
-        }, 5000);
+        }, 7000);
+    } catch (error) {}
+}
+
+// تست 1: بررسی وضعیت کلی navigation
+function testNavigationStructure() {
+    try {
+        const nav = document.getElementById('glassNav');
+        const container = document.querySelector('.nav-container');
+        const floater = document.querySelector('.nav-floater');
+        const items = document.querySelectorAll('.nav-item');
+        const scanItem = document.querySelector('[data-page="/scan-page"]');
+        const marketItem = document.querySelector('[data-page="/markets-page"]');
+        const commandPalette = document.getElementById('commandPalette');
+        const quickPeek = document.getElementById('quickPeekOverlay');
+        
+        let report = 'گزارش وضعیت navigation:\n';
+        report += '• المان اصلی: ' + (nav ? '✅' : '❌') + '\n';
+        report += '• کانتینر: ' + (container ? '✅' : '❌') + '\n';
+        report += '• دکمه شناور: ' + (floater ? '✅' : '❌') + '\n';
+        report += '• تعداد آیتم‌ها: ' + items.length + '\n';
+        report += '• آیتم اسکن: ' + (scanItem ? '✅' : '❌') + '\n';
+        report += '• آیتم مارکت: ' + (marketItem ? '✅' : '❌') + '\n';
+        report += '• Command Palette: ' + (commandPalette ? '✅' : '❌') + '\n';
+        report += '• Quick Peek: ' + (quickPeek ? '✅' : '❌');
+        
+        showDebugMessage(report, 'info');
+        
+        // تست overlay interference
+        if (commandPalette || quickPeek) {
+            showDebugMessage('⚠️ overlayها فعال هستند - ممکن است کلیک را block کنند', 'error');
+        }
         
     } catch (error) {
-        // ignore
+        showDebugMessage('خطا در بررسی ساختار: ' + error.message, 'error');
     }
 }
 
-// تست آیتم‌های خاص
+// تست 2: بررسی routeها
+function testRoutePaths() {
+    try {
+        const items = document.querySelectorAll('.nav-item');
+        let routeReport = 'مسیرهای route:\n';
+        
+        items.forEach(function(item, index) {
+            const page = item.getAttribute('data-page');
+            const isExternal = item.getAttribute('data-external') === 'true';
+            routeReport += (index + 1) + '. ' + page + (isExternal ? ' (خارجی)' : '') + '\n';
+        });
+        
+        showDebugMessage(routeReport, 'info');
+        
+    } catch (error) {
+        showDebugMessage('خطا در بررسی مسیرها', 'error');
+    }
+}
+
+// تست 3: بررسی CSS interference
+function testCSSInterference() {
+    try {
+        const scanItem = document.querySelector('[data-page="/scan-page"]');
+        const marketItem = document.querySelector('[data-page="/markets-page"]');
+        
+        if (scanItem) {
+            const scanStyle = window.getComputedStyle(scanItem);
+            const marketStyle = marketItem ? window.getComputedStyle(marketItem) : null;
+            
+            let cssReport = 'بررسی CSS:\n';
+            cssReport += '• اسکن - pointer-events: ' + scanStyle.pointerEvents + '\n';
+            cssReport += '• اسکن - opacity: ' + scanStyle.opacity + '\n';
+            cssReport += '• اسکن - display: ' + scanStyle.display + '\n';
+            
+            if (marketStyle) {
+                cssReport += '• مارکت - pointer-events: ' + marketStyle.pointerEvents + '\n';
+                cssReport += '• مارکت - opacity: ' + marketStyle.opacity;
+            }
+            
+            showDebugMessage(cssReport, 'info');
+            
+            // علامت‌گذاری آیتم‌های مشکل‌دار
+            if (scanItem) {
+                scanItem.style.outline = '3px solid red';
+                scanItem.style.position = 'relative';
+            }
+            if (marketItem) {
+                marketItem.style.outline = '3px solid green';
+                marketItem.style.position = 'relative';
+            }
+        }
+        
+    } catch (error) {
+        showDebugMessage('خطا در بررسی CSS', 'error');
+    }
+}
+
+// تست 4: بررسی event propagation
+function testEventPropagation() {
+    try {
+        const scanItem = document.querySelector('[data-page="/scan-page"]');
+        const marketItem = document.querySelector('[data-page="/markets-page"]');
+        
+        if (scanItem) {
+            scanItem.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                showDebugMessage('✅ Event روی اسکن ثبت شد!', 'success');
+                
+                // تست هدایت
+                setTimeout(function() {
+                    showDebugMessage('🔄 در حال هدایت به /scan-page...', 'info');
+                    window.location.href = '/scan-page';
+                }, 1000);
+            }, true); // useCapture = true
+        }
+        
+        if (marketItem) {
+            marketItem.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                showDebugMessage('✅ Event روی مارکت ثبت شد!', 'success');
+                
+                // تست هدایت
+                setTimeout(function() {
+                    showDebugMessage('🔄 در حال هدایت به /markets-page...', 'info');
+                    window.location.href = '/markets-page';
+                }, 1000);
+            }, true); // useCapture = true
+        }
+        
+    } catch (error) {
+        showDebugMessage('خطا در ثبت eventها', 'error');
+    }
+}
+
+// اجرای تمام تست‌ها
 try {
     if (typeof document !== 'undefined') {
         document.addEventListener('DOMContentLoaded', function() {
             setTimeout(function() {
-                // پیدا کردن آیتم‌های مشکل‌دار
-                const scanItem = document.querySelector('[data-page="/scan-page"]');
-                const marketItem = document.querySelector('[data-page="/markets-page"]');
-                const analyzeItem = document.querySelector('[data-page="/analysis-page"]');
+                showDebugMessage('🚀 شروع دیباگ navigation...', 'info');
                 
-                let debugInfo = 'بررسی آیتم‌ها: ';
-                
-                if (scanItem) {
-                    debugInfo += 'اسکن: ' + scanItem.className + ' ';
-                    // اضافه کردن استایل خاص برای اسکن
-                    scanItem.style.background = 'rgba(255,0,0,0.3)';
-                }
-                
-                if (marketItem) {
-                    debugInfo += 'مارکت: ' + marketItem.className + ' ';
-                    // اضافه کردن استایل خاص برای مارکت
-                    marketItem.style.background = 'rgba(0,255,0,0.3)';
-                }
-                
-                if (analyzeItem) {
-                    debugInfo += 'آنالیز: ' + analyzeItem.className + ' ';
-                    // اضافه کردن استایل خاص برای آنالیز
-                    analyzeItem.style.background = 'rgba(0,0,255,0.3)';
-                }
-                
-                showDebugMessage(debugInfo);
+                // اجرای تست‌ها با تأخیر
+                setTimeout(testNavigationStructure, 1000);
+                setTimeout(testRoutePaths, 3000);
+                setTimeout(testCSSInterference, 5000);
+                setTimeout(testEventPropagation, 7000);
                 
             }, 1000);
         });
     }
-} catch (error) {
-    // ignore
+} catch (error) {}
 }
 
-// مدیریت کلیک روی دکمه شناور
+// مدیریت کلیک روی دکمه شناور (ساده)
 document.querySelector('.nav-floater').addEventListener('click', function(e) {
     e.preventDefault();
     e.stopPropagation();
-    
     const nav = document.getElementById('glassNav');
     const container = document.querySelector('.nav-container');
     
     if (container.style.display === 'block') {
         container.style.display = 'none';
         nav.classList.remove('expanded');
-        showDebugMessage('منو بسته شد');
+        showDebugMessage('منو بسته شد', 'info');
     } else {
         container.style.display = 'block';
         nav.classList.add('expanded');
-        showDebugMessage('منو باز شد');
-        
-        // تست مستقیم روی آیتم‌های مشکل‌دار
-        setTimeout(function() {
-            const scanItem = document.querySelector('[data-page="/scan-page"]');
-            const marketItem = document.querySelector('[data-page="/markets-page"]');
-            
-            if (scanItem) {
-                scanItem.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    showDebugMessage('مستقیم کلیک روی اسکن');
-                    window.location.href = '/scan-page';
-                });
-            }
-            
-            if (marketItem) {
-                marketItem.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    showDebugMessage('مستقیم کلیک روی مارکت');
-                    window.location.href = '/markets-page';
-                });
-            }
-            
-            showDebugMessage('Event listeners مستقیم اضافه شد');
-            
-        }, 500);
+        showDebugMessage('منو باز شد - حالا روی اسکن/مارکت کلیک کن', 'success');
     }
 });
 
-// همچنین event listener کلی
-document.addEventListener('click', function(e) {
-    const navItem = e.target.closest('.nav-item');
-    
-    if (navItem) {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        const page = navItem.getAttribute('data-page');
-        showDebugMessage('کلیک کلی روی: ' + page);
-        
-        // بستن منو
-        const container = document.querySelector('.nav-container');
-        const nav = document.getElementById('glassNav');
-        container.style.display = 'none';
-        nav.classList.remove('expanded');
-        
-        // هدایت به صفحه
-        const isExternal = navItem.getAttribute('data-external') === 'true';
-        if (isExternal) {
-            window.open(page, '_blank');
-        } else {
-            window.location.href = page;
-        }
-    }
-});
-
-// توابع کمکی
+// توابع کمکی موجود
 function showQuickPeek(itemId) {
     try {
         const overlay = document.getElementById('quickPeekOverlay');
@@ -475,9 +529,7 @@ function showQuickPeek(itemId) {
             content.textContent = navItems[itemId] || 'اطلاعات بیشتر';
             overlay.style.display = 'block';
         }
-    } catch (error) {
-        // ignore
-    }
+    } catch (error) {}
 }
 
 function hideQuickPeek() {
@@ -486,10 +538,9 @@ function hideQuickPeek() {
         if (overlay) {
             overlay.style.display = 'none';
         }
-    } catch (error) {
-        // ignore
-    }
+    } catch (error) {}
 }
+
 </script>
 `;
 }
