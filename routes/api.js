@@ -1185,6 +1185,45 @@ module.exports = ({ gistManager, wsManager, apiClient, exchangeAPI }) => {
             });
         }
     });
+    // تست دقیق خطای CoinStats
+    router.get("/debug-coinstats", async (req, res) => {
+        try {
+            const url = "https://openapiv1.coinstats.app/coins?limit=5&currency=USD";
+            console.log("🔍 Testing CoinStats API...");
+        
+            const response = await fetch(url, {
+                headers: {
+                    'X-API-KEY': 'uNb+sQjnjCQmV30dYrChxgh55hRHElmizLinkJX+5U6g=',
+                    'Accept': 'application/json',
+                    'User-Agent': 'VortexAI-Server/1.0'
+                }
+            });
+ 
+            console.log("📊 Response Status:", response.status);
+            console.log("📊 Response Headers:", response.headers);
+        
+            const contentType = response.headers.get('content-type');
+            const responseText = await response.text();
+        
+            console.log("📊 Content-Type:", contentType);
+            console.log("📊 Response (first 500 chars):", responseText.substring(0, 500));
+
+            res.json({
+                status: response.status,
+                contentType: contentType,
+                headers: Object.fromEntries(response.headers),
+                responseSample: responseText.substring(0, 500),
+                isJson: contentType && contentType.includes('application/json')
+            });
+
+        } catch (error) {
+            console.log("❌ Fetch Error:", error.message);
+            res.json({
+                error: error.message,
+                stack: error.stack
+            });
+        }
+    });
 
     return router;
 };
