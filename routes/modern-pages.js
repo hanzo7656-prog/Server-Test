@@ -306,50 +306,65 @@ function generateClassNavigation(currentPage = 'home') {
 </style>
 
 <script>
-// تابع toggle ساده شده
-function toggleGlassNav() {
-    const nav = document.getElementById('glassNav');
-    const container = document.querySelector('.nav-container');
-    if (nav && container) {
-        const isExpanded = nav.classList.contains('expanded');
-        nav.classList.toggle('expanded');
-        container.style.display = isExpanded ? 'none' : 'block';
-    }
-}
-// ساده‌ترین راه - بدون پیچیدگی
-document.addEventListener('click', function(e) {
-    const navItem = e.target.closest('.nav-item');
-    if (navItem) {
-        e.preventDefault();
-        const page = navItem.getAttribute('data-page');
-        const isExternal = navItem.getAttribute('data-external') === 'true';
-        
-        if (isExternal) {
-            window.open(page, '_blank');
-        } else {
-            window.location.href = page;
-        }
-    }
-});
 
-// دکمه شناور
-document.querySelector('.nav-floater')?.addEventListener('click', function(e) {
+// مدیریت کلیک روی دکمه شناور
+document.querySelector('.nav-floater').addEventListener('click', function(e) {
+    e.preventDefault();
     e.stopPropagation();
     const nav = document.getElementById('glassNav');
     const container = document.querySelector('.nav-container');
-    if (nav && container) {
-        const isExpanded = nav.classList.contains('expanded');
-        nav.classList.toggle('expanded');
-        container.style.display = isExpanded ? 'none' : 'block';
+    
+    if (container.style.display === 'block') {
+        container.style.display = 'none';
+        nav.classList.remove('expanded');
+    } else {
+        container.style.display = 'block';
+        nav.classList.add('expanded');
     }
 });
-// توابع کمکی برای نویگیشن
+
+// مدیریت کلیک روی آیتم‌های نویگیشن
+document.addEventListener('DOMContentLoaded', function() {
+    const navItems = document.querySelectorAll('.nav-item');
+    
+    navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const page = this.getAttribute('data-page');
+            const isExternal = this.getAttribute('data-external') === 'true';
+            
+            console.log('Navigation clicked:', page, 'External:', isExternal);
+            
+            if (isExternal) {
+                window.open(page, '_blank');
+            } else {
+                window.location.href = page;
+            }
+        });
+    });
+});
+
+// بستن navigation وقتی خارج از آن کلیک شود
+document.addEventListener('click', function(e) {
+    const nav = document.getElementById('glassNav');
+    const container = document.querySelector('.nav-container');
+    const floater = document.querySelector('.nav-floater');
+    
+    if (!nav.contains(e.target) && container.style.display === 'block') {
+        container.style.display = 'none';
+        nav.classList.remove('expanded');
+    }
+});
+
+// توابع کمکی
 function showQuickPeek(itemId) {
     const overlay = document.getElementById('quickPeekOverlay');
     const content = document.getElementById('quickPeekContent');
     const navItems = {
         'home': 'داشبورد اصلی - نمای کلی سیستم',
-        'scan': 'اسکن بازار - شناسایی فرصت‌های سرمایه‌گذاری',
+        'scan': 'اسکن بازار - شناسایی فرصت‌های سرمایه‌گذاری', 
         'analyze': 'تحلیل تکنیکال - نمودارها و شاخص‌های فنی',
         'ai': 'تحلیل هوش مصنوعی - پیش‌بینی‌های پیشرفته',
         'market': 'بازار و سرمایه - داده‌های جهانی بازار',
@@ -378,11 +393,6 @@ function startPress(itemId) {
 
 function endPress(itemId) {
     console.log('End press:', itemId);
-}
-
-function searchCommands(event) {
-    // پیاده‌سازی جستجوی دستورات
-    console.log('Search commands:', event.target.value);
 }
 </script>
 `;
