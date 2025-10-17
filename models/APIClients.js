@@ -47,6 +47,10 @@ class AdvancedCoinStatsAPIClient {
     this.request_count = 0;
     this.last_request_time = Date.now();
     this.ratelimitDelay = 1000;
+    console.log('🔧 API Client initialized:', {
+      base_url: this.base_url,
+      api_key: this.api_key ? '***' + this.api_key.slice(-10) : 'none'
+    });
   }
 
   async _rateLimit() {
@@ -55,7 +59,7 @@ class AdvancedCoinStatsAPIClient {
     
     if (timeDiff < this.ratelimitDelay) {
       const waitTime = this.ratelimitDelay - timeDiff;
-      console.log(`Rate limiting: waiting ${waitTime}ms`);
+      console.log(`⏳ Rate limiting: waiting ${waitTime}ms`);
       await new Promise(resolve => setTimeout(resolve, waitTime));
     }
     
@@ -72,10 +76,10 @@ class AdvancedCoinStatsAPIClient {
     
     try {
       const url = `${this.base_url}/coins?limit=${limit}&currency=USD`;
-      console.log(`⚫ Fetching coins from: ${url}`);
+      console.log(`🌐 Fetching coins from: ${url}`);
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
 
       const response = await fetch(url, {
         method: 'GET',
@@ -88,26 +92,41 @@ class AdvancedCoinStatsAPIClient {
       });
 
       clearTimeout(timeoutId);
-      console.log(`⚫ Response status: ${response.status} ${response.statusText}`);
+      
+      console.log(`📨 Response status: ${response.status} ${response.statusText}`);
 
       if (response.status === 429) {
-        console.log('⚫ Rate limit exceeded! Increasing delay...');
+        console.log('🚫 Rate limit exceeded! Increasing delay...');
         this.ratelimitDelay = 2000;
         return { coins: [], error: 'Rate limit exceeded' };
       }
 
       if (!response.ok) {
-        console.log(`HTTP error! status: ${response.status}`);
-        return { coins: [], error: `HTTP ${response.status}` };
+        const errorText = await response.text();
+        console.log(`❌ HTTP error! status: ${response.status}, body:`, errorText);
+        return { coins: [], error: `HTTP ${response.status}: ${response.statusText}` };
       }
 
       const data = await response.json();
-      const coinsCount = data.result?.length || data.coins?.length || 0;
-      console.log(`Received ${coinsCount} coins from API`);
+      console.log('📦 Raw API response structure:', Object.keys(data));
       
-      return { coins: data.result || data.coins || data || [] };
+      // بررسی همه حالت‌های ممکن برای ساختار داده
+      let coins = [];
+      if (data.result && Array.isArray(data.result)) {
+        coins = data.result;
+      } else if (data.coins && Array.isArray(data.coins)) {
+        coins = data.coins;
+      } else if (data.data && Array.isArray(data.data)) {
+        coins = data.data;
+      } else if (Array.isArray(data)) {
+        coins = data;
+      }
+      
+      console.log(`✅ Received ${coins.length} coins from API`);
+      return { coins };
+      
     } catch (error) {
-      console.error('API getCoins error', error.message);
+      console.error('💥 API getCoins error:', error.message);
       return { coins: [], error: error.message };
     }
   }
@@ -122,10 +141,10 @@ class AdvancedCoinStatsAPIClient {
         .sort((a, b) => b.priceChange24h - a.priceChange24h)
         .slice(0, limit);
 
-      console.log(`✓ Found ${gainers.length} top gainers`);
+      console.log(`📈 Found ${gainers.length} top gainers`);
       return gainers;
     } catch (error) {
-      console.error('✓ Top gainers error', error.message);
+      console.error('❌ Top gainers error:', error.message);
       return [];
     }
   }
@@ -183,7 +202,7 @@ class HistoricalDataAPI {
 
     const coinId = symbolMap[cleanSymbol];
     if (!coinId) {
-      console.log(`Symbol not found in map: ${cleanSymbol}, using lowercase`);
+      console.log(`🔍 Symbol not found in map: ${cleanSymbol}, using lowercase`);
       return cleanSymbol.toLowerCase();
     }
 
@@ -195,7 +214,7 @@ class HistoricalDataAPI {
     const cached = this.requestCache.get(cacheKey);
 
     if (cached && (Date.now() - cached.timestamp < this.cacheTimeout)) {
-      console.log(`[ ] Using cached historical data for ${coinIds.length} coins`);
+      console.log(`💾 Using cached historical data for ${coinIds.length} coins`);
       return cached.data;
     }
 
@@ -211,7 +230,7 @@ class HistoricalDataAPI {
 
       for (let i = 0; i < batches.length; i++) {
         const batch = batches[i];
-        console.log(`[ ] Fetching batch ${i + 1}/${batches.length}: ${batch.join(',')}`);
+        console.log(`🔄 Fetching batch ${i + 1}/${batches.length}: ${batch.join(',')}`);
         const batchResult = await this.fetchBatchHistorical(batch, period);
         
         if (batchResult.data && Array.isArray(batchResult.data)) {
@@ -234,10 +253,10 @@ class HistoricalDataAPI {
         timestamp: Date.now()
       });
 
-      console.log(`[ ] Total historical records received: ${allResults.length}`);
+      console.log(`✅ Total historical records received: ${allResults.length}`);
       return result;
     } catch (error) {
-      console.error('Error in getMultipleCoinsHistorical', error);
+      console.error('❌ Error in getMultipleCoinsHistorical:', error);
       return { data: [], source: 'fallback', error: error.message };
     }
   }
@@ -245,7 +264,7 @@ class HistoricalDataAPI {
   async fetchBatchHistorical(coinIds, period) {
     const coinIdsString = coinIds.join(",");
     const url = `${this.base_url}/coins/charts?period=${period}&coinIds=${coinIdsString}`;
-    console.log(`[ ] Fetching historical from: ${url}`);
+    console.log(`📊 Fetching historical from: ${url}`);
 
     try {
       const controller = new AbortController();
@@ -283,7 +302,7 @@ class HistoricalDataAPI {
       console.log(`✅ Received valid historical data for ${validData.length} coins`);
       return { data: validData, source: 'real_api' };
     } catch (error) {
-      console.error(`✗ Historical API error for ${coinIds.join(',')}`, error.message);
+      console.error(`❌ Historical API error for ${coinIds.join(',')}:`, error.message);
       throw error;
     }
   }
@@ -297,27 +316,27 @@ class HistoricalDataAPI {
     });
 
     if (!coinData) {
-      console.log("✗ No coinData provided");
+      console.log("❌ No coinData provided");
       return { changes: {}, source: 'no_data' };
     }
 
     if (!coinData.chart) {
-      console.log("✗ No chart in coinData");
+      console.log("❌ No chart in coinData");
       return { changes: {}, source: 'no_data' };
     }
 
     const chart = coinData.chart;
     if (!Array.isArray(chart)) {
-      console.log("✗ Chart is not an array");
+      console.log("❌ Chart is not an array");
       return { changes: {}, source: 'no_data' };
     }
 
     if (chart.length === 0) {
-      console.log("✗ Chart array is empty");
+      console.log("❌ Chart array is empty");
       return { changes: {}, source: 'no_data' };
     }
 
-    console.log("[ ] Chart Info:", {
+    console.log("📈 Chart Info:", {
       chartLength: chart.length,
       firstPoint: chart[0],
       lastPoint: chart[chart.length - 1]
@@ -325,12 +344,12 @@ class HistoricalDataAPI {
 
     const latestDataPoint = chart[chart.length - 1];
     if (!latestDataPoint || !Array.isArray(latestDataPoint)) {
-      console.log("✗ Latest data point is invalid");
+      console.log("❌ Latest data point is invalid");
       return { changes: {}, source: 'no_data' };
     }
 
     if (latestDataPoint.length < 2) {
-      console.log("✗ Latest data point doesn't have enough data");
+      console.log("❌ Latest data point doesn't have enough data");
       return { changes: {}, source: 'no_data' };
     }
 
@@ -338,16 +357,16 @@ class HistoricalDataAPI {
     const latestPrice = latestDataPoint[1];
 
     if (!latestTime || typeof latestTime !== 'number') {
-      console.log("✗ Invalid latestTime:", latestTime);
+      console.log("❌ Invalid latestTime:", latestTime);
       return { changes: {}, source: 'no_data' };
     }
 
     if (!latestPrice || latestPrice <= 0) {
-      console.log("✗ Invalid latestPrice:", latestPrice);
+      console.log("❌ Invalid latestPrice:", latestPrice);
       return { changes: {}, source: 'no_data' };
     }
 
-    console.log("✓ Valid chart data - Latest time:", new Date(latestTime * 1000), "Latest price:", latestPrice);
+    console.log("✅ Valid chart data - Latest time:", new Date(latestTime * 1000), "Latest price:", latestPrice);
 
     const periods = {
       '1h': 1 * 60 * 60,
@@ -358,17 +377,17 @@ class HistoricalDataAPI {
       '180d': 180 * 24 * 60 * 60
     };
 
-    console.log("[ ] Periods Debug:");
+    console.log("🕒 Periods Debug:");
     const changes = {};
 
     for (const [periodName, seconds] of Object.entries(periods)) {
       const targetTime = latestTime - seconds;
       if (targetTime < 0) {
-        console.log(`[ ] Target time for ${periodName} is negative, skipping`);
+        console.log(`⏩ Target time for ${periodName} is negative, skipping`);
         continue;
       }
 
-      console.log(`[ ] Calculating ${periodName}: targetTime = ${targetTime} (${new Date(targetTime * 1000)})`);
+      console.log(`📐 Calculating ${periodName}: targetTime = ${targetTime} (${new Date(targetTime * 1000)})`);
       const historicalPoint = this.findClosestHistoricalPoint(chart, targetTime);
 
       if (historicalPoint &&
@@ -378,9 +397,9 @@ class HistoricalDataAPI {
         const historicalPrice = historicalPoint[1];
         const change = ((latestPrice - historicalPrice) / historicalPrice) * 100;
         changes[periodName] = parseFloat(change.toFixed(2));
-        console.log(`[ ] ${periodName}: ${changes[periodName]}% (from ${historicalPrice} to ${latestPrice})`);
+        console.log(`📊 ${periodName}: ${changes[periodName]}% (from ${historicalPrice} to ${latestPrice})`);
       } else {
-        console.log(`✗ No valid historical point found for ${periodName}`);
+        console.log(`❌ No valid historical point found for ${periodName}`);
         changes[periodName] = 0.0;
       }
     }
@@ -390,13 +409,13 @@ class HistoricalDataAPI {
       source: Object.keys(changes).length > 0 ? 'real' : 'no_data'
     };
 
-    console.log("✔ Final result:", result);
+    console.log("✅ Final result:", result);
     return result;
   }
 
   findClosestHistoricalPoint(chart, targetTime) {
     if (!chart || chart.length === 0) {
-      console.log("✗ findClosestHistoricalPoint: Empty chart");
+      console.log("❌ findClosestHistoricalPoint: Empty chart");
       return null;
     }
 
@@ -436,6 +455,8 @@ class ExchangeAPI {
   async getExchangePrice(exchange, from, to, timestamp) {
     try {
       const url = `${constants.API_URLS.exchange}?exchange=${exchange}&from=${from}&to=${to}&timestamp=${timestamp}`;
+      console.log(`💱 Fetching exchange price from: ${url}`);
+      
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -447,7 +468,7 @@ class ExchangeAPI {
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return await response.json();
     } catch (error) {
-      console.error("✗ Exchange API error", error);
+      console.error("❌ Exchange API error:", error);
       throw error;
     }
   }
@@ -455,6 +476,8 @@ class ExchangeAPI {
   async getTickers(exchange) {
     try {
       const url = `${constants.API_URLS.tickers}?exchange=${exchange}`;
+      console.log(`📊 Fetching tickers from: ${url}`);
+      
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -466,7 +489,7 @@ class ExchangeAPI {
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return await response.json();
     } catch (error) {
-      console.error("✗ Tickers API error", error);
+      console.error("❌ Tickers API error:", error);
       throw error;
     }
   }
@@ -474,6 +497,8 @@ class ExchangeAPI {
   async getAveragePrice(coinId, timestamp) {
     try {
       const url = `${constants.API_URLS.avgPrice}?coinId=${coinId}&timestamp=${timestamp}`;
+      console.log(`📈 Fetching average price from: ${url}`);
+      
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -485,7 +510,7 @@ class ExchangeAPI {
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return await response.json();
     } catch (error) {
-      console.error("🔍 Average Price API error", error);
+      console.error("❌ Average Price API error:", error);
       throw error;
     }
   }
@@ -501,7 +526,7 @@ class MarketDataAPI {
   async getMarketCap() {
     try {
       const url = `${constants.API_URLS.markets}`;
-      console.log(`🔍 Fetching market cap data from: ${url}`);
+      console.log(`🌍 Fetching market cap data from: ${url}`);
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -523,10 +548,10 @@ class MarketDataAPI {
       }
 
       const data = await response.json();
-      console.log('Market cap data received');
+      console.log('✅ Market cap data received');
       return data;
     } catch (error) {
-      console.error('Market cap API error:', error.message);
+      console.error('❌ Market cap API error:', error.message);
       throw error;
     }
   }
@@ -534,7 +559,7 @@ class MarketDataAPI {
   async getCurrencies() {
     try {
       const url = `${constants.API_URLS.currencies}`;
-      console.log(`Fetching currencies data from: ${url}`);
+      console.log(`💰 Fetching currencies data from: ${url}`);
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -556,10 +581,10 @@ class MarketDataAPI {
       }
 
       const data = await response.json();
-      console.log(`Currencies data received: ${data.length || 'unknown'} items`);
+      console.log(`✅ Currencies data received: ${data.length || 'unknown'} items`);
       return data;
     } catch (error) {
-      console.error("✗ Currencies API error:", error.message);
+      console.error("❌ Currencies API error:", error.message);
       throw error;
     }
   }
@@ -567,7 +592,7 @@ class MarketDataAPI {
   async getGlobalData() {
     try {
       const url = `${this.base_url}/global`;
-      console.log(`🌍 Fetching global data from: ${url}`);
+      console.log(`🌐 Fetching global data from: ${url}`);
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -589,10 +614,10 @@ class MarketDataAPI {
       }
 
       const data = await response.json();
-      console.log('Global data received');
+      console.log('✅ Global data received');
       return data;
     } catch (error) {
-      console.error('Global data API error:', error.message);
+      console.error('❌ Global data API error:', error.message);
       
       // Fallback: استفاده از داده‌های موجود
       try {
@@ -606,7 +631,7 @@ class MarketDataAPI {
           }
         };
       } catch (fallbackError) {
-        console.error('✗ Global data fallback error', fallbackError.message);
+        console.error('❌ Global data fallback error:', fallbackError.message);
         throw error;
       }
     }
@@ -623,7 +648,7 @@ class NewsAPI {
   async getNewsSources() {
     try {
       const url = `${constants.API_URLS.newsSources}`;
-      console.log(`[ ] Fetching news sources from: ${url}`);
+      console.log(`📰 Fetching news sources from: ${url}`);
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -645,10 +670,10 @@ class NewsAPI {
       }
 
       const data = await response.json();
-      console.log(`News sources received: ${data.length || 'unknown'} sources`);
+      console.log(`✅ News sources received: ${data.length || 'unknown'} sources`);
       return data;
     } catch (error) {
-      console.error("News sources API error:", error.message);
+      console.error("❌ News sources API error:", error.message);
       throw error;
     }
   }
@@ -661,7 +686,7 @@ class NewsAPI {
       if (from) url += `&from=${from}`;
       if (to) url += `&to=${to}`;
 
-      console.log(`[ ] Fetching news from: ${url}`);
+      console.log(`📰 Fetching news from: ${url}`);
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000);
@@ -683,10 +708,10 @@ class NewsAPI {
       }
 
       const data = await response.json();
-      console.log(`News received: ${data.result?.length || 0} articles`);
+      console.log(`✅ News received: ${data.result?.length || 0} articles`);
       return data;
     } catch (error) {
-      console.error('News API error', error.message);
+      console.error('❌ News API error:', error.message);
       throw error;
     }
   }
@@ -702,7 +727,7 @@ class InsightsAPI {
   async getBTCDominance(type = 'all') {
     try {
       const url = `${constants.API_URLS.btcDominance}?type=${type}`;
-      console.log(`📊 Fetching BTC Dominance from: ${url}`);
+      console.log(`₿ Fetching BTC Dominance from: ${url}`);
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -724,10 +749,10 @@ class InsightsAPI {
       }
 
       const data = await response.json();
-      console.log('📊 BTC Dominance data received');
+      console.log('✅ BTC Dominance data received');
       return data;
     } catch (error) {
-      console.error('📊 BTC Dominance API error', error.message);
+      console.error('❌ BTC Dominance API error:', error.message);
       throw error;
     }
   }
@@ -757,10 +782,10 @@ class InsightsAPI {
       }
 
       const data = await response.json();
-      console.log("😊 Fear & Greed Index data received");
+      console.log("✅ Fear & Greed Index data received");
       return data;
     } catch (error) {
-      console.error("✗ Fear & Greed API error:", error.message);
+      console.error("❌ Fear & Greed API error:", error.message);
       throw error;
     }
   }
@@ -768,7 +793,7 @@ class InsightsAPI {
   async getFearGreedChart() {
     try {
       const url = `${constants.API_URLS.fearGreedChart}`;
-      console.log(`[ ] Fetching Fear & Greed Chart from: ${url}`);
+      console.log(`📊 Fetching Fear & Greed Chart from: ${url}`);
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000);
@@ -790,10 +815,10 @@ class InsightsAPI {
       }
 
       const data = await response.json();
-      console.log('[ ] Fear & Greed Chart data received');
+      console.log('✅ Fear & Greed Chart data received');
       return data;
     } catch (error) {
-      console.error('[ ] Fear & Greed Chart API error', error.message);
+      console.error('❌ Fear & Greed Chart API error:', error.message);
       throw error;
     }
   }
@@ -801,7 +826,7 @@ class InsightsAPI {
   async getRainbowChart(coin = 'bitcoin') {
     try {
       const url = `${constants.API_URLS.rainbowChart}/${coin}`;
-      console.log(`[ ] Fetching Rainbow Chart for ${coin} from: ${url}`);
+      console.log(`🌈 Fetching Rainbow Chart for ${coin} from: ${url}`);
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000);
@@ -823,10 +848,10 @@ class InsightsAPI {
       }
 
       const data = await response.json();
-      console.log(`[ ] Rainbow Chart data received for ${coin}`);
+      console.log(`✅ Rainbow Chart data received for ${coin}`);
       return data;
     } catch (error) {
-      console.error('[ ] Rainbow Chart API error', error.message);
+      console.error('❌ Rainbow Chart API error:', error.message);
       throw error;
     }
   }
