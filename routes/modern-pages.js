@@ -308,7 +308,7 @@ function generateClassNavigation(currentPage = 'home') {
 <script>
 
 // ==================== 
-// BASIC CLICK TEST
+// Z-INDEX DEBUG TEST
 // ====================
 
 function showDebugMessage(message) {
@@ -343,16 +343,18 @@ function showDebugMessage(message) {
     }
 }
 
-// تست اول: بررسی اینکه آیا المان‌ها وجود دارند
+// تست Z-Index - اضافه کردن border رنگی به آیتم‌ها
 try {
     if (typeof document !== 'undefined') {
         document.addEventListener('DOMContentLoaded', function() {
             setTimeout(function() {
-                const container = document.querySelector('.nav-container');
-                const floater = document.querySelector('.nav-floater');
                 const items = document.querySelectorAll('.nav-item');
-                
-                showDebugMessage('تست: المان‌ها - منو:' + !!container + ' دکمه:' + !!floater + ' آیتم‌ها:' + items.length);
+                items.forEach(function(item, index) {
+                    // اضافه کردن border رنگی برای تست visibility
+                    item.style.border = '2px solid red';
+                    item.style.boxShadow = '0 0 10px yellow';
+                });
+                showDebugMessage('اضافه کردن border به آیتم‌ها - حالا کلیک کن');
             }, 1000);
         });
     }
@@ -360,11 +362,11 @@ try {
     // ignore
 }
 
-// تست دوم: کلیک روی دکمه شناور
+// مدیریت کلیک روی دکمه شناور
 document.querySelector('.nav-floater').addEventListener('click', function(e) {
     e.preventDefault();
     e.stopPropagation();
-    showDebugMessage('دکمه شناور کلیک شد');
+    showDebugMessage('دکمه شناور کلیک شد - منو باز شد');
     
     const nav = document.getElementById('glassNav');
     const container = document.querySelector('.nav-container');
@@ -375,33 +377,28 @@ document.querySelector('.nav-floater').addEventListener('click', function(e) {
     } else {
         container.style.display = 'block';
         nav.classList.add('expanded');
-    }
-});
-
-// تست سوم: کلیک روی آیتم‌های نویگیشن
-document.addEventListener('click', function(e) {
-    const navItem = e.target.closest('.nav-item');
-    
-    if (navItem) {
-        e.preventDefault();
-        e.stopPropagation();
         
-        const page = navItem.getAttribute('data-page');
-        showDebugMessage('کلیک روی آیتم: ' + page);
-        
-        // بستن منو
-        const container = document.querySelector('.nav-container');
-        const nav = document.getElementById('glassNav');
-        container.style.display = 'none';
-        nav.classList.remove('expanded');
-        
-        // هدایت به صفحه
-        const isExternal = navItem.getAttribute('data-external') === 'true';
-        if (isExternal) {
-            window.open(page, '_blank');
-        } else {
-            window.location.href = page;
-        }
+        // تست: اضافه کردن event listener بعد از باز شدن منو
+        setTimeout(function() {
+            const items = document.querySelectorAll('.nav-item');
+            items.forEach(function(item) {
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const page = this.getAttribute('data-page');
+                    showDebugMessage('مستقیم کلیک روی: ' + page);
+                    
+                    // هدایت به صفحه
+                    const isExternal = this.getAttribute('data-external') === 'true';
+                    if (isExternal) {
+                        window.open(page, '_blank');
+                    } else {
+                        window.location.href = page;
+                    }
+                });
+            });
+            showDebugMessage('Event listeners اضافه شدند - حالا تست کن');
+        }, 500);
     }
 });
 
