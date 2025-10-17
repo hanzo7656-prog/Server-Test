@@ -3,14 +3,14 @@ const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
 
-// ایمپورت ماژول‌ها
+// ایمپورت ماژول ها
 const constants = require('./config/constants');
 const logger = require('./config/logger');
 const GistManager = require('./models/GistManager');
 const WebSocketManager = require('./models/WebSocketManager');
 const { AdvancedCoinStatsAPIClient, HistoricalDataAPI, ExchangeAPI, InsightsAPI } = require('./models/APIClients');
 
-// ✅ ایمپورت ماژول‌های روت که جا افتاده بود
+// ایمپورت ماژول های روتر که جا افتاده بود
 const apiRoutes = require('./routes/api');
 const modernRoutes = require('./routes/modern-pages');
 const navigationGenerator = require('./routes/navigation-generator');
@@ -44,29 +44,31 @@ const apiClient = new AdvancedCoinStatsAPIClient();
 const exchangeAPI = new ExchangeAPI();
 const insightsAPI = new InsightsAPI();
 
-// ========== REDIRECT ROUTES برای Frontend ==========
+// --- REDIRECT ROUTES برای Frontend ---
 
 app.get('/scan', (req, res) => {
   const limit = req.query.limit;
   const filter = req.query.filter;
-  let redirectUrl = '/scan';
+  let redirectUrl = '/scan-page';
+
   if (limit || filter) {
     redirectUrl += '?' + new URLSearchParams(req.query).toString();
   }
+
   res.redirect(redirectUrl);
 });
 
 app.get('/analysis', (req, res) => {
   const symbol = req.query.symbol;
   if (symbol) {
-    res.redirect(`/analysis?symbol=${symbol}`);
+    res.redirect('/analysis-page?symbol=' + symbol);
   } else {
     res.status(400).json({ error: "Symbol parameter required" });
   }
 });
 
 app.get('/timeframes-api', (req, res) => {
-  res.redirect('/api/timeframes');
+  res.redirect('/api/timeframes-api');
 });
 
 app.get('/health-api', (req, res) => {
@@ -78,15 +80,17 @@ app.get('/currencies', (req, res) => {
 });
 
 app.get('/api-data', (req, res) => {
-  res.redirect('/api/health-combined');
+  res.redirect('/api/api-data');
 });
 
 // ========== MAIN ROUTES ==========
-// ✅ حالا این routeها کار میکنن چون ماژول‌ها ایمپورت شدن
+
+// حالا این route ها کار می‌کن چون ماژول ها ایمپورت شدن
 app.use('/api', apiRoutes({ gistManager, wsManager, apiClient, exchangeAPI }));
 app.use('/', modernRoutes({ gistManager, wsManager, apiClient }));
 
 // هندلرهای سلامت
+
 app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'OK',
@@ -126,18 +130,19 @@ app.get('/health/ready', (req, res) => {
 
 // راه‌اندازی سرور
 const server = app.listen(PORT, '0.0.0.0', () => {
-  logger.info(`✔ VortexAI 6-Layer Server started on port ${PORT}`);
-  logger.info('✔ Features: 6-Timeframe Historical Data + WebSocket Real-time + VortexAI Analysis');
-  logger.info(`✔ Real-time Pairs: ${constants.ALL_TRADING_PAIRS.length}`);
-  logger.info(`✔ Dashboard: http://localhost:${PORT}/`);
-  logger.info(`✔ Health: http://localhost:${PORT}/health`);
-  logger.info(`✔ Scanner: http://localhost:${PORT}/scan`);
-  logger.info(`✔ Analysis: http://localhost:${PORT}/analysis`);
+  logger.info(`✅ VortexAI 6-Layer Server started on port ${PORT}`);
+  logger.info('✅ Features: 6-Timeframe Historical Data + WebSocket Real-time + VortexAI Analysis');
+  logger.info(`✅ Real-time Pairs: ${constants.ALL_TRADING_PAIRS.length}`);
+  logger.info(`✅ Dashboard: http://localhost:${PORT}/`);
+  logger.info(`✅ Health: http://localhost:${PORT}/health`);
+  logger.info(`✅ Scanner: http://localhost:${PORT}/scan-page`);
+  logger.info(`✅ Analysis: http://localhost:${PORT}/analysis-page`);
 });
 
-// --- Graceful Shutdown --- //
+// -- Graceful Shutdown -- //
+
 async function gracefulShutdown(signal) {
-  logger.info(`🔄 ${signal} signal received: starting graceful shutdown`);
+  logger.info(`🛑 ${signal} signal received: starting graceful shutdown`);
   
   let shutdownTimeout = setTimeout(() => {
     logger.error('🛑 Force shutdown after 15 seconds timeout');
@@ -145,49 +150,49 @@ async function gracefulShutdown(signal) {
   }, 15000);
 
   try {
-    logger.info('⏹️ Stopping server from accepting new connections');
+    logger.info('🛑 Stopping server from accepting new connections');
     server.close(() => {
-      logger.info('✔ HTTP server stopped accepting new connections');
+      logger.info('✅ HTTP server stopped accepting new connections');
     });
 
     // 2. بستن اتصالات WebSocket
     if (wsManager && wsManager.ws) {
-      logger.info('🔌 Closing WebSocket connections...');
+      logger.info("🔴 Closing WebSocket connections...");
       wsManager.ws.close();
-      logger.info('✔ WebSocket connections closed');
+      logger.info("✅ WebSocket connections closed");
     }
 
-    // 3. بستن اتصالات به APIهای خارجی
-    logger.info('🔌 Closing external API connections...');
+    // 3. بستن اتصالات خارجی API
+    logger.info("🔴 Closing external API connections...");
 
     // 4. ذخیره داده‌های نهایی در Gist
-    logger.info('💾 Saving final data to Gist...');
+    logger.info("💾 Saving final data to Gist...");
     await gistManager.saveToGist();
-    logger.info('✔ Final data saved to Gist');
+    logger.info("✅ Final data saved to Gist");
 
-    // 5. تکمیل graceful shutdown
+    // 5. graceful shutdown کامل
     clearTimeout(shutdownTimeout);
-    logger.info('✅ Graceful shutdown completed successfully');
+    logger.info("✅ Graceful shutdown completed successfully");
     process.exit(0);
   } catch (error) {
     clearTimeout(shutdownTimeout);
-    logger.error('❌ Error during graceful shutdown:', error);
+    logger.error("❌ Error during graceful shutdown:", error);
     process.exit(1);
   }
 }
 
-// event handlers برای سیگنال‌های مختلف
+// event handler های مختلف برای سیگنال
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 // مدیریت خطاهای unhandled
 process.on('uncaughtException', (error) => {
-  logger.error('⚠️ Uncaught Exception:', error);
+  logger.error('💥 Uncaught Exception:', error);
   gracefulShutdown('UNCAUGHT_EXCEPTION');
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  logger.error('⚠️ Unhandled Rejection at:', promise, 'reason:', reason);
+  logger.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
   gracefulShutdown('UNHANDLED_REJECTION');
 });
 
