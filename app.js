@@ -137,6 +137,10 @@ app.get('/health/ready', (req, res) => {
   res.status(statusCode).json(healthStatus);
 });
 
+// تست route ساده
+app.get('/test-simple', (req, res) => {
+    res.send('✅ Route Test Works!');
+});
 // راه‌اندازی سرور
 const server = app.listen(PORT, '0.0.0.0', () => {
   logger.info(`✅ VortexAI 6-Layer Server started on port ${PORT}`);
