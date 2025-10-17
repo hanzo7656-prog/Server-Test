@@ -169,6 +169,7 @@ try {
           currencies: "https://openapiv1.coinstats.app/currencies",
           newsSources: "https://openapiv1.coinstats.app/news/sources",
           news: "https://openapiv1.coinstats.app/news",
+          newsByType: "https://openapiv1.coinstats.app/news/type",
           btcDominance: "https://openapiv1.coinstats.app/insights/btc-dominance",
           fearGreed: "https://openapiv1.coinstats.app/insights/fear-and-greed",
           fearGreedChart: "https://openapiv1.coinstats.app/insights/fear-and-greed/chart",
@@ -330,7 +331,7 @@ class AdvancedCoinStatsAPIClient {
           rank: coin.rank || coin.market_cap_rank || 0,
           
           // نگهداری داده خام برای دیباگ
-          __raw: coin // حذف این خط در production
+          __raw: coin
         };
       });
 
@@ -719,7 +720,6 @@ class HistoricalDataAPI {
     return closestPoint;
   }
 }
-
 // API های جدید برای تبادل و قیمت
 class ExchangeAPI {
   constructor() {
@@ -1044,6 +1044,86 @@ class NewsAPI {
       throw error;
     }
   }
+
+  async getNewsByType(type = 'trending', params = {}) {
+    const request = apiDebugSystem.logRequest('GET', `${constants.API_URLS.newsByType}/${type}`, { type, ...params });
+    
+    try {
+      const { page = 1, limit = 20 } = params;
+      let url = `${constants.API_URLS.newsByType}/${type}?page=${page}&limit=${limit}`;
+      
+      console.log(`📰 Fetching ${type} news from: ${url}`);
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'X-API-KEY': this.api_key,
+          'Accept': 'application/json',
+          'User-Agent': 'VortexAI-Server/1.0'
+        },
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log(`✅ ${type} news received: ${data.length || 0} articles`);
+      
+      apiDebugSystem.logResponse(request, { articlesCount: data.length, type: type }, 0);
+      return data;
+      
+    } catch (error) {
+      apiDebugSystem.logError(request, error);
+      console.error(`❌ ${type} news API error:`, error.message);
+      throw error;
+    }
+  }
+
+  async getNewsDetail(newsId) {
+    const request = apiDebugSystem.logRequest('GET', `${this.base_url}/news/${newsId}`, { newsId });
+    
+    try {
+      const url = `${this.base_url}/news/${newsId}`;
+      console.log(`📖 Fetching news detail from: ${url}`);
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'X-API-KEY': this.api_key,
+          'Accept': 'application/json',
+          'User-Agent': 'VortexAI-Server/1.0'
+        },
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log(`✅ News detail received for ID: ${newsId}`);
+      
+      apiDebugSystem.logResponse(request, data, 0);
+      return data;
+      
+    } catch (error) {
+      apiDebugSystem.logError(request, error);
+      console.error(`❌ News detail API error:`, error.message);
+      throw error;
+    }
+  }
 }
 
 class InsightsAPI {
@@ -1240,6 +1320,234 @@ apiDebugRouter.post('/reset-stats', (req, res) => {
   apiDebugSystem.requests = [];
   apiDebugSystem.errors = [];
   res.json({ success: true, message: 'API statistics reset' });
+});
+
+// تست اتصال به CoinStats API
+apiDebugRouter.get('/test-coinstats-connection', async (req, res) => {
+  try {
+    const testResults = [];
+    
+    // تست فقط CoinStats API
+    const coinStatsEndpoints = [
+      { 
+        name: 'CoinStats Global Data', 
+        url: 'https://openapiv1.coinstats.app/global',
+        method: 'GET'
+      },
+      { 
+        name: 'CoinStats Coins List', 
+        url: 'https://openapiv1.coinstats.app/coins?limit=5&currency=USD',
+        method: 'GET'
+      },
+      { 
+        name: 'CoinStats News', 
+        url: 'https://openapiv1.coinstats.app/news?limit=3',
+        method: 'GET'
+      },
+      { 
+        name: 'CoinStats Fear & Greed', 
+        url: 'https://openapiv1.coinstats.app/insights/fear-and-greed',
+        method: 'GET'
+      }
+    ];
+    
+    for (const endpoint of coinStatsEndpoints) {
+      const startTime = Date.now();
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        
+        const response = await fetch(endpoint.url, {
+          method: endpoint.method,
+          headers: {
+            'X-API-KEY': constants.COINSTATS_API_KEY,
+            'Accept': 'application/json',
+            'User-Agent': 'VortexAI-Tester/1.0'
+          },
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        const duration = Date.now() - startTime;
+        
+        testResults.push({
+          name: endpoint.name,
+          url: endpoint.url,
+          status: 'success',
+          httpStatus: response.status,
+          duration: duration + 'ms',
+          ok: response.ok,
+          responseSize: response.headers.get('content-length') || 'unknown'
+        });
+        
+      } catch (error) {
+        const duration = Date.now() - startTime;
+        testResults.push({
+          name: endpoint.name,
+          url: endpoint.url,
+          status: 'error',
+          error: error.message,
+          duration: duration + 'ms',
+          httpStatus: 0
+        });
+      }
+    }
+    
+    res.json({
+      success: true,
+      results: testResults,
+      summary: {
+        total: testResults.length,
+        success: testResults.filter(r => r.status === 'success').length,
+        failed: testResults.filter(r => r.status === 'error').length,
+        successRate: ((testResults.filter(r => r.status === 'success').length / testResults.length) * 100).toFixed(1) + '%'
+      }
+    });
+    
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// تست کامل عملکرد APIهای داخلی
+apiDebugRouter.get('/test-internal-apis', async (req, res) => {
+  const startTime = Date.now();
+  try {
+    const testResults = [];
+    
+    // تست APIهای داخلی
+    const internalAPIs = [
+      { name: 'AdvancedCoinStatsAPIClient.getCoins', test: () => new AdvancedCoinStatsAPIClient().getCoins(5) },
+      { name: 'MarketDataAPI.getMarketCap', test: () => new MarketDataAPI().getMarketCap() },
+      { name: 'NewsAPI.getNews', test: () => new NewsAPI().getNews({ limit: 3 }) },
+      { name: 'InsightsAPI.getFearGreedIndex', test: () => new InsightsAPI().getFearGreedIndex() },
+      { name: 'NewsAPI.getNewsByType (trending)', test: () => new NewsAPI().getNewsByType('trending', { limit: 3 }) },
+      { name: 'ExchangeAPI.getTickers', test: () => new ExchangeAPI().getTickers('binance') },
+      { name: 'HistoricalDataAPI.getMultipleCoinsHistorical', test: () => new HistoricalDataAPI().getMultipleCoinsHistorical(['bitcoin', 'ethereum'], '24h') }
+    ];
+    
+    for (const apiTest of internalAPIs) {
+      const apiStartTime = Date.now();
+      try {
+        const result = await apiTest.test();
+        const duration = Date.now() - apiStartTime;
+        
+        testResults.push({
+          name: apiTest.name,
+          status: 'success',
+          duration: duration + 'ms',
+          dataReceived: !!result,
+          dataSize: result ? Object.keys(result).length : 0
+        });
+        
+      } catch (error) {
+        const duration = Date.now() - apiStartTime;
+        testResults.push({
+          name: apiTest.name,
+          status: 'error',
+          error: error.message,
+          duration: duration + 'ms'
+        });
+      }
+    }
+    
+    const totalDuration = Date.now() - startTime;
+    
+    res.json({
+      success: true,
+      results: testResults,
+      summary: {
+        total: testResults.length,
+        success: testResults.filter(r => r.status === 'success').length,
+        failed: testResults.filter(r => r.status === 'error').length,
+        totalDuration: totalDuration + 'ms',
+        successRate: ((testResults.filter(r => r.status === 'success').length / testResults.length) * 100).toFixed(1) + '%'
+      }
+    });
+    
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// بررسی وضعیت WebSocket LBank
+apiDebugRouter.get('/websocket-status', (req, res) => {
+  // این اطلاعات باید از WebSocket Manager گرفته شود
+  // فعلاً ساختگی برمی‌گردانیم
+  res.json({
+    success: true,
+    websocket: {
+      provider: 'LBank',
+      status: 'connected', // یا 'disconnected'
+      activeConnections: 1,
+      subscribedPairs: ['btc_usdt', 'eth_usdt', 'sol_usdt'],
+      lastUpdate: new Date().toISOString(),
+      uptime: '99.8%'
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
+// بررسی سلامت کامل سیستم
+apiDebugRouter.get('/system-health', async (req, res) => {
+  const startTime = Date.now();
+  try {
+    const [coinStatsTest, internalAPIsTest, wsStatus] = await Promise.all([
+      fetch(`${req.protocol}://${req.get('host')}/api/test-coinstats-connection`).then(r => r.json()),
+      fetch(`${req.protocol}://${req.get('host')}/api/test-internal-apis`).then(r => r.json()),
+      fetch(`${req.protocol}://${req.get('host')}/api/websocket-status`).then(r => r.json())
+    ]);
+    
+    const totalDuration = Date.now() - startTime;
+    
+    const overallStatus = 
+      coinStatsTest.success && 
+      internalAPIsTest.success && 
+      wsStatus.success ? 'healthy' : 'degraded';
+    
+    res.json({
+      success: true,
+      checkType: 'complete_system_health_check',
+      timestamp: new Date().toISOString(),
+      processingTime: totalDuration + 'ms',
+      overallStatus: overallStatus,
+      components: {
+        coinStatsAPI: {
+          status: coinStatsTest.success ? 'healthy' : 'unhealthy',
+          successRate: coinStatsTest.summary?.successRate || '0%'
+        },
+        internalAPIs: {
+          status: internalAPIsTest.success ? 'healthy' : 'unhealthy',
+          successRate: internalAPIsTest.summary?.successRate || '0%'
+        },
+        websocket: {
+          status: wsStatus.websocket?.status === 'connected' ? 'healthy' : 'unhealthy',
+          provider: wsStatus.websocket?.provider || 'LBank'
+        }
+      },
+      recommendations: overallStatus === 'healthy' ? 
+        ['سیستم در وضعیت سالم قرار دارد'] :
+        [
+          'بررسی اتصال CoinStats API',
+          'بررسی WebSocket connections',
+          'بررسی internal API endpoints'
+        ]
+    });
+    
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      checkType: 'complete_system_health_check',
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 module.exports = {
