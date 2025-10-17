@@ -101,7 +101,8 @@ const apiDebugSystem = {
       'priceChange24h', 'price_change_24h', 'change24h', 
       'priceChangePercentage24h', 'percent_change_24h',
       'changePercentage24h', 'priceChange', 'change_24h',
-      'price_change_percentage_24h', 'price_change_percentage_24h_in_currency'
+      'price_change_percentage_24h', 'price_change_percentage_24h_in_currency',
+      'priceChange1d', 'priceChange1w', 'priceChange1h'
     ];
     
     for (const field of possibleFields) {
@@ -226,7 +227,8 @@ class AdvancedCoinStatsAPIClient {
     try {
       const url = `${this.base_url}/coins?limit=${limit}&currency=USD`;
       console.log(`🔄 Fetching coins from: ${url}`);
-
+      
+      console.log('🔍 [DEBUG] Available fields in coin:', Object.keys(data.result[0] || {}));
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000);
 
