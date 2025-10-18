@@ -450,140 +450,140 @@ module.exports = ({ gistManager, wsManager }) => {
 };
         // ==================== دکمه ۵: بینش های بازار ====================
 
-// تسلط بیت‌کوین
-router.get("/insights/btc-dominance", async (req, res) => {
-    await handleApiRequest(
-        apiClient.getBTCDominance(req.query.type || 'all', false),
-        req, res, '/insights/btc-dominance'
-    );
-});
+    // تسلط بیت‌کوین
+    router.get("/insights/btc-dominance", async (req, res) => {
+        await handleApiRequest(
+            apiClient.getBTCDominance(req.query.type || 'all', false),
+            req, res, '/insights/btc-dominance'
+        );
+    });
 
-// شاخص ترس و طمع
-router.get("/insights/fear-greed", async (req, res) => {
-    await handleApiRequest(
-        apiClient.getFearGreedIndex(false),
-        req, res, '/insights/fear-greed'
-    );
-});
+    // شاخص ترس و طمع
+    router.get("/insights/fear-greed", async (req, res) => {
+        await handleApiRequest(
+            apiClient.getFearGreedIndex(false),
+            req, res, '/insights/fear-greed'
+        );
+    });
 
-// نمودار ترس و طمع
-router.get("/insights/fear-greed-chart", async (req, res) => {
-    await handleApiRequest(
-        apiClient.getFearGreedChart(false),
-        req, res, '/insights/fear-greed-chart'
-    );
-});
+    // نمودار ترس و طمع
+    router.get("/insights/fear-greed-chart", async (req, res) => {
+        await handleApiRequest(
+            apiClient.getFearGreedChart(false),
+            req, res, '/insights/fear-greed-chart'
+        );
+    });
+  
+    // نمودار رنگین‌کمان
+    router.get("/insights/rainbow-chart", async (req, res) => {
+        await handleApiRequest(
+            apiClient.getRainbowChart(req.query.coin || 'bitcoin', false),
+            req, res, '/insights/rainbow-chart'
+        );
+    });
 
-// نمودار رنگین‌کمان
-router.get("/insights/rainbow-chart", async (req, res) => {
-    await handleApiRequest(
-        apiClient.getRainbowChart(req.query.coin || 'bitcoin', false),
-        req, res, '/insights/rainbow-chart'
-    );
-});
+    // داده جهانی
+    router.get("/insights/global-data", async (req, res) => {
+        await handleApiRequest(
+            apiClient.getGlobalData(false),
+            req, res, '/insights/global-data'
+        );
+    });
 
-// داده جهانی
-router.get("/insights/global-data", async (req, res) => {
-    await handleApiRequest(
-        apiClient.getGlobalData(false),
-        req, res, '/insights/global-data'
-    );
-});
+    // ارزها
+    router.get("/insights/currencies", async (req, res) => {
+        await handleApiRequest(
+            apiClient.getCurrencies(false),
+            req, res, '/insights/currencies'
+        );
+    });
 
-// ارزها
-router.get("/insights/currencies", async (req, res) => {
-    await handleApiRequest(
-        apiClient.getCurrencies(false),
-        req, res, '/insights/currencies'
-    );
-});
+    // ==================== دکمه ۶: مارکت کپ / مارکت ====================
 
-// ==================== دکمه ۶: مارکت کپ / مارکت ====================
+    // مارکت کپ اصلی
+    router.get("/markets/summary", async (req, res) => {
+        await handleApiRequest(
+            apiClient.getMarketCap(false),
+            req, res, '/markets/summary'
+        );
+    });
 
-// مارکت کپ اصلی
-router.get("/markets/summary", async (req, res) => {
-    await handleApiRequest(
-        apiClient.getMarketCap(false),
-        req, res, '/markets/summary'
-    );
-});
+    // صرافی‌ها
+    router.get("/markets/exchanges", async (req, res) => {
+        await handleApiRequest(
+            apiClient.getTickerExchanges(false),
+            req, res, '/markets/exchanges'
+        );
+    });
 
-// صرافی‌ها
-router.get("/markets/exchanges", async (req, res) => {
-    await handleApiRequest(
-        apiClient.getTickerExchanges(false),
-        req, res, '/markets/exchanges'
-    );
-});
+    // بازارها
+    router.get("/markets/tickers", async (req, res) => {
+        await handleApiRequest(
+            apiClient.getTickerMarkets(false),
+            req, res, '/markets/tickers'
+        );
+    });
 
-// بازارها
-router.get("/markets/tickers", async (req, res) => {
-    await handleApiRequest(
-        apiClient.getTickerMarkets(false),
-        req, res, '/markets/tickers'
-    );
-});
-
-// قیمت تبادل
-router.get("/markets/exchange-price", async (req, res) => {
-    const { exchange, from, to, timestamp } = req.query;
+    // قیمت تبادل
+    router.get("/markets/exchange-price", async (req, res) => {
+        const { exchange, from, to, timestamp } = req.query;
     
-    if (!exchange || !from || !to) {
-        return res.status(400).json(createResponse(false, null, 'exchange, from, and to parameters are required'));
-    }
+        if (!exchange || !from || !to) {
+            return res.status(400).json(createResponse(false, null, 'exchange, from, and to parameters are required'));
+        }
     
-    await handleApiRequest(
-        apiClient.getCoinExchangePrice(exchange, from, to, timestamp, false),
-        req, res, '/markets/exchange-price'
-    );
-});
-
-// تیکرهای صرافی
-router.get("/markets/exchange-tickers", async (req, res) => {
-    // این اندپوینت نیاز به پیاده‌سازی جداگانه دارد
-    // فعلاً از getTickerExchanges استفاده می‌کنیم
-    await handleApiRequest(
-        apiClient.getTickerExchanges(false),
-        req, res, '/markets/exchange-tickers'
-    );
-});
+        await handleApiRequest(
+            apiClient.getCoinExchangePrice(exchange, from, to, timestamp, false),
+            req, res, '/markets/exchange-price'
+        );
+    });
+ 
+    // تیکرهای صرافی
+    router.get("/markets/exchange-tickers", async (req, res) => {
+        // این اندپوینت نیاز به پیاده‌سازی جداگانه دارد
+        // فعلاً از getTickerExchanges استفاده می‌کنیم
+        await handleApiRequest(
+            apiClient.getTickerExchanges(false),
+            req, res, '/markets/exchange-tickers'
+        );
+    });
 
 // ==================== دکمه ۷: سلامت ====================
 
-// سلامت ترکیبی
-router.get("/health/combined", async (req, res) => {
-    try {
-        const wsStatus = wsManager.getConnectionStatus();
-        const gistData = gistManager.getAllData();
-        const performanceStats = apiDebugSystem.getPerformanceStats();
-        const endpointHealth = apiDebugSystem.checkAllEndpointsHealth();
+    // سلامت ترکیبی
+    router.get("/health/combined", async (req, res) => {
+        try {
+            const wsStatus = wsManager.getConnectionStatus();
+            const gistData = gistManager.getAllData();
+            const performanceStats = apiDebugSystem.getPerformanceStats();
+            const endpointHealth = apiDebugSystem.checkAllEndpointsHealth();
 
-        const healthData = {
-            status: 'healthy',
-            service: 'VortexAI Combined System',
-            version: '7.0 - Enhanced API',
-            timestamp: new Date().toISOString(),
+            const healthData = {
+                status: 'healthy',
+                service: 'VortexAI Combined System',
+                version: '7.0 - Enhanced API',
+                timestamp: new Date().toISOString(),
             
-            websocket_status: {
-                connected: wsStatus.connected,
-                active_coins: wsStatus.active_coins,
-                total_subscribed: wsStatus.total_subscribed,
-                provider: "LBank",
-                status: wsStatus.connected ? 'healthy' : 'unhealthy'
-            },
+                websocket_status: {
+                    connected: wsStatus.connected,
+                    active_coins: wsStatus.active_coins,
+                    total_subscribed: wsStatus.total_subscribed,
+                    provider: "LBank",
+                    status: wsStatus.connected ? 'healthy' : 'unhealthy'
+                },
             
-            gist_status: {
-                active: true,
-                total_coins: Object.keys(gistData.prices || {}).length,
-                last_updated: gistData.last_updated,
-                timeframes_available: gistManager.getAvailableTimeframes(),
-                status: 'healthy'
-            },
+                gist_status: {
+                    active: true,
+                    total_coins: Object.keys(gistData.prices || {}).length,
+                    last_updated: gistData.last_updated,
+                    timeframes_available: gistManager.getAvailableTimeframes(),
+                    status: 'healthy'
+                },
             
-            api_status: {
-                requests_count: performanceStats.totalRequests,
-                success_rate: performanceStats.successRate,
-                average_response_time: performanceStats.averageDuration,
+                api_status: {
+                    requests_count: performanceStats.totalRequests,
+                    success_rate: performanceStats.successRate,
+                    average_response_time: performanceStats.averageDuration,
                     endpoint_health: endpointHealth.summary.healthPercentage,
                     status: performanceStats.successRate > 80 ? 'healthy' : 'degraded'
                 },
