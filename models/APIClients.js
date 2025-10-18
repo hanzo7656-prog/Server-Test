@@ -1,7 +1,7 @@
 const express = require('express');
 const path = require('path');
-const WebSocketManager = require('./models/WebSocketManager');
-const GistManager = require('./models/GistManager');
+const WebSocketManager = require('../models/WebSocketManager');
+const GistManager = require('../models/GistManager');
 const constants = require('../config/constants');
 
 // سیستم دیباگ و مانیتورینگ پیشرفته
