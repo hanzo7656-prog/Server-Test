@@ -400,8 +400,17 @@ class AdvancedCoinStatsAPIClient {
     }
 
     // ========================= NEWS =========================
+    // تابع getNews را اینطور اصلاح کنید:
     async getNews(params = {}, raw = false) {
-        return this._makeRequest('/news', params, raw);
+    // پارامترهای معتبر برای API جدید
+        const validParams = {};
+    
+        if (params.limit) validParams.limit = params.limit;
+        if (params.page) validParams.page = params.page;
+        if (params.from) validParams.from = params.from;
+        if (params.to) validParams.to = params.to;
+    
+        return this._makeRequest('/news', validParams, raw);
     }
 
     async getNewsByType(type = 'trending', params = {}, raw = false) {
