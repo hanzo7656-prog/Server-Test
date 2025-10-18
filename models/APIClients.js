@@ -709,6 +709,110 @@ function createApiDebugRouter(wsManager = null, gistManager = null) {
     return apiDebugRouter;
 }
 
+// کلاس تحلیل تکنیکال برای API
+class TechnicalAnalysisAPI {
+    constructor() {
+        this.engine = new TechnicalAnalysisEngine();
+    }
+
+    // تحلیل پیشرفته برای front-end
+    async getTechnicalAnalysis(symbol, timeframe = '24h') {
+        try {
+            const chartData = await this.getCoinCharts(symbol, timeframe, false);
+            if (!chartData.success) {
+                throw new Error('Failed to fetch chart data');
+            }
+
+            const priceData = this.prepareChartDataForAnalysis(chartData.data);
+            const indicators = TechnicalAnalysisEngine.calculateAllIndicators(priceData);
+            
+            return {
+                success: true,
+                data: {
+                    symbol,
+                    timeframe,
+                    indicators,
+                    analysis: this.generateAnalysisReport(indicators),
+                    timestamp: new Date().toISOString()
+                }
+            };
+        } catch (error) {
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+    }
+
+    prepareChartDataForAnalysis(chartData) {
+        // پیاده‌سازی مشابه تابع preparePriceDataForAnalysis
+        if (!chartData || !chartData.chart) return [];
+        
+        return chartData.chart.map((point, index) => ({
+            timestamp: point[0],
+            open: point[1] * 0.99,
+            high: point[1] * 1.02,
+            low: point[1] * 0.98,
+            price: point[1],
+            volume: point[2] || 1000
+        }));
+    }
+
+    generateAnalysisReport(indicators) {
+        // تولید گزارش تحلیلی پیشرفته
+        return {
+            overall_sentiment: this.calculateSentiment(indicators),
+            key_levels: this.calculateKeyLevels(indicators),
+            risk_assessment: this.assessRisk(indicators),
+            trading_recommendations: this.generateRecommendations(indicators)
+        };
+    }
+
+    calculateSentiment(indicators) {
+        // محاسبه احساسات بازار بر اساس اندیکاتورها
+        let score = 0;
+        
+        if (indicators.rsi < 30) score += 2;
+        if (indicators.rsi > 70) score -= 2;
+        if (indicators.macd > indicators.macd_signal) score += 1;
+        if (indicators.moving_avg_20 > indicators.moving_avg_50) score += 1;
+        
+        if (score > 1) return 'BULLISH';
+        if (score < -1) return 'BEARISH';
+        return 'NEUTRAL';
+    }
+
+    calculateKeyLevels(indicators) {
+        return {
+            support: indicators.bollinger_lower,
+            resistance: indicators.bollinger_upper,
+            pivot: indicators.pivot_point,
+            fibonacci: {
+                level_236: indicators.fibonacci_236,
+                level_382: indicators.fibonacci_382,
+                level_618: indicators.fibonacci_618
+            }
+        };
+    }
+
+    assessRisk(indicators) {
+        const volatility = Math.abs(indicators.bollinger_upper - indicators.bollinger_lower) / indicators.bollinger_middle;
+        
+        if (volatility > 0.1) return 'HIGH';
+        if (volatility > 0.05) return 'MEDIUM';
+        return 'LOW';
+    }
+
+    generateRecommendations(indicators) {
+        const recommendations = [];
+        
+        if (indicators.rsi < 30) recommendations.push('سیگنال خرید بر اساس RSI');
+        if (indicators.rsi > 70) recommendations.push('سیگنال فروش بر اساس RSI');
+        if (indicators.macd_hist > 0) recommendations.push('تغییر روند مثبت در MACD');
+        
+        return recommendations;
+    }
+}
 // Export برای backward compatibility
 const apiDebugRouter = createApiDebugRouter();
 
@@ -717,6 +821,7 @@ module.exports = {
     apiDebugSystem,
     apiDebugRouter,
     createApiDebugRouter,
+    TechnicalAnalysisAPI,
     AdvancedHealthMonitor,
     compatibilityLayer
 };
