@@ -262,7 +262,127 @@ class AdvancedCoinStatsAPIClient {
         }
     }
 
+    async getCoins(limit = 100) {
+        const startTime = Date.now();
+        const requestId = Math.random().toString(36).substring(7);
     
+        console.log(`🚀 [GETCOINS-${requestId}] STARTING - Limit: ${limit}`);
+        console.log(`🔧 [GETCOINS-${requestId}] Config:`, {
+            base_url: this.base_url,
+            api_key_exists: !!this.api_key,
+            api_key_length: this.api_key?.length,
+            api_key_preview: this.api_key ? this.api_key.substring(0, 10) + '...' : 'MISSING',
+            rate_limit_active: !!this._rateLimit
+        });
+
+        try {
+            // ساخت URL نهایی
+            const url = `https://openapiv1.coinstats.app/coins?limit=${limit}&currency=USD`;
+        
+            console.log(`🔗 [GETCOINS-${requestId}] Final URL:`, url);
+            console.log(`📋 [GETCOINS-${requestId}] Headers:`, {
+                'X-API-KEY': this.api_key ? '***' + this.api_key.substring(this.api_key.length - 5) : 'MISSING'
+            });
+
+            // لاگ قبل از ریت لیمیت
+            console.log(`⏳ [GETCOINS-${requestId}] Checking rate limit...`);
+            await this._rateLimit();
+            console.log(`✅ [GETCOINS-${requestId}] Rate limit passed`);
+ 
+            // کنترلر برای تایم‌اوت
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => {
+                console.log(`⏰ [GETCOINS-${requestId}] Request timeout after 15s`);
+                controller.abort();
+            }, 15000);
+
+            // اجرای درخواست
+            console.log(`📡 [GETCOINS-${requestId}] Sending fetch request...`);
+            const fetchStartTime = Date.now();
+        
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'X-API-KEY': this.api_key
+                },
+                signal: controller.signal
+            });
+
+            const fetchDuration = Date.now() - fetchStartTime;
+            clearTimeout(timeoutId);
+
+            console.log(`📨 [GETCOINS-${requestId}] Response received:`, {
+                status: response.status,
+                statusText: response.statusText,
+                duration: fetchDuration + 'ms',
+                headers: Object.fromEntries(response.headers.entries()),
+                ok: response.ok,
+                redirected: response.redirected,
+                type: response.type
+            });
+
+            // بررسی وضعیت پاسخ
+            if (!response.ok) {
+                const errorBody = await response.text();
+                console.error(`❌ [GETCOINS-${requestId}] API Error ${response.status}:`, {
+                    status: response.status,
+                    statusText: response.statusText,
+                    body: errorBody,
+                    url: url
+                });
+            
+                throw new Error(`CoinStats API Error ${response.status}: ${response.statusText} - ${errorBody}`);
+            }
+
+            // پردازش داده‌های موفق
+            console.log(`📊 [GETCOINS-${requestId}] Parsing JSON response...`);
+            const data = await response.json();
+          
+            console.log(`✅ [GETCOINS-${requestId}] SUCCESS:`, {
+                total_coins: Array.isArray(data) ? data.length : 'Unknown structure',
+                data_structure: Object.keys(data || {}),
+                first_coin: Array.isArray(data) && data[0] ? {
+                    name: data[0].name,
+                    symbol: data[0].symbol,
+                    price: data[0].price
+                } : 'No data',
+                total_duration: (Date.now() - startTime) + 'ms'
+            });
+
+            // لاگ به سیستم دیباگ
+            if (apiDebugSystem && typeof apiDebugSystem.logRequest === 'function') {
+                apiDebugSystem.logRequest('GET', `${this.base_url}/coins`, { limit }, {
+                    duration: Date.now() - startTime,
+                    status: 'success',
+                    data_length: Array.isArray(data) ? data.length : 0
+                });
+            }
+
+            return data;
+
+        } catch (error) {
+            const totalDuration = Date.now() - startTime;
+          
+            console.error(`💥 [GETCOINS-${requestId}] FATAL ERROR:`, {
+                error_name: error.name,
+                error_message: error.message,
+                error_stack: error.stack,
+                total_duration: totalDuration + 'ms',
+                timestamp: new Date().toISOString()
+            });
+
+            // لاگ خطا به سیستم دیباگ
+            if (apiDebugSystem && typeof apiDebugSystem.logError === 'function') {
+                apiDebugSystem.logError(error, {
+                    endpoint: 'getCoins',
+                    limit: limit,
+                    duration: totalDuration
+                });
+            }
+
+            throw error;
+        }
+    }
     async getTopGainers(limit = 10) {
         console.log('🔍 [TOPGAINERS] Starting getTopGainers with limit:', limit);
         const request = apiDebugSystem.logRequest('GET', 'getTopGainers', { limit });
