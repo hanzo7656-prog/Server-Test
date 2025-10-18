@@ -175,7 +175,7 @@ const apiDebugSystem = {
 }
 
 try {
-    constants = require('./config/constants');
+    constants = require('../config/constants');
 } catch (error) {
     try {
         constants = require('./config/constants');
@@ -185,7 +185,7 @@ try {
         } catch (error3) {
             console.log('△ Using fallback constants configuration');
             constants = {
-                COINSTATS_API_KEY: process.env.COINSTATS_API_KEY || 'uNb+sQjnjCQmV30dYrChxgh55hRHElmizLinkJX+5U6g=',
+                COINSTATS_API_KEY: process.env.COINSTATS_API_KEY || '40QRC4gdyzWIGwsvGkqWtcDOf0bk+FV217KmLxQ/Wmw=',
                 API_URLS: {
                     base: "https://openapiv1.coinstats.app",
                     exchange: "https://openapiv1.coinstats.app/coins/price/exchange",
