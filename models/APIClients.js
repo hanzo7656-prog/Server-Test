@@ -1,3 +1,26 @@
+// 🔧 DEBUG - این رو در LINE 1 فایل APIClients.js قرار بده
+console.log('🚀 DEBUG MODE: Tracking ALL API calls to CoinStats');
+
+const originalFetch = global.fetch;
+global.fetch = function(url, options = {}) {
+    // فقط API callهای مربوط به CoinStats رو لاگ کن
+    if (url && url.includes('coinstats')) {
+        console.log('🐛 [COINSTATS API DEBUG] ======================');
+        console.log('🔗 URL:', url);
+        console.log('📦 Method:', options.method || 'GET');
+        
+        const apiKey = options.headers?.['X-API-KEY'] || options.headers?.['x-api-key'];
+        console.log('🔑 API Key Status:', apiKey ? '✅ PRESENT' : '❌ MISSING');
+        console.log('🔑 API Key Preview:', apiKey ? apiKey.substring(0, 20) + '...' : 'NOT FOUND');
+        console.log('🔑 API Key Length:', apiKey?.length || 0);
+        
+        console.log('📋 All Headers:', JSON.stringify(options.headers, null, 2));
+        console.log('🐛 [END DEBUG] ================================');
+    }
+    
+    return originalFetch(url, options);
+};
+
 const express = require('express');
 const path = require('path');
 
