@@ -165,15 +165,6 @@ const apiDebugSystem = {
     }
 };
 
-// if constants is a constant
-{
-    if constants is a constant {
-    {
-    }
-    }
-    }
-}
-
 try {
     constants = require('../config/constants');
 } catch (error) {
