@@ -8,6 +8,23 @@ module.exports = {
   GITHUB_TOKEN: process.env.GITHUB_TOKEN,
   GIST_ID: process.env.GIST_ID,
 
+  // Server URLs
+  SERVER_URL: "https://server-test-ovta.onrender.com",
+  API_URLS: {
+    base: "https://openapiv1.coinstats.app",
+    exchange: "https://openapiv1.coinstats.app/coins/price/exchange",
+    tickers: "https://openapiv1.coinstats.app/tickers/exchanges",
+    avgPrice: "https://openapiv1.coinstats.app/coins/price/avg",
+    markets: "https://openapiv1.coinstats.app/markets",
+    currencies: "https://openapiv1.coinstats.app/currencies",
+    newsSources: "https://openapiv1.coinstats.app/news/sources",
+    news: "https://openapiv1.coinstats.app/news",
+    btcDominance: "https://openapiv1.coinstats.app/insights/btc-dominance",
+    fearGreed: "https://openapiv1.coinstats.app/insights/fear-and-greed",
+    fearGreedChart: "https://openapiv1.coinstats.app/insights/fear-and-greed/chart",
+    rainbowChart: "https://openapiv1.coinstats.app/insights/rainbow-chart/bitcoin"
+  },
+
   // ALL_TRADING_PAIRS
   ALL_TRADING_PAIRS: [
     "btc_usdt", "eth_usdt", "xrp_usdt", "ada_usdt", "dot_usdt", "doge_usdt", "sol_usdt",
@@ -57,19 +74,56 @@ module.exports = {
     batchSize: 5
   },
 
-  // URLهای API
-  API_URLS: {
-    base: "https://openapiv1.coinstats.app",
-    exchange: "https://openapiv1.coinstats.app/coins/price/exchange",
-    tickers: "https://openapiv1.coinstats.app/tickers/exchanges",
-    avgPrice: "https://openapiv1.coinstats.app/coins/price/avg",
-    markets: "https://openapiv1.coinstats.app/markets",
-    currencies: "https://openapiv1.coinstats.app/currencies",
-    newsSources: "https://openapiv1.coinstats.app/news/sources",
-    news: "https://openapiv1.coinstats.app/news",
-    btcDominance: "https://openapiv1.coinstats.app/insights/btc-dominance",
-    fearGreed: "https://openapiv1.coinstats.app/insights/fear-and-greed",
-    fearGreedChart: "https://openapiv1.coinstats.app/insights/fear-and-greed/chart",
-    rainbowChart: "https://openapiv1.coinstats.app/insights/rainbow-chart/bitcoin"
+  // تنظیمات API Client
+  API_CLIENT_CONFIG: {
+    rateLimitDelay: 1000,
+    maxRetries: 3,
+    timeout: 30000,
+    userAgent: 'VortexAI-Server/1.0'
+  },
+
+  // تنظیمات WebSocket
+  WS_CONFIG: {
+    provider: "LBank",
+    reconnectInterval: 5000,
+    maxReconnectAttempts: 10,
+    heartbeatInterval: 30000
+  },
+
+  // تنظیمات تحلیل تکنیکال
+  TA_CONFIG: {
+    rsiPeriod: 14,
+    bbPeriod: 20,
+    macdFast: 12,
+    macdSlow: 26,
+    macdSignal: 9,
+    supportResistanceLevels: 5
+  },
+
+  // تنظیمات عمومی
+  DEFAULT_CURRENCY: 'USD',
+  DEFAULT_LIMIT: 100,
+  MAX_LIMIT: 300,
+  DEFAULT_TIMEFRAME: '24h',
+
+  // تنظیمات سلامت سیستم
+  HEALTH_CHECK_CONFIG: {
+    interval: 60000, // 1 دقیقه
+    timeout: 10000,
+    criticalEndpoints: [
+      '/coins?limit=1',
+      '/markets',
+      '/news?limit=1',
+      '/insights/fear-and-greed',
+      '/tickers/exchanges'
+    ]
+  },
+
+  // تنظیمات دبیاگ و مانیتورینگ
+  DEBUG_CONFIG: {
+    enabled: true,
+    maxRequests: 100,
+    maxErrors: 50,
+    logPerformance: true
   }
 };
