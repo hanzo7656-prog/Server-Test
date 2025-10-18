@@ -1,7 +1,8 @@
 const express = require('express');
 const { AdvancedCoinStatsAPIClient, apiDebugSystem } = require('../models/APIClients');
-const TechnicalAnalysisEngine = require('..models/TechnicalAnalysis');
+const TechnicalAnalysisEngine = require('../models/TechnicalAnalysis');
 const constants = require('../config/constants');
+
 const router = express.Router();
 
 // تابع کمکی برای ساخت پاسخ استاندارد
@@ -17,7 +18,7 @@ function createResponse(success, data = null, error = null, metadata = {}) {
     };
 }
 
-// تابع کمکی برای هندل کردن درخواست‌های API
+// تابع کمکی برای هندل کردن درخواست های API
 async function handleApiRequest(apiCall, req, res, endpointName) {
     const startTime = Date.now();
     const request = apiDebugSystem.logRequest('GET', endpointName, req.query);
@@ -52,16 +53,16 @@ async function handleApiRequest(apiCall, req, res, endpointName) {
 module.exports = ({ gistManager, wsManager }) => {
     const apiClient = new AdvancedCoinStatsAPIClient();
 
-    // ==================== دکمه ۱: داشبورد ====================
+    // ---: دکتری واردات اضافه --- //
     
-    // اسکن بازار - اصلی
+    // اسکن بازار اصلی
     router.get("/scan", async (req, res) => {
         await handleApiRequest(
             apiClient.getCoins(parseInt(req.query.limit) || 100, 'USD', false),
             req, res, '/scan'
         );
     });
-    
+
     // مارکت کپ جهانی
     router.get("/markets/cap", async (req, res) => {
         await handleApiRequest(
@@ -69,8 +70,8 @@ module.exports = ({ gistManager, wsManager }) => {
             req, res, '/markets/cap'
         );
     });
-    
-    // بینش‌های ترکیبی
+
+    // دشبورد بینش ترکیبی
     router.get("/insights/dashboard", async (req, res) => {
         try {
             const [btcDominance, fearGreed, marketCap] = await Promise.all([
@@ -78,14 +79,14 @@ module.exports = ({ gistManager, wsManager }) => {
                 apiClient.getFearGreedIndex(false),
                 apiClient.getMarketCap(false)
             ]);
-            
+
             const dashboardData = {
                 btc_dominance: btcDominance.success ? btcDominance.data : null,
                 fear_greed: fearGreed.success ? fearGreed.data : null,
                 market_cap: marketCap.success ? marketCap.data : null,
                 timestamp: new Date().toISOString()
             };
-            
+
             res.json(createResponse(true, dashboardData, null, {
                 endpoint: '/insights/dashboard'
             }));
@@ -93,30 +94,30 @@ module.exports = ({ gistManager, wsManager }) => {
             res.status(500).json(createResponse(false, null, error.message));
         }
     });
-    
-    // آخرین اخبار برای داشبورد
+
+    // آخرین اخبار برای دشبورد
     router.get("/dashboard/news", async (req, res) => {
         await handleApiRequest(
             apiClient.getNews({ limit: 10 }, false),
             req, res, '/dashboard/news'
         );
     });
-    
-    // برترین سودده‌ها برای داشبورد
+
+    // برترین سودده‌ها برای دشبورد
     router.get("/dashboard/top-gainers", async (req, res) => {
         await handleApiRequest(
             apiClient.getTopGainers(parseInt(req.query.limit) || 5),
             req, res, '/dashboard/top-gainers'
         );
     });
-    
+
     // سلامت سیستم
     router.get("/health", async (req, res) => {
         try {
             const wsStatus = wsManager.getConnectionStatus();
             const gistData = gistManager.getAllData();
             const performanceStats = apiDebugSystem.getPerformanceStats();
-            
+
             const healthData = {
                 status: 'healthy',
                 service: 'VortexAI Crypto Scanner',
@@ -139,7 +140,7 @@ module.exports = ({ gistManager, wsManager }) => {
                 },
                 performance: performanceStats
             };
-            
+
             res.json(createResponse(true, healthData, null, {
                 endpoint: '/health'
             }));
@@ -148,28 +149,28 @@ module.exports = ({ gistManager, wsManager }) => {
         }
     });
 
-    // ==================== دکمه ۲: اسکن ====================
-    
+    // --- اسکن --- //
+
     // اسکن پیشرفته
     router.get("/scan/advanced", async (req, res) => {
         const limit = Math.min(parseInt(req.query.limit) || 100, 300);
         const filterType = req.query.filter || 'volume';
-        
+
         try {
             const [apiResult, realtimeData] = await Promise.all([
                 apiClient.getCoins(limit, 'USD', false),
                 Promise.resolve(wsManager.getRealtimeData())
             ]);
-            
+
             if (!apiResult.success) {
                 throw new Error(apiResult.error);
             }
-            
+
             let coins = apiResult.data || [];
-            
+
             // ترکیب با داده real-time
             const enhancedCoins = coins.map(coin => {
-                const symbol = `${coin.symbol.toLowerCase()}_usdt`;
+                const symbol = `${coin.symbol.toLowerCase()}.usdt`;
                 const realtime = realtimeData[symbol];
                 return {
                     ...coin,
@@ -183,7 +184,7 @@ module.exports = ({ gistManager, wsManager }) => {
                     }
                 };
             });
-            
+
             // فیلتر کردن
             switch (filterType) {
                 case 'volume':
@@ -196,19 +197,19 @@ module.exports = ({ gistManager, wsManager }) => {
                     enhancedCoins.sort((a, b) => (b.analysis?.signal_strength || 0) - (a.analysis?.signal_strength || 0));
                     break;
             }
-            
+
             res.json(createResponse(true, {
                 coins: enhancedCoins.slice(0, limit),
                 total_scanned: enhancedCoins.length,
                 filter_applied: filterType,
                 scan_mode: 'advanced'
             }, null, { endpoint: '/scan/advanced' }));
-            
+
         } catch (error) {
             res.status(500).json(createResponse(false, null, error.message));
         }
     });
-    
+
     // اسکن ساده
     router.get("/scan/basic", async (req, res) => {
         await handleApiRequest(
@@ -216,20 +217,18 @@ module.exports = ({ gistManager, wsManager }) => {
             req, res, '/scan/basic'
         );
     });
-    
+
     // اسکن با فیلتر AI
     router.get("/scan/ai-signal", async (req, res) => {
         const limit = parseInt(req.query.limit) || 50;
-        
         try {
             const apiResult = await apiClient.getCoins(100, 'USD', false);
-            
             if (!apiResult.success) {
                 throw new Error(apiResult.error);
             }
-            
+
             let coins = apiResult.data || [];
-            
+
             // شبیه‌سازی سیگنال AI
             const aiRatedCoins = coins.map(coin => ({
                 ...coin,
@@ -239,72 +238,69 @@ module.exports = ({ gistManager, wsManager }) => {
                     recommendation: Math.random() > 0.5 ? 'BUY' : 'HOLD'
                 }
             })).sort((a, b) => b.ai_signal.strength - a.ai_signal.strength);
-            
+
             res.json(createResponse(true, {
                 coins: aiRatedCoins.slice(0, limit),
                 ai_model: 'VortexAI-Signal-v2',
                 signal_threshold: 70
             }, null, { endpoint: '/scan/ai-signal' }));
-            
+
         } catch (error) {
             res.status(500).json(createResponse(false, null, error.message));
         }
     });
-    
-    // لیست کوین‌ها
+
+    // لیست کوین ها
     router.get("/coins", async (req, res) => {
         await handleApiRequest(
             apiClient.getCoins(
-                parseInt(req.query.limit) || 100, 
-                req.query.currency || 'USD', 
+                parseInt(req.query.limit) || 100,
+                req.query.currency || 'USD',
                 false
             ),
             req, res, '/coins'
         );
     });
 
-    // ==================== دکمه ۳: انالیز ====================
-    
-    // تحلیل تکنیکال
     // تحلیل تکنیکال - با موتور واقعی
     router.get("/analysis/technical", async (req, res) => {
         const { symbol, timeframe = '24h' } = req.query;
-    
+
         if (!symbol) {
             return res.status(400).json(createResponse(false, null, 'Symbol parameter is required'));
         }
-    
+
         try {
             const [coinData, historicalData] = await Promise.all([
                 apiClient.getCoinDetails(symbol, 'USD', false),
                 apiClient.getCoinCharts(symbol, timeframe, false)
             ]);
-          
+
             if (!coinData.success || !historicalData.success) {
                 throw new Error('Failed to fetch analysis data');
             }
 
             // آماده‌سازی داده برای تحلیل تکنیکال
-            const priceData = this.preparePriceDataForAnalysis(historicalData.data);
-        
+            const priceData = preparePriceDataForAnalysis(historicalData.data);
+
             // محاسبه تمام اندیکاتورها با موتور واقعی
             const technicalIndicators = TechnicalAnalysisEngine.calculateAllIndicators(priceData);
-        
+
             const technicalAnalysis = {
                 symbol: symbol,
                 current_price: coinData.data?.price || 0,
                 indicators: technicalIndicators,
-                signals: this.generateTradingSignals(technicalIndicators),
+                signals: generateTradingSignals(technicalIndicators),
                 support_resistance: TechnicalAnalysisEngine.calculateSupportResistance(priceData),
                 chart_data: historicalData.data,
                 timeframe: timeframe,
                 analysis_timestamp: new Date().toISOString()
             };
-          
+
             res.json(createResponse(true, technicalAnalysis, null, {
                 endpoint: '/analysis/technical'
             }));
-        
+
         } catch (error) {
             res.status(500).json(createResponse(false, null, error.message));
         }
@@ -322,8 +318,8 @@ module.exports = ({ gistManager, wsManager }) => {
                     timestamp: point[0],
                     open: point[1] * 0.99, // شبیه‌سازی open
                     high: point[1] * 1.02, // شبیه‌سازی high
-                    low: point[1] * 0.98,  // شبیه‌سازی low
-                    price: point[1],       // close price
+                    low: point[1] * 0.98, // شبیه‌سازی low
+                    price: point[1], // close price
                     volume: point[2] || 1000
                 };
             }
@@ -338,7 +334,7 @@ module.exports = ({ gistManager, wsManager }) => {
         }).filter(point => point !== null);
     }
 
-// تابع کمکی برای تولید سیگنال‌های معاملاتی
+    // تابع کمکی برای تولید سیگنال های معاملاتی
     function generateTradingSignals(indicators) {
         const signals = {
             trend: 'NEUTRAL',
@@ -350,14 +346,14 @@ module.exports = ({ gistManager, wsManager }) => {
 
         // تحلیل RSI
         if (indicators.rsi > 70) {
-            signals.recommendations.push('RSI نشان‌دهنده اشباع خرید است');
+            signals.recommendations.push('RSI نشان دهنده اشباع خرید است');
             signals.trend = 'BEARISH';
         } else if (indicators.rsi < 30) {
-            signals.recommendations.push('RSI نشان‌دهنده اشباع فروش است');
+            signals.recommendations.push('RSI نشان دهنده اشباع فروش است');
             signals.trend = 'BULLISH';
         }
 
-    // تحلیل MACD
+        // تحلیل MACD
         if (indicators.macd > indicators.macd_signal && indicators.macd_hist > 0) {
             signals.recommendations.push('MACD سیگنال خرید می‌دهد');
             signals.trend = 'BULLISH';
@@ -375,63 +371,59 @@ module.exports = ({ gistManager, wsManager }) => {
         }
 
         // محاسبه قدرت سیگنال
-        const bullishSignals = signals.recommendations.filter(rec => rec.includes('خرید')).length;
-        const bearishSignals = signals.recommendations.filter(rec => rec.includes('فروش')).length;
-    
+        const bullishSignals = signals.recommendations.filter(rec => rec.includes("خرید")).length;
+        const bearishSignals = signals.recommendations.filter(rec => rec.includes("فروش")).length;
+
         signals.strength = Math.abs(bullishSignals - bearishSignals) * 25;
         signals.confidence = Math.min(signals.strength + 50, 95);
 
         return signals;
     }
-    
+
     // داده تاریخی
     router.get("/coin/:symbol/history/:timeframe", async (req, res) => {
         const { symbol, timeframe } = req.params;
-        
         await handleApiRequest(
             apiClient.getCoinCharts(symbol, timeframe, false),
             req, res, `/coin/${symbol}/history/${timeframe}`
         );
     });
-    
-    // جزییات کوین
+
+    // جزئیات کوین
     router.get("/coins/:id/details", async (req, res) => {
         const { id } = req.params;
-        
         await handleApiRequest(
             apiClient.getCoinDetails(id, req.query.currency || 'USD', false),
             req, res, `/coins/${id}/details`
         );
     });
-    
+
     // قیمت میانگین
     router.get("/analysis/average-price", async (req, res) => {
         const { coinId, timestamp } = req.query;
-        
         await handleApiRequest(
             apiClient.getCoinAvgPrice(coinId, timestamp, false),
             req, res, '/analysis/average-price'
         );
     });
-    
+
     // چارت چند کوین
     router.get("/analysis/multi-chart", async (req, res) => {
         const { coinIds, period = '7d' } = req.query;
-        
+
         if (!coinIds) {
             return res.status(400).json(createResponse(false, null, 'coinIds parameter is required'));
         }
-        
-        const coinIdArray = coinIds.split(',').map(id => id.trim());
-        
+
+        const coinIdArray = coinIds.split(",").map(id => id.trim());
         await handleApiRequest(
             apiClient.getCoinsCharts(coinIdArray, period, false),
             req, res, '/analysis/multi-chart'
         );
     });
 
-    // ==================== دکمه ۴: اخبار ====================
-    
+    // --- :کمک --- //
+
     // همه اخبار
     router.get("/news", async (req, res) => {
         await handleApiRequest(
@@ -444,7 +436,7 @@ module.exports = ({ gistManager, wsManager }) => {
             req, res, '/news'
         );
     });
-    
+
     // اخبار ترند
     router.get("/news/trending", async (req, res) => {
         await handleApiRequest(
@@ -455,7 +447,7 @@ module.exports = ({ gistManager, wsManager }) => {
             req, res, '/news/trending'
         );
     });
-    
+
     // اخبار منتخب
     router.get("/news/handpicked", async (req, res) => {
         await handleApiRequest(
@@ -466,7 +458,7 @@ module.exports = ({ gistManager, wsManager }) => {
             req, res, '/news/handpicked'
         );
     });
-    
+
     // جدیدترین اخبار
     router.get("/news/latest", async (req, res) => {
         await handleApiRequest(
@@ -477,7 +469,7 @@ module.exports = ({ gistManager, wsManager }) => {
             req, res, '/news/latest'
         );
     });
-    
+
     // اخبار صعودی
     router.get("/news/bullish", async (req, res) => {
         await handleApiRequest(
@@ -488,7 +480,7 @@ module.exports = ({ gistManager, wsManager }) => {
             req, res, '/news/bullish'
         );
     });
-    
+
     // اخبار نزولی
     router.get("/news/bearish", async (req, res) => {
         await handleApiRequest(
@@ -499,7 +491,7 @@ module.exports = ({ gistManager, wsManager }) => {
             req, res, '/news/bearish'
         );
     });
-    
+
     // منابع خبری
     router.get("/news/sources", async (req, res) => {
         await handleApiRequest(
@@ -507,20 +499,17 @@ module.exports = ({ gistManager, wsManager }) => {
             req, res, '/news/sources'
         );
     });
-    
-    // جزییات خبر
+
+    // جزئیات خبر
     router.get("/news/detail/:id", async (req, res) => {
         const { id } = req.params;
-        
         await handleApiRequest(
             apiClient.getNewsDetail(id, false),
             req, res, `/news/detail/${id}`
         );
     });
 
-    return router;
-};
-        // ==================== دکمه ۵: بینش های بازار ====================
+    // ==================== بینش‌های بازار ==================== //
 
     // تسلط بیت‌کوین
     router.get("/insights/btc-dominance", async (req, res) => {
@@ -545,7 +534,7 @@ module.exports = ({ gistManager, wsManager }) => {
             req, res, '/insights/fear-greed-chart'
         );
     });
-  
+
     // نمودار رنگین‌کمان
     router.get("/insights/rainbow-chart", async (req, res) => {
         await handleApiRequest(
@@ -570,7 +559,7 @@ module.exports = ({ gistManager, wsManager }) => {
         );
     });
 
-    // ==================== دکمه ۶: مارکت کپ / مارکت ====================
+    // ==================== مارکت ... ==================== //
 
     // مارکت کپ اصلی
     router.get("/markets/summary", async (req, res) => {
@@ -580,7 +569,7 @@ module.exports = ({ gistManager, wsManager }) => {
         );
     });
 
-    // صرافی‌ها
+    // صرافی ها
     router.get("/markets/exchanges", async (req, res) => {
         await handleApiRequest(
             apiClient.getTickerExchanges(false),
@@ -599,17 +588,17 @@ module.exports = ({ gistManager, wsManager }) => {
     // قیمت تبادل
     router.get("/markets/exchange-price", async (req, res) => {
         const { exchange, from, to, timestamp } = req.query;
-    
+
         if (!exchange || !from || !to) {
             return res.status(400).json(createResponse(false, null, 'exchange, from, and to parameters are required'));
         }
-    
+
         await handleApiRequest(
             apiClient.getCoinExchangePrice(exchange, from, to, timestamp, false),
             req, res, '/markets/exchange-price'
         );
     });
- 
+
     // تیکرهای صرافی
     router.get("/markets/exchange-tickers", async (req, res) => {
         // این اندپوینت نیاز به پیاده‌سازی جداگانه دارد
@@ -620,7 +609,7 @@ module.exports = ({ gistManager, wsManager }) => {
         );
     });
 
-// ==================== دکمه ۷: سلامت ====================
+    // --- سلامت ---
 
     // سلامت ترکیبی
     router.get("/health/combined", async (req, res) => {
@@ -635,7 +624,6 @@ module.exports = ({ gistManager, wsManager }) => {
                 service: 'VortexAI Combined System',
                 version: '7.0 - Enhanced API',
                 timestamp: new Date().toISOString(),
-            
                 websocket_status: {
                     connected: wsStatus.connected,
                     active_coins: wsStatus.active_coins,
@@ -643,7 +631,6 @@ module.exports = ({ gistManager, wsManager }) => {
                     provider: "LBank",
                     status: wsStatus.connected ? 'healthy' : 'unhealthy'
                 },
-            
                 gist_status: {
                     active: true,
                     total_coins: Object.keys(gistData.prices || {}).length,
@@ -651,7 +638,6 @@ module.exports = ({ gistManager, wsManager }) => {
                     timeframes_available: gistManager.getAvailableTimeframes(),
                     status: 'healthy'
                 },
-            
                 api_status: {
                     requests_count: performanceStats.totalRequests,
                     success_rate: performanceStats.successRate,
@@ -659,7 +645,6 @@ module.exports = ({ gistManager, wsManager }) => {
                     endpoint_health: endpointHealth.summary.healthPercentage,
                     status: performanceStats.successRate > 80 ? 'healthy' : 'degraded'
                 },
-              
                 system_status: {
                     uptime: performanceStats.uptime,
                     memory_usage: performanceStats.memoryUsage,
@@ -696,7 +681,7 @@ module.exports = ({ gistManager, wsManager }) => {
                 performance: performanceStats,
                 endpoints_available: [
                     "/scan", "/scan/advanced", "/scan/basic", "/scan/ai-signal",
-                    "/analysis/technical", "/coin/:symbol/history/:timeframe", 
+                    "/analysis/technical", "/coin/:symbol/history/:timeframe",
                     "/coins/:id/details", "/analysis/average-price", "/analysis/multi-chart",
                     "/news", "/news/trending", "/news/handpicked", "/news/latest",
                     "/news/bullish", "/news/bearish", "/news/sources", "/news/detail/:id",
@@ -717,18 +702,17 @@ module.exports = ({ gistManager, wsManager }) => {
         }
     });
 
-// ==================== دکمه ۸: تنظیمات ====================
+    // ==================== تنظیمات ... ==================== //
 
-    // تایم‌فریم‌ها
+    // تایم‌فریم ها
     router.get("/settings/timeframes", async (req, res) => {
         try {
             const timeframes = gistManager.getAvailableTimeframes();
-        
             const timeframeData = {
                 timeframes: timeframes,
                 description: {
-                   "1h": "1 hour history - 1 minute intervals",
-                    "4h": "4 hours history - 5 minute intervals", 
+                    "1h": "1 hour history - 1 minute intervals",
+                    "4h": "4 hours history - 5 minute intervals",
                     "24h": "24 hours history - 15 minute intervals",
                     "7d": "7 days history - 1 hour intervals",
                     "30d": "30 days history - 4 hour intervals",
@@ -757,7 +741,6 @@ module.exports = ({ gistManager, wsManager }) => {
     router.get("/settings/test-endpoints", async (req, res) => {
         try {
             const healthReport = await apiDebugSystem.testAllCriticalConnections();
-         
             res.json(createResponse(true, healthReport, null, {
                 endpoint: '/settings/test-endpoints'
             }));
@@ -766,11 +749,10 @@ module.exports = ({ gistManager, wsManager }) => {
         }
     });
 
-    // دیباگ کوین‌استتس
+    // دیباگ کوین استتوس
     router.get("/settings/debug", async (req, res) => {
         try {
             const testUrl = "https://openapiv1.coinstats.app/coins?limit=3";
-        
             const response = await fetch(testUrl, {
                 headers: {
                     'X-API-KEY': constants.COINSTATS_API_KEY,
@@ -802,14 +784,13 @@ module.exports = ({ gistManager, wsManager }) => {
         }
     });
 
-// ==================== اندپوینت‌های کمکی ====================
+    // ==================== اندپوینت های کمکی ==================== //
 
-    // وضعیت real-time WebSocket
+    // real-time WebSocket
     router.get("/websocket/status", async (req, res) => {
         try {
             const wsStatus = wsManager.getConnectionStatus();
             const realtimeData = wsManager.getRealtimeData();
-        
             const statusData = {
                 connected: wsStatus.connected,
                 active_coins: wsStatus.active_coins,
@@ -836,7 +817,7 @@ module.exports = ({ gistManager, wsManager }) => {
         try {
             const performanceStats = apiDebugSystem.getPerformanceStats();
             const errorAnalysis = apiDebugSystem.analyzeErrors();
-        
+
             const systemStats = {
                 performance: performanceStats,
                 error_analysis: errorAnalysis,
@@ -855,7 +836,6 @@ module.exports = ({ gistManager, wsManager }) => {
                 },
                 timestamp: new Date().toISOString()
             };
-
             res.json(createResponse(true, systemStats, null, {
                 endpoint: '/system/stats'
             }));
@@ -864,37 +844,36 @@ module.exports = ({ gistManager, wsManager }) => {
         }
     });
 
-// ==================== اندپوینت‌های داده خام (برای استفاده داخلی) ====================
+    // ==================== داخلی - استفاده برای داده‌های خام اندپوینت ==================== //
 
-    // داده خام تک کوین (فقط برای AI)
+    // فقط برای AI - داده خام تک کوین
     router.get("/internal/raw/single/:symbol", async (req, res) => {
         const { symbol } = req.params;
         const { timeframe = "24h", limit = 500 } = req.query;
-    
-        // فقط برای استفاده داخلی - می‌تونی authentication اضافه کنی
+        // authentication اضافی می‌توانی - فقط برای استفاده داخلی
+        
         await handleApiRequest(
             apiClient.getCoinCharts(symbol, timeframe, true), // raw=true
             req, res, `/internal/raw/single/${symbol}`
         );
     });
 
-    // داده خام چند کوین (فقط برای AI)
+    // فقط برای AI - داده خام چند کوین
     router.get("/internal/raw/multi", async (req, res) => {
         const { symbols, period = '24h' } = req.query;
-    
+
         if (!symbols) {
             return res.status(400).json(createResponse(false, null, 'symbols parameter is required'));
         }
-     
-        const coinIds = symbols.split(',').map(s => s.trim());
-    
+
+        const coinIds = symbols.split(",").map(s => s.trim());
         await handleApiRequest(
             apiClient.getCoinsCharts(coinIds, period, true), // raw=true
             req, res, '/internal/raw/multi'
         );
     });
 
-    // داده خام بازار (فقط برای AI)
+    // فقط برای AI - داده خام بازار
     router.get("/internal/raw/market", async (req, res) => {
         await handleApiRequest(
             apiClient.getMarketCap(true), // raw=true
@@ -902,4 +881,5 @@ module.exports = ({ gistManager, wsManager }) => {
         );
     });
 
-    module.exports = router;
+    return router;
+};
