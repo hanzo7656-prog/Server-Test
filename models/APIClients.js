@@ -264,23 +264,82 @@ class AdvancedCoinStatsAPIClient {
 
     
     async getCoins(limit = 100) {
+        const startTime = Date.now();
+    
+        // استفاده از سیستم دیباگ اگر وجود دارد
+        const request = apiDebugSystem ? apiDebugSystem.logRequest('GET', `${this.base_url}/coins`, { limit }) : null;
+    
+        // ریت لیمیت
         await this._rateLimit();
 
-        const url = `${this.base_url}/coins?limit=${limit}&currency=USD`;
-    
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-                'X-API-KEY': this.api_key,
-                'Accept': 'application/json'
+        try {
+            // ساخت URL دقیقاً مطابق مستندات
+            const url = `https://openapiv1.coinstats.app/coins?currency=USD&limit=${limit}`;
+        
+            console.log('🔗 [GETCOINS] Fetch URL:', url);
+            console.log('🔑 [GETCOINS] API Key:', this.api_key ? 'Present' : 'Missing');
+
+            // کنترلر برای تایم‌اوت
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+            // درخواست fetch دقیقاً مطابق مستندات
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'X-API-KEY': this.api_key,
+                    'Accept': 'application/json',
+                    'User-Agent': 'VortexAI-Server/1.0'
+                },
+                signal: controller.signal
+            });
+
+            clearTimeout(timeoutId);
+
+            console.log('📡 [GETCOINS] Response Status:', response.status);
+            console.log('📡 [GETCOINS] Response OK:', response.ok);
+
+            // بررسی پاسخ
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('❌ [GETCOINS] API Error:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    error: errorText
+                });
+            
+                throw new Error(`CoinStats API Error: ${response.status} - ${response.statusText}`);
             }
-        });
 
-        if (!response.ok) {
-            throw new Error(`API error: ${response.status}`);
+            // پردازش پاسخ موفق
+            const data = await response.json();
+        
+            console.log('✅ [GETCOINS] Success:', {
+                coinsReceived: data.length,
+                duration: `${Date.now() - startTime}ms`,
+                firstCoin: data[0] ? `${data[0].name} (${data[0].symbol})` : 'None'
+            });
+
+            // ثبت موفقیت در سیستم دیباگ
+            if (request) {
+                request.complete(data);
+            }
+
+            return data;
+
+        } catch (error) {
+            console.error('💥 [GETCOINS] Fatal Error:', {
+                error: error.message,
+                duration: `${Date.now() - startTime}ms`
+            });
+
+            // ثبت خطا در سیستم دیباگ
+            if (request) {
+                request.error(error);
+            }
+
+            throw error;
         }
-
-        return await response.json();
     }
     async getTopGainers(limit = 10) {
         console.log('🔍 [TOPGAINERS] Starting getTopGainers with limit:', limit);
