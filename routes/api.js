@@ -1,5 +1,7 @@
 const express = require('express');
-const { AdvancedCoinStatsAPIClient, apiDebugSystem } = require('./apiclient');
+const { AdvancedCoinStatsAPIClient, apiDebugSystem } = require('../models/APIClients');
+const TechnicalAnalysisEngine = require('..models/TechnicalAnalysis');
+const constants = require('../config/constants');
 const router = express.Router();
 
 // تابع کمکی برای ساخت پاسخ استاندارد
@@ -264,53 +266,123 @@ module.exports = ({ gistManager, wsManager }) => {
     // ==================== دکمه ۳: انالیز ====================
     
     // تحلیل تکنیکال
+    // تحلیل تکنیکال - با موتور واقعی
     router.get("/analysis/technical", async (req, res) => {
         const { symbol, timeframe = '24h' } = req.query;
-        
+    
         if (!symbol) {
             return res.status(400).json(createResponse(false, null, 'Symbol parameter is required'));
         }
-        
+    
         try {
             const [coinData, historicalData] = await Promise.all([
                 apiClient.getCoinDetails(symbol, 'USD', false),
                 apiClient.getCoinCharts(symbol, timeframe, false)
             ]);
-            
+          
             if (!coinData.success || !historicalData.success) {
                 throw new Error('Failed to fetch analysis data');
             }
-            
-            // شبیه‌سازی تحلیل تکنیکال
+
+            // آماده‌سازی داده برای تحلیل تکنیکال
+            const priceData = this.preparePriceDataForAnalysis(historicalData.data);
+        
+            // محاسبه تمام اندیکاتورها با موتور واقعی
+            const technicalIndicators = TechnicalAnalysisEngine.calculateAllIndicators(priceData);
+        
             const technicalAnalysis = {
                 symbol: symbol,
                 current_price: coinData.data?.price || 0,
-                indicators: {
-                    rsi: Math.random() * 100,
-                    macd: { value: Math.random() * 2 - 1, signal: Math.random() * 2 - 1 },
-                    bollinger_bands: {
-                        upper: (coinData.data?.price || 0) * 1.1,
-                        lower: (coinData.data?.price || 0) * 0.9,
-                        middle: coinData.data?.price || 0
-                    }
-                },
-                signals: {
-                    trend: Math.random() > 0.5 ? 'BULLISH' : 'BEARISH',
-                    strength: Math.random() * 100,
-                    confidence: Math.random() * 100
-                },
+                indicators: technicalIndicators,
+                signals: this.generateTradingSignals(technicalIndicators),
+                support_resistance: TechnicalAnalysisEngine.calculateSupportResistance(priceData),
                 chart_data: historicalData.data,
-                timeframe: timeframe
+                timeframe: timeframe,
+                analysis_timestamp: new Date().toISOString()
             };
-            
+          
             res.json(createResponse(true, technicalAnalysis, null, {
                 endpoint: '/analysis/technical'
             }));
-            
+        
         } catch (error) {
             res.status(500).json(createResponse(false, null, error.message));
         }
     });
+
+    // تابع کمکی برای آماده‌سازی داده قیمت
+    function preparePriceDataForAnalysis(chartData) {
+        if (!chartData || !chartData.chart || !Array.isArray(chartData.chart)) {
+            return [];
+        }
+
+        return chartData.chart.map((point, index) => {
+            if (Array.isArray(point) && point.length >= 4) {
+                return {
+                    timestamp: point[0],
+                    open: point[1] * 0.99, // شبیه‌سازی open
+                    high: point[1] * 1.02, // شبیه‌سازی high
+                    low: point[1] * 0.98,  // شبیه‌سازی low
+                    price: point[1],       // close price
+                    volume: point[2] || 1000
+                };
+            }
+            return {
+                timestamp: Date.now() - (index * 3600000),
+                open: point * 0.99,
+                high: point * 1.02,
+                low: point * 0.98,
+                price: point,
+                volume: 1000
+            };
+        }).filter(point => point !== null);
+    }
+
+// تابع کمکی برای تولید سیگنال‌های معاملاتی
+    function generateTradingSignals(indicators) {
+        const signals = {
+            trend: 'NEUTRAL',
+            strength: 0,
+            confidence: 0,
+            recommendations: [],
+            risk_level: 'MEDIUM'
+        };
+
+        // تحلیل RSI
+        if (indicators.rsi > 70) {
+            signals.recommendations.push('RSI نشان‌دهنده اشباع خرید است');
+            signals.trend = 'BEARISH';
+        } else if (indicators.rsi < 30) {
+            signals.recommendations.push('RSI نشان‌دهنده اشباع فروش است');
+            signals.trend = 'BULLISH';
+        }
+
+    // تحلیل MACD
+        if (indicators.macd > indicators.macd_signal && indicators.macd_hist > 0) {
+            signals.recommendations.push('MACD سیگنال خرید می‌دهد');
+            signals.trend = 'BULLISH';
+        } else if (indicators.macd < indicators.macd_signal && indicators.macd_hist < 0) {
+            signals.recommendations.push('MACD سیگنال فروش می‌دهد');
+            signals.trend = 'BEARISH';
+        }
+
+        // تحلیل بولینگر باند
+        const currentPrice = indicators.bollinger_middle;
+        if (currentPrice > indicators.bollinger_upper) {
+            signals.recommendations.push('قیمت در بالای باند بولینگر قرار دارد');
+        } else if (currentPrice < indicators.bollinger_lower) {
+            signals.recommendations.push('قیمت در زیر باند بولینگر قرار دارد');
+        }
+
+        // محاسبه قدرت سیگنال
+        const bullishSignals = signals.recommendations.filter(rec => rec.includes('خرید')).length;
+        const bearishSignals = signals.recommendations.filter(rec => rec.includes('فروش')).length;
+    
+        signals.strength = Math.abs(bullishSignals - bearishSignals) * 25;
+        signals.confidence = Math.min(signals.strength + 50, 95);
+
+        return signals;
+    }
     
     // داده تاریخی
     router.get("/coin/:symbol/history/:timeframe", async (req, res) => {
@@ -701,7 +773,7 @@ module.exports = ({ gistManager, wsManager }) => {
         
             const response = await fetch(testUrl, {
                 headers: {
-                    'X-API-KEY': process.env.COINSTATS_API_KEY || 'demo-key',
+                    'X-API-KEY': constants.COINSTATS_API_KEY,
                     'Accept': 'application/json'
                 }
             });
