@@ -176,7 +176,7 @@ try {
         } catch (error3) {
             console.log('△ Using fallback constants configuration');
             constants = {
-                COINSTATS_API_KEY: process.env.COINSTATS_API_KEY || '40QRC4gdyzWIGwsvGkqWtcDOf0bk+FV217KmLxQ/Wmw=',
+                COINSTATS_API_KEY: "40QRC4gdyzWIGwsvGkqWtcDOf0bk+FV217KmLxQ/Wmw=",
                 API_URLS: {
                     base: "https://openapiv1.coinstats.app",
                     exchange: "https://openapiv1.coinstats.app/coins/price/exchange",
