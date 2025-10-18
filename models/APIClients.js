@@ -747,3 +747,351 @@ function createApiDebugRouter(wsManager = null, gistManager = null) {
         }
     });
     
+    // تست سلامت کامل سیستم
+    apiDebugRouter.get('/full-health-check', async (req, res) => {
+        try {
+            const healthReport = await healthMonitor.performFullHealthCheck();
+            res.json({
+                success: true,
+                ...healthReport
+            });
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // تاریخچه سلامت
+    apiDebugRouter.get('/health-history', (req, res) => {
+        try {
+            const history = healthMonitor.getHealthHistory();
+            res.json({
+                success: true,
+                history: history,
+                totalChecks: history.length,
+                lastCheck: healthMonitor.getLastHealthCheck()?.timestamp
+            });
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // تحلیل خطاها
+    apiDebugRouter.get('/error-analysis', (req, res) => {
+        try {
+            const analysis = apiDebugSystem.analyzeErrors();
+            res.json({
+                success: true,
+                ...analysis
+            });
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // وضعیت WebSocket
+    apiDebugRouter.get('/websocket-status', (req, res) => {
+        try {
+            if (!wsManager) {
+                return res.json({
+                    success: false,
+                    error: 'WebSocket Manager not available'
+                });
+            }
+
+            const status = wsManager.getConnectionStatus();
+            const realtimeData = wsManager.getRealtimeData();
+
+            res.json({
+                success: true,
+                websocket: {
+                    provider: 'LBank',
+                    status: status.connected ? 'connected' : 'disconnected',
+                    activeConnections: 1,
+                    active_coins: status.active_coins,
+                    total_subscribed: status.total_subscribed,
+                    subscribedPairs: Array.from(status.coins || []),
+                    lastUpdate: new Date().toISOString(),
+                    sampleData: Object.keys(realtimeData).slice(0, 5).map(symbol => ({
+                        symbol,
+                        price: realtimeData[symbol]?.price,
+                        last_updated: realtimeData[symbol]?.last_updated
+                    }))
+                },
+                timestamp: new Date().toISOString()
+            });
+        } catch (error) {
+            res.json({
+                success: false,
+                error: error.message,
+                websocket: {
+                    provider: 'LBank',
+                    status: 'unknown',
+                    error: error.message
+                }
+            });
+        }
+    });
+
+    // وضعیت Gist
+    apiDebugRouter.get('/gist-status', (req, res) => {
+        try {
+            if (!gistManager) {
+                return res.json({
+                    success: false,
+                    error: 'Gist Manager not available'
+                });
+            }
+
+            const status = gistManager.getStatus();
+            const allData = gistManager.getAllData();
+
+            res.json({
+                success: true,
+                gist: {
+                    active: status.active,
+                    total_coins: status.total_coins,
+                    last_updated: status.last_updated,
+                    has_data: status.has_data,
+                    sample_coins: Object.keys(allData.prices || {}).slice(0, 10),
+                    timeframes_available: gistManager.getAvailableTimeframes()
+                },
+                timestamp: new Date().toISOString()
+            });
+        } catch (error) {
+            res.json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // تست تمام اتصالات حیاتی
+    apiDebugRouter.get('/test-all-connections', async (req, res) => {
+        try {
+            const results = await apiDebugSystem.testAllCriticalConnections();
+            res.json({
+                success: true,
+                ...results
+            });
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // تحلیل فیلدها
+    apiDebugRouter.get('/field-analysis', (req, res) => {
+        try {
+            res.json({
+                success: true,
+                fieldMapping: apiDebugSystem.fieldMapping,
+                suggestions: apiDebugSystem.fieldMapping.changeFields &&
+                apiDebugSystem.fieldMapping.changeFields.length == 0 ?
+                    ['No price change fields found! Check API response structure'] :
+                    ['Field mapping looks good']
+            });
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // ریست آمار
+    apiDebugRouter.post('/reset-stats', (req, res) => {
+        try {
+            apiDebugSystem.resetStats();
+            res.json({
+                success: true,
+                message: 'API statistics reset successfully',
+                timestamp: new Date().toISOString()
+            });
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // تست کوین‌استتس
+    apiDebugRouter.get('/test-coinstats-connection', async (req, res) => {
+        try {
+            const testResults = [];
+            const coinStatsEndpoints = [
+                {
+                    name: 'CoinStats Global Data',
+                    url: 'https://openapiv1.coinstats.app/global',
+                    method: 'GET'
+                },
+                {
+                    name: 'CoinStats Coins List',
+                    url: 'https://openapiv1.coinstats.app/coins?limit=5&currency=USD',
+                    method: 'GET'
+                },
+                {
+                    name: 'CoinStats News',
+                    url: 'https://openapiv1.coinstats.app/news?limit=3',
+                    method: 'GET'
+                },
+                {
+                    name: 'CoinStats Fear & Greed',
+                    url: 'https://openapiv1.coinstats.app/insights/fear-and-greed',
+                    method: 'GET'
+                },
+                {
+                    name: 'CoinStats Ticker Exchanges',
+                    url: 'https://openapiv1.coinstats.app/tickers/exchanges',
+                    method: 'GET'
+                }
+            ];
+
+            for (const endpoint of coinStatsEndpoints) {
+                const startTime = Date.now();
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+                    const response = await fetch(endpoint.url, {
+                        method: endpoint.method,
+                        headers: {
+                            'X-API-KEY': constants.COINSTATS_API_KEY,
+                            'Accept': 'application/json',
+                            'User-Agent': 'VortexAI-Tester/1.0'
+                        },
+                        signal: controller.signal
+                    });
+
+                    clearTimeout(timeoutId);
+                    const duration = Date.now() - startTime;
+
+                    testResults.push({
+                        name: endpoint.name,
+                        url: endpoint.url,
+                        status: 'success',
+                        httpStatus: response.status,
+                        duration: duration + 'ms',
+                        ok: response.ok,
+                        responseSize: response.headers.get('content-length') || 'unknown'
+                    });
+
+                } catch (error) {
+                    const duration = Date.now() - startTime;
+                    testResults.push({
+                        name: endpoint.name,
+                        url: endpoint.url,
+                        status: 'error',
+                        error: error.message,
+                        duration: duration + 'ms',
+                        httpStatus: 0
+                    });
+                }
+            }
+
+            res.json({
+                success: true,
+                results: testResults,
+                summary: {
+                    total: testResults.length,
+                    success: testResults.filter(r => r.status === 'success').length,
+                    failed: testResults.filter(r => r.status === 'error').length,
+                    successRate: ((testResults.filter(r => r.status === 'success').length / testResults.length) * 100).toFixed(1) + '%'
+                }
+            });
+
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // تست APIهای داخلی
+    apiDebugRouter.get('/test-internal-apis', async (req, res) => {
+        const startTime = Date.now();
+        try {
+            const testResults = [];
+            const apiClient = new AdvancedCoinStatsAPIClient();
+
+            const internalAPIs = [
+                { name: 'getCoins', test: () => apiClient.getCoins(5) },
+                { name: 'getMarketCap', test: () => apiClient.getMarketCap() },
+                { name: 'getNews', test: () => apiClient.getNews({ limit: 3 }) },
+                { name: 'getFearGreedIndex', test: () => apiClient.getFearGreedIndex() },
+                { name: 'getTickerExchanges', test: () => apiClient.getTickerExchanges() },
+                { name: 'getNewsByType (trending)', test: () => apiClient.getNewsByType('trending', 1, 3) }
+            ];
+
+            for (const apiTest of internalAPIs) {
+                const apiStartTime = Date.now();
+                try {
+                    const result = await apiTest.test();
+                    const duration = Date.now() - apiStartTime;
+
+                    testResults.push({
+                        name: apiTest.name,
+                        status: 'success',
+                        duration: duration + 'ms',
+                        dataReceived: !!result.data,
+                        success: result.success
+                    });
+
+                } catch (error) {
+                    const duration = Date.now() - apiStartTime;
+                    testResults.push({
+                        name: apiTest.name,
+                        status: 'error',
+                        error: error.message,
+                        duration: duration + 'ms'
+                    });
+                }
+            }
+
+            const totalDuration = Date.now() - startTime;
+
+            res.json({
+                success: true,
+                results: testResults,
+                summary: {
+                    total: testResults.length,
+                    success: testResults.filter(r => r.status === 'success').length,
+                    failed: testResults.filter(r => r.status === 'error').length,
+                    totalDuration: totalDuration + 'ms',
+                    successRate: ((testResults.filter(r => r.status === 'success').length / testResults.length) * 100).toFixed(1) + '%'
+                }
+            });
+
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    return apiDebugRouter;
+}
+
+// Export برای backward compatibility
+const apiDebugRouter = createApiDebugRouter();
+
+module.exports = {
+    AdvancedCoinStatsAPIClient,
+    apiDebugSystem,
+    apiDebugRouter,
+    createApiDebugRouter,
+    AdvancedHealthMonitor
+};
