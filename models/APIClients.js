@@ -264,6 +264,13 @@ class AdvancedCoinStatsAPIClient {
 
     async getCoins(limit = 100) {
         const startTime = Date.now();
+
+        console.log('🔍 [BASE_URL CHECK]:', {
+            base_url: this.base_url,
+            api_key_exists: !!this.api_key,
+            api_key_preview: this.api_key ? this.api_key.substring(0, 15) + '...' : 'MISSING',
+            full_url: `${this.base_url}/coins?limit=${limit}&currency=USD`
+        });
         console.log('🔍 [GETCOINS] Starting getCoins with limit:', limit);
         
         const request = apiDebugSystem.logRequest('GET', `${this.base_url}/coins`, { limit });
@@ -271,6 +278,7 @@ class AdvancedCoinStatsAPIClient {
 
         try {
             const url = `${this.base_url}/coins?limit=${limit}&currency=USD`;
+            console.log('🔍 [FINAL URL]:', url);
             console.log('🔍 [GETCOINS] Fetching from URL:', url);
             console.log('🔍 [GETCOINS] API Key exists:', !!this.api_key);
 
