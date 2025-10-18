@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { generateNavigationHTML } = require('./navigation-generation');
+const { generateNavigationHTML } = require('./navigation-generator');
 
 function generateModernPage(title, content, currentPage = 'home') {
     return `
