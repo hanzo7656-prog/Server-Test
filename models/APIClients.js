@@ -1,7 +1,7 @@
 const express = require('express');
 const path = require('path');
-const WebSocketManager = require('../models/WebSocketManager');
-const GistManager = require('../models/GistManager');
+const WebSocketManager = require('./models/WebSocketManager');
+const GistManager = require('./models/GistManager');
 const constants = require('../config/constants');
 
 // سیستم دیباگ و مانیتورینگ پیشرفته
@@ -12,10 +12,9 @@ const apiDebugSystem = {
     endpointStatus: new Map(),
     healthChecks: [],
     fieldMapping: {},
-    
+
     logRequest: function(method, url, params = {}) {
         if (!this.enabled) return;
-        
         const request = {
             id: Date.now() + Math.random().toString(36).substr(2, 9),
             timestamp: new Date().toISOString(),
@@ -27,12 +26,11 @@ const apiDebugSystem = {
             duration: null,
             status: 'pending'
         };
-        
         this.requests.push(request);
         if (this.requests.length > 100) this.requests.shift();
         return request;
     },
-    
+
     logResponse: function(request, response, duration) {
         if (!this.enabled) return;
         request.response = response;
@@ -41,31 +39,29 @@ const apiDebugSystem = {
         request.completedAt = new Date().toISOString();
         this.updateEndpointStatus(request.url, 'healthy', duration);
     },
-    
+
     logError: function(request, error, stackTrace = null) {
         if (!this.enabled) return;
         request.error = { message: error.message, stack: stackTrace || error.stack, type: error.constructor.name };
         request.status = 'error';
         request.completedAt = new Date().toISOString();
         this.updateEndpointStatus(request.url, 'error', null, error.message);
-        
+
         const errorRecord = {
             id: Date.now() + Math.random().toString(36).substr(2, 9),
             timestamp: new Date().toISOString(),
             request: { method: request.method, url: request.url, params: request.params },
             error: { message: error.message, stack: stackTrace || error.stack, type: error.constructor.name, endpoint: request.url }
         };
-        
         this.errors.push(errorRecord);
         if (this.errors.length > 50) this.errors.shift();
     },
-    
+
     updateEndpointStatus: function(endpoint, status, responseTime = null, error = null) {
         const now = new Date().toISOString();
         const endpointStatus = this.endpointStatus.get(endpoint) || {
             endpoint, status: 'unknown', lastChecked: now, responseTimes: [], errorCount: 0, successCount: 0, lastError: null
         };
-        
         endpointStatus.lastChecked = now;
         endpointStatus.status = status;
         if (responseTime) {
@@ -76,7 +72,7 @@ const apiDebugSystem = {
         else if (status === 'error') { endpointStatus.errorCount++; endpointStatus.lastError = error; }
         this.endpointStatus.set(endpoint, endpointStatus);
     },
-    
+
     checkEndpointHealth: function(endpoint) {
         const status = this.endpointStatus.get(endpoint);
         if (!status) return { status: 'unknown', message: 'Never checked' };
@@ -89,25 +85,30 @@ const apiDebugSystem = {
             errorCount: status.errorCount, lastError: status.lastError
         };
     },
-    
+
     checkAllEndpointsHealth: function() {
         const healthReport = {};
         let healthyCount = 0, errorCount = 0, unknownCount = 0;
         for (const [endpoint] of this.endpointStatus) {
             const health = this.checkEndpointHealth(endpoint);
             healthReport[endpoint] = health;
-            if (health.status === 'healthy') healthyCount++;
+            if (health.status === "healthy") healthyCount++;
             else if (health.status === 'error') errorCount++;
             else unknownCount++;
         }
         return {
             timestamp: new Date().toISOString(),
-            summary: { totalEndpoints: this.endpointStatus.size, healthy: healthyCount, errors: errorCount, unknown: unknownCount,
-                healthPercentage: ((healthyCount / this.endpointStatus.size) * 100).toFixed(2) + '%' },
+            summary: { 
+                totalEndpoints: this.endpointStatus.size, 
+                healthy: healthyCount, 
+                errors: errorCount, 
+                unknown: unknownCount,
+                healthPercentage: ((healthyCount / this.endpointStatus.size) * 100).toFixed(2) + '%'
+            },
             details: healthReport
         };
     },
-    
+
     async testEndpointConnection(endpointUrl, timeout = 10000) {
         const startTime = Date.now();
         const request = this.logRequest('HEALTH_CHECK', endpointUrl, { timeout });
@@ -115,41 +116,71 @@ const apiDebugSystem = {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), timeout);
             const response = await fetch(endpointUrl, {
-                method: 'GET', headers: { 'X-API-KEY': constants.COINSTATS_API_KEY, 'Accept': 'application/json' }, signal: controller.signal
+                method: 'GET', 
+                headers: { 
+                    'X-API-KEY': constants.COINSTATS_API_KEY, 
+                    'Accept': 'application/json' 
+                }, 
+                signal: controller.signal
             });
             clearTimeout(timeoutId);
             const duration = Date.now() - startTime;
             if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             const data = await response.json();
             this.logResponse(request, { status: response.status, dataSize: JSON.stringify(data).length }, duration);
-            return { success: true, endpoint: endpointUrl, statusCode: response.status, responseTime: duration + 'ms', dataReceived: !!data, timestamp: new Date().toISOString() };
+            return { 
+                success: true, 
+                endpoint: endpointUrl, 
+                statusCode: response.status, 
+                responseTime: duration + 'ms', 
+                dataReceived: !!data, 
+                timestamp: new Date().toISOString() 
+            };
         } catch (error) {
             const duration = Date.now() - startTime;
             this.logError(request, error, error.stack);
-            return { success: false, endpoint: endpointUrl, error: error.message, responseTime: duration + 'ms', timestamp: new Date().toISOString(), stackTrace: error.stack };
+            return { 
+                success: false, 
+                endpoint: endpointUrl, 
+                error: error.message, 
+                responseTime: duration + 'ms', 
+                timestamp: new Date().toISOString(), 
+                stackTrace: error.stack 
+            };
         }
     },
-    
+
     async testAllCriticalConnections() {
         const criticalEndpoints = [
-            `${constants.API_URLS.base}/coins?limit=1`, `${constants.API_URLS.base}/markets`,
-            `${constants.API_URLS.base}/news?limit=1`, `${constants.API_URLS.base}/insights/fear-and-greed`,
-            `${constants.API_URLS.base}/tickers/exchanges`, `${constants.API_URLS.base}/coins/price/avg?coinId=bitcoin`,
-            `${constants.API_URLS.base}/insights/btc-dominance`, `${constants.API_URLS.base}/news/sources`
+            `${constants.API_URLS.base}/coins?limit=1`,
+            `${constants.API_URLS.base}/markets`,
+            `${constants.API_URLS.base}/news?limit=1`,
+            `${constants.API_URLS.base}/insights/fear-and-greed`,
+            `${constants.API_URLS.base}/tickers/exchanges`,
+            `${constants.API_URLS.base}/coins/price/avg?coinId=bitcoin`,
+            `${constants.API_URLS.base}/insights/btc-dominance`,
+            `${constants.API_URLS.base}/news/sources`
         ];
+
         const results = [];
         for (const endpoint of criticalEndpoints) {
             const result = await this.testEndpointConnection(endpoint);
             results.push(result);
             await new Promise(resolve => setTimeout(resolve, 500));
         }
-        return { timestamp: new Date().toISOString(), results: results, summary: {
-            total: results.length, successful: results.filter(r => r.success).length,
-            failed: results.filter(r => !r.success).length,
-            successRate: ((results.filter(r => r.success).length / results.length) * 100).toFixed(2) + '%'
-        }};
+
+        return { 
+            timestamp: new Date().toISOString(), 
+            results: results, 
+            summary: {
+                total: results.length, 
+                successful: results.filter(r => r.success).length,
+                failed: results.filter(r => !r.success).length,
+                successRate: ((results.filter(r => r.success).length / results.length) * 100).toFixed(2) + '%'
+            }
+        };
     },
-    
+
     analyzeErrors: function() {
         const errorAnalysis = { byEndpoint: {}, byType: {}, recentPatterns: [], mostCommonErrors: [] };
         this.errors.forEach(error => {
@@ -159,37 +190,58 @@ const apiDebugSystem = {
             errorAnalysis.byEndpoint[endpoint].lastError = error.timestamp;
             errorAnalysis.byEndpoint[endpoint].errors.push(error);
         });
+
         this.errors.forEach(error => {
             const errorType = error.error.type || 'Unknown';
             if (!errorAnalysis.byType[errorType]) errorAnalysis.byType[errorType] = 0;
             errorAnalysis.byType[errorType]++;
         });
-        errorAnalysis.mostCommonErrors = Object.entries(errorAnalysis.byType).sort(([,a], [,b]) => b - a).slice(0, 5).map(([type, count]) => ({ type, count }));
+
+        errorAnalysis.mostCommonErrors = Object.entries(errorAnalysis.byType)
+            .sort(([,a], [,b]) => b - a)
+            .slice(0, 5)
+            .map(([type, count]) => ({ type, count }));
+
         return errorAnalysis;
     },
-    
+
     getPerformanceStats: function() {
         const recentRequests = this.requests.filter(req => req.status === 'completed' || req.status === 'error');
         const successfulRequests = recentRequests.filter(req => req.status === 'completed');
-        const avgDuration = successfulRequests.length > 0 ? successfulRequests.reduce((sum, req) => sum + (req.duration || 0), 0) / successfulRequests.length : 0;
+        const avgDuration = successfulRequests.length > 0 ? 
+            successfulRequests.reduce((sum, req) => sum + (req.duration || 0), 0) / successfulRequests.length : 0;
+
         const endpointStats = {};
-        for (const [endpoint, status] of this.endpointStatus) endpointStats[endpoint] = this.checkEndpointHealth(endpoint);
+        for (const [endpoint] of this.endpointStatus) {
+            endpointStats[endpoint] = this.checkEndpointHealth(endpoint);
+        }
+
         return {
-            totalRequests: this.requests.length, completedRequests: recentRequests.length, successfulRequests: successfulRequests.length,
-            errorCount: this.errors.length, averageDuration: avgDuration.toFixed(2) + 'ms', successRate: recentRequests.length > 0 ? 
-            ((successfulRequests.length / recentRequests.length) * 100).toFixed(2) + '%' : '0%', endpointCount: this.endpointStatus.size,
-            uptime: process.uptime().toFixed(2) + 's', memoryUsage: `${(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2)} MB`
+            totalRequests: this.requests.length,
+            completedRequests: recentRequests.length,
+            successfulRequests: successfulRequests.length,
+            errorCount: this.errors.length,
+            averageDuration: avgDuration.toFixed(2) + 'ms',
+            successRate: recentRequests.length > 0 ?
+                ((successfulRequests.length / recentRequests.length) * 100).toFixed(2) + '%' : '0%',
+            endpointCount: this.endpointStatus.size,
+            uptime: process.uptime().toFixed(2) + 's',
+            memoryUsage: `${(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2)} MB`
         };
     },
-    
-    resetStats: function() { this.requests = []; this.errors = []; this.endpointStatus.clear(); console.log('✅ API statistics reset'); }
+
+    resetStats: function() { 
+        this.requests = []; 
+        this.errors = []; 
+        this.endpointStatus.clear(); 
+        console.log('✅ API statistics reset'); 
+    }
 };
 
-// Compatibility Layer برای سیستم قدیم
+// Compatibility Layer
 const compatibilityLayer = {
     normalizeCoinData: function(coinData, isRaw = false) {
         if (isRaw) return coinData;
-        
         return {
             id: coinData.id,
             symbol: coinData.symbol,
@@ -203,7 +255,7 @@ const compatibilityLayer = {
             __raw: coinData
         };
     },
-    
+
     findBestPriceChangeField: function(coin) {
         const possibleFields = ['priceChange24h', 'price_change_24h', 'change24h', 'priceChangePercentage24h', 'percent_change_24h'];
         for (const field of possibleFields) {
@@ -214,16 +266,19 @@ const compatibilityLayer = {
         }
         return { field: 'not_found', value: 0 };
     },
-    
+
     analyzeFieldMapping: function(coinData) {
-        if (!coinData || coinData.length == 0) return {};
+        if (!coinData || coinData.length === 0) return {};
         const sampleCoin = coinData[0];
         const fieldAnalysis = {
-            priceFields: Object.keys(sampleCoin).filter(key => key.toLowerCase().includes('price') && !key.toLowerCase().includes('change')),
-            changeFields: Object.keys(sampleCoin).filter(key => (key.toLowerCase().includes('change') || key.toLowerCase().includes('percent')) && 
+            priceFields: Object.keys(sampleCoin).filter(key => 
+                key.toLowerCase().includes('price') && key.toLowerCase().includes('change')),
+            changeFields: Object.keys(sampleCoin).filter(key =>
+                (key.toLowerCase().includes('change') || key.toLowerCase().includes('percent')) &&
                 (key.toLowerCase().includes('24h') || key.toLowerCase().includes('24_hour') || key.toLowerCase().includes('price'))),
             volumeFields: Object.keys(sampleCoin).filter(key => key.toLowerCase().includes('volume')),
-            marketCapFields: Object.keys(sampleCoin).filter(key => key.toLowerCase().includes('market') && key.toLowerCase().includes('cap')),
+            marketCapFields: Object.keys(sampleCoin).filter(key =>
+                key.toLowerCase().includes('market') && key.toLowerCase().includes('cap')),
             allFields: Object.keys(sampleCoin)
         };
         apiDebugSystem.fieldMapping = fieldAnalysis;
@@ -231,7 +286,6 @@ const compatibilityLayer = {
     }
 };
 
-// کلاینت اصلی API با تمام 40+ اندپوینت
 class AdvancedCoinStatsAPIClient {
     constructor() {
         this.base_url = constants.API_URLS.base;
@@ -240,15 +294,17 @@ class AdvancedCoinStatsAPIClient {
         this.last_request_time = Date.now();
         this.ratelimitDelay = 1000;
     }
-    
+
     async _rateLimit() {
         const currentTime = Date.now();
         const timeDiff = currentTime - this.last_request_time;
-        if (timeDiff < this.ratelimitDelay) await new Promise(resolve => setTimeout(resolve, this.ratelimitDelay - timeDiff));
+        if (timeDiff < this.ratelimitDelay) {
+            await new Promise(resolve => setTimeout(resolve, this.ratelimitDelay - timeDiff));
+        }
         this.last_request_time = Date.now();
         this.request_count++;
     }
-    
+
     async _makeRequest(endpoint, params = {}, isRaw = false) {
         const startTime = Date.now();
         const request = apiDebugSystem.logRequest('GET', `${this.base_url}${endpoint}`, params);
@@ -257,30 +313,30 @@ class AdvancedCoinStatsAPIClient {
         try {
             const url = new URL(`${this.base_url}${endpoint}`);
             Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
-            
+
             const response = await fetch(url, {
                 method: 'GET',
-                headers: { 'X-API-KEY': this.api_key, 'Accept': 'application/json', 'User-Agent': 'VortexAI-Server/1.0' }
+                headers: { 
+                    'X-API-KEY': this.api_key, 
+                    'Accept': 'application/json', 
+                    'User-Agent': 'VortexAI-Server/1.0' 
+                }
             });
-            
+
             if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            
             const data = await response.json();
             const duration = Date.now() - startTime;
-            
             apiDebugSystem.logResponse(request, { dataSize: JSON.stringify(data).length }, duration);
-            
+
             if (isRaw) return { success: true, data, raw: true };
-            
             return { success: true, data: this._normalizeData(endpoint, data) };
-            
         } catch (error) {
             const duration = Date.now() - startTime;
             apiDebugSystem.logError(request, error, error.stack);
             return { success: false, error: error.message };
         }
     }
-    
+
     _normalizeData(endpoint, data) {
         switch(endpoint) {
             case '/coins':
@@ -289,67 +345,65 @@ class AdvancedCoinStatsAPIClient {
                     return data.map(coin => compatibilityLayer.normalizeCoinData(coin));
                 }
                 return data;
-                
             case '/news':
                 if (data.result && Array.isArray(data.result)) return data.result;
                 return data;
-                
             default:
                 return data;
         }
     }
-    
-    // ==================== MARKET DATA ====================
+
+    // ===================== MARKET DATA ================================
     async getCoins(limit = 100, currency = 'USD', raw = false) {
         return this._makeRequest('/coins', { limit, currency }, raw);
     }
-    
+
     async getCoinDetails(coinId, currency = 'USD', raw = false) {
         return this._makeRequest(`/coins/${coinId}`, { currency }, raw);
     }
-    
+
     async getMarketCap(raw = false) {
         return this._makeRequest('/markets', {}, raw);
     }
-    
+
     async getCurrencies(raw = false) {
         return this._makeRequest('/currencies', {}, raw);
     }
-    
+
     async getTickerExchanges(raw = false) {
         return this._makeRequest('/tickers/exchanges', {}, raw);
     }
-    
+
     async getTickerMarkets(raw = false) {
         return this._makeRequest('/tickers/markets', {}, raw);
     }
-    
+
     async getCoinAvgPrice(coinId, timestamp = null, raw = false) {
         const params = { coinId };
         if (timestamp) params.timestamp = timestamp;
         return this._makeRequest('/coins/price/avg', params, raw);
     }
-    
+
     async getCoinExchangePrice(exchange, from, to, timestamp = null, raw = false) {
         const params = { exchange, from, to };
         if (timestamp) params.timestamp = timestamp;
         return this._makeRequest('/coins/price/exchange', params, raw);
     }
-    
-    // ==================== CHARTS ====================
+
+    // ========================= CHARTS =========================
     async getCoinCharts(coinId, period = '24h', raw = false) {
         return this._makeRequest(`/coins/${coinId}/charts`, { period }, raw);
     }
-    
+
     async getCoinsCharts(coinIds, period = '24h', raw = false) {
         return this._makeRequest('/coins/charts', { coinIds: coinIds.join(','), period }, raw);
     }
-    
-    // ==================== NEWS ====================
+
+    // ========================= NEWS =========================
     async getNews(params = {}, raw = false) {
         return this._makeRequest('/news', params, raw);
     }
-    
+
     async getNewsByType(type = 'trending', params = {}, raw = false) {
         const validTypes = ['handpicked', 'trending', 'latest', 'bullish', 'bearish'];
         if (!validTypes.includes(type)) {
@@ -357,45 +411,43 @@ class AdvancedCoinStatsAPIClient {
         }
         return this._makeRequest(`/news/type/${type}`, params, raw);
     }
-    
+
     async getNewsDetail(newsId, raw = false) {
         return this._makeRequest(`/news/${newsId}`, {}, raw);
     }
-    
+
     async getNewsSources(raw = false) {
         return this._makeRequest('/news/sources', {}, raw);
     }
-    
-    // ==================== INSIGHTS ====================
+
+    // ========================= INSIGHTS =========================
     async getFearGreedIndex(raw = false) {
         return this._makeRequest('/insights/fear-and-greed', {}, raw);
     }
-    
+
     async getFearGreedChart(raw = false) {
         return this._makeRequest('/insights/fear-and-greed/chart', {}, raw);
     }
-    
+
     async getBTCDominance(type = 'all', raw = false) {
         return this._makeRequest('/insights/btc-dominance', { type }, raw);
     }
-    
+
     async getRainbowChart(coin = 'bitcoin', raw = false) {
         return this._makeRequest(`/insights/rainbow-chart/${coin}`, {}, raw);
     }
-    
-    // ==================== COMPATIBILITY ====================
+
+    // ===================== COMPATIBILITY ======================
     async getTopGainers(limit = 10) {
         const result = await this.getCoins(50);
         if (!result.success) return [];
-        
         const gainers = (result.data || [])
             .filter(coin => coin.priceChange24h > 0)
             .sort((a, b) => b.priceChange24h - a.priceChange24h)
             .slice(0, limit);
-            
         return gainers;
     }
-    
+
     async getGlobalData(raw = false) {
         return this.getMarketCap(raw);
     }
@@ -409,7 +461,7 @@ class AdvancedHealthMonitor {
         this.healthChecks = [];
         this.lastFullCheck = null;
     }
-    
+
     async performFullHealthCheck() {
         const checkStart = Date.now();
         const healthReport = {
@@ -418,10 +470,10 @@ class AdvancedHealthMonitor {
             components: {},
             recommendations: []
         };
-        
+
         const apiHealth = await apiDebugSystem.testAllCriticalConnections();
         healthReport.components.apiConnectivity = apiHealth;
-        
+
         if (this.wsManager) {
             const wsStatus = this.wsManager.getConnectionStatus();
             healthReport.components.websocket = {
@@ -432,7 +484,7 @@ class AdvancedHealthMonitor {
                 provider: 'LBank'
             };
         }
-        
+
         if (this.gistManager) {
             const gistStatus = this.gistManager.getStatus();
             healthReport.components.gistDatabase = {
@@ -443,7 +495,7 @@ class AdvancedHealthMonitor {
                 hasData: gistStatus.has_data
             };
         }
-        
+
         healthReport.components.server = {
             status: 'healthy',
             uptime: process.uptime() + 's',
@@ -451,29 +503,29 @@ class AdvancedHealthMonitor {
             nodeVersion: process.version,
             platform: process.platform
         };
-        
+
         const endpointHealth = apiDebugSystem.checkAllEndpointsHealth();
         healthReport.components.endpoints = endpointHealth;
-        
+
         const failedComponents = [];
         if (apiHealth.summary.successRate < 80) failedComponents.push('API Connectivity');
         if (healthReport.components.websocket && !healthReport.components.websocket.connected) failedComponents.push('WebSocket');
         if (healthReport.components.gistDatabase && !healthReport.components.gistDatabase.active) failedComponents.push('Gist Database');
         if (endpointHealth.summary.healthPercentage < 80) failedComponents.push('Internal Endpoints');
-        
+
         if (failedComponents.length > 0) {
             healthReport.overallStatus = 'degraded';
             healthReport.failedComponents = failedComponents;
             healthReport.recommendations = failedComponents.map(comp => `بررسی و تعمیر ${comp}`);
         }
-        
+
         healthReport.checkDuration = (Date.now() - checkStart) + 'ms';
         this.lastFullCheck = healthReport;
         this.healthChecks.push(healthReport);
         if (this.healthChecks.length > 50) this.healthChecks.shift();
         return healthReport;
     }
-    
+
     getHealthHistory() { return this.healthChecks; }
     getLastHealthCheck() { return this.lastFullCheck; }
 }
@@ -482,7 +534,7 @@ class AdvancedHealthMonitor {
 function createApiDebugRouter(wsManager = null, gistManager = null) {
     const apiDebugRouter = express.Router();
     const healthMonitor = new AdvancedHealthMonitor(wsManager, gistManager);
-    
+
     apiDebugRouter.get('/api-stats', (req, res) => {
         try {
             res.json({
@@ -499,7 +551,7 @@ function createApiDebugRouter(wsManager = null, gistManager = null) {
             res.status(500).json({ success: false, error: error.message });
         }
     });
-    
+
     apiDebugRouter.get('/endpoints-health', (req, res) => {
         try {
             res.json({ success: true, ...apiDebugSystem.checkAllEndpointsHealth() });
@@ -507,7 +559,7 @@ function createApiDebugRouter(wsManager = null, gistManager = null) {
             res.status(500).json({ success: false, error: error.message });
         }
     });
-    
+
     apiDebugRouter.post('/test-endpoint', express.json(), async (req, res) => {
         try {
             const { endpointUrl, timeout = 10000 } = req.body;
@@ -518,7 +570,7 @@ function createApiDebugRouter(wsManager = null, gistManager = null) {
             res.status(500).json({ success: false, error: error.message });
         }
     });
-    
+
     apiDebugRouter.get('/full-health-check', async (req, res) => {
         try {
             const healthReport = await healthMonitor.performFullHealthCheck();
@@ -527,19 +579,21 @@ function createApiDebugRouter(wsManager = null, gistManager = null) {
             res.status(500).json({ success: false, error: error.message });
         }
     });
-    
+
     apiDebugRouter.get('/health-history', (req, res) => {
         try {
             const history = healthMonitor.getHealthHistory();
             res.json({
-                success: true, history: history, totalChecks: history.length,
+                success: true, 
+                history: history, 
+                totalChecks: history.length,
                 lastCheck: healthMonitor.getLastHealthCheck()?.timestamp
             });
         } catch (error) {
             res.status(500).json({ success: false, error: error.message });
         }
     });
-    
+
     apiDebugRouter.get('/error-analysis', (req, res) => {
         try {
             res.json({ success: true, ...apiDebugSystem.analyzeErrors() });
@@ -547,7 +601,7 @@ function createApiDebugRouter(wsManager = null, gistManager = null) {
             res.status(500).json({ success: false, error: error.message });
         }
     });
-    
+
     apiDebugRouter.get('/websocket-status', (req, res) => {
         try {
             if (!wsManager) return res.json({ success: false, error: 'WebSocket Manager not available' });
@@ -556,19 +610,34 @@ function createApiDebugRouter(wsManager = null, gistManager = null) {
             res.json({
                 success: true,
                 websocket: {
-                    provider: 'LBank', status: status.connected ? 'connected' : 'disconnected',
-                    activeConnections: 1, active_coins: status.active_coins, total_subscribed: status.total_subscribed,
-                    subscribedPairs: Array.from(status.coins || []), lastUpdate: new Date().toISOString(),
+                    provider: 'LBank', 
+                    status: status.connected ? 'connected' : 'disconnected',
+                    activeConnections: 1, 
+                    active_coins: status.active_coins, 
+                    total_subscribed: status.total_subscribed,
+                    subscribedPairs: Array.from(status.coins || []), 
+                    lastUpdate: new Date().toISOString(),
                     sampleData: Object.keys(realtimeData).slice(0, 5).map(symbol => ({
-                        symbol, price: realtimeData[symbol]?.price, last_updated: realtimeData[symbol]?.last_updated
+                        symbol, 
+                        price: realtimeData[symbol]?.price, 
+                        last_updated: realtimeData[symbol]?.last_updated
                     }))
-                }, timestamp: new Date().toISOString()
+                }, 
+                timestamp: new Date().toISOString()
             });
         } catch (error) {
-            res.json({ success: false, error: error.message, websocket: { provider: 'LBank', status: 'unknown', error: error.message } });
+            res.json({ 
+                success: false, 
+                error: error.message, 
+                websocket: { 
+                    provider: 'LBank', 
+                    status: 'unknown', 
+                    error: error.message 
+                } 
+            });
         }
     });
-    
+
     apiDebugRouter.get('/gist-status', (req, res) => {
         try {
             if (!gistManager) return res.json({ success: false, error: 'Gist Manager not available' });
@@ -577,16 +646,20 @@ function createApiDebugRouter(wsManager = null, gistManager = null) {
             res.json({
                 success: true,
                 gist: {
-                    active: status.active, total_coins: status.total_coins, last_updated: status.last_updated,
-                    has_data: status.has_data, sample_coins: Object.keys(allData.prices || {}).slice(0, 10),
-                    timeframes_available: gistManager.getAvailableTimeframes()
-                }, timestamp: new Date().toISOString()
+                    active: status.active, 
+                    total_coins: status.total_coins, 
+                    last_updated: status.last_updated,
+                    has_data: status.has_data, 
+                    sample_coins: Object.keys(allData.prices || {}).slice(0, 10), 
+                    timeframes_available: gistManager.getAvailableTimeframes() 
+                }, 
+                timestamp: new Date().toISOString()
             });
         } catch (error) {
             res.json({ success: false, error: error.message });
         }
     });
-    
+
     apiDebugRouter.get('/test-all-connections', async (req, res) => {
         try {
             const results = await apiDebugSystem.testAllCriticalConnections();
@@ -595,28 +668,34 @@ function createApiDebugRouter(wsManager = null, gistManager = null) {
             res.status(500).json({ success: false, error: error.message });
         }
     });
-    
+
     apiDebugRouter.get('/field-analysis', (req, res) => {
         try {
-            res.json({
-                success: true, fieldMapping: apiDebugSystem.fieldMapping,
-                suggestions: apiDebugSystem.fieldMapping.changeFields && apiDebugSystem.fieldMapping.changeFields.length == 0 ?
-                    ['No price change fields found! Check API response structure'] : ['Field mapping looks good']
+            res.json({ 
+                success: true, 
+                fieldMapping: apiDebugSystem.fieldMapping, 
+                suggestions: apiDebugSystem.fieldMapping.changeFields && apiDebugSystem.fieldMapping.changeFields.length === 0 ? 
+                    ["No price change fields found! Check API response structure"] : 
+                    ["Field mapping looks good"]
             });
         } catch (error) {
             res.status(500).json({ success: false, error: error.message });
         }
     });
-    
+
     apiDebugRouter.post('/reset-stats', (req, res) => {
         try {
             apiDebugSystem.resetStats();
-            res.json({ success: true, message: 'API statistics reset successfully', timestamp: new Date().toISOString() });
+            res.json({ 
+                success: true, 
+                message: 'API statistics reset successfully', 
+                timestamp: new Date().toISOString() 
+            });
         } catch (error) {
             res.status(500).json({ success: false, error: error.message });
         }
     });
-    
+
     apiDebugRouter.get('/test-coinstats-connection', async (req, res) => {
         try {
             const testResults = [];
@@ -630,28 +709,51 @@ function createApiDebugRouter(wsManager = null, gistManager = null) {
                 { name: 'CoinStats News Sources', url: 'https://openapiv1.coinstats.app/news/sources', method: 'GET' },
                 { name: 'CoinStats Avg Price', url: 'https://openapiv1.coinstats.app/coins/price/avg?coinId=bitcoin', method: 'GET' }
             ];
+
             for (const endpoint of coinStatsEndpoints) {
                 const startTime = Date.now();
                 try {
                     const controller = new AbortController();
                     const timeoutId = setTimeout(() => controller.abort(), 10000);
                     const response = await fetch(endpoint.url, {
-                        method: endpoint.method, headers: { 'X-API-KEY': constants.COINSTATS_API_KEY, 'Accept': 'application/json', 'User-Agent': 'VortexAI-Tester/1.0' }, signal: controller.signal
+                        method: endpoint.method, 
+                        headers: { 
+                            'X-API-KEY': constants.COINSTATS_API_KEY, 
+                            'Accept': 'application/json', 
+                            'User-Agent': 'VortexAI-Tester/1.0' 
+                        }, 
+                        signal: controller.signal
                     });
                     clearTimeout(timeoutId);
                     const duration = Date.now() - startTime;
                     testResults.push({
-                        name: endpoint.name, url: endpoint.url, status: 'success', httpStatus: response.status,
-                        duration: duration + 'ms', ok: response.ok, responseSize: response.headers.get('content-length') || 'unknown'
+                        name: endpoint.name, 
+                        url: endpoint.url, 
+                        status: 'success', 
+                        httpStatus: response.status,
+                        duration: duration + 'ms', 
+                        ok: response.ok, 
+                        responseSize: response.headers.get('content-length') || 'unknown'
                     });
                 } catch (error) {
                     const duration = Date.now() - startTime;
-                    testResults.push({ name: endpoint.name, url: endpoint.url, status: 'error', error: error.message, duration: duration + 'ms', httpStatus: 0 });
+                    testResults.push({ 
+                        name: endpoint.name, 
+                        url: endpoint.url, 
+                        status: 'error', 
+                        error: error.message, 
+                        duration: duration + 'ms', 
+                        httpStatus: 0 
+                    });
                 }
             }
+
             res.json({
-                success: true, results: testResults, summary: {
-                    total: testResults.length, success: testResults.filter(r => r.status === 'success').length,
+                success: true, 
+                results: testResults, 
+                summary: {
+                    total: testResults.length, 
+                    success: testResults.filter(r => r.status === 'success').length,
                     failed: testResults.filter(r => r.status === 'error').length,
                     successRate: ((testResults.filter(r => r.status === 'success').length / testResults.length) * 100).toFixed(1) + '%'
                 }
@@ -660,7 +762,7 @@ function createApiDebugRouter(wsManager = null, gistManager = null) {
             res.status(500).json({ success: false, error: error.message });
         }
     });
-    
+
     apiDebugRouter.get('/test-internal-apis', async (req, res) => {
         const startTime = Date.now();
         try {
@@ -682,22 +784,39 @@ function createApiDebugRouter(wsManager = null, gistManager = null) {
                 { name: 'getNewsByType (bullish)', test: () => apiClient.getNewsByType('bullish', { limit: 3 }) },
                 { name: 'getNewsByType (bearish)', test: () => apiClient.getNewsByType('bearish', { limit: 3 }) }
             ];
+
             for (const apiTest of internalAPIs) {
                 const apiStartTime = Date.now();
                 try {
                     const result = await apiTest.test();
                     const duration = Date.now() - apiStartTime;
-                    testResults.push({ name: apiTest.name, status: 'success', duration: duration + 'ms', dataReceived: !!result.data, success: result.success });
+                    testResults.push({ 
+                        name: apiTest.name, 
+                        status: 'success', 
+                        duration: duration + 'ms', 
+                        dataReceived: !!result.data, 
+                        success: result.success 
+                    });
                 } catch (error) {
                     const duration = Date.now() - apiStartTime;
-                    testResults.push({ name: apiTest.name, status: 'error', error: error.message, duration: duration + 'ms' });
+                    testResults.push({ 
+                        name: apiTest.name, 
+                        status: 'error', 
+                        error: error.message, 
+                        duration: duration + 'ms' 
+                    });
                 }
             }
+
             const totalDuration = Date.now() - startTime;
             res.json({
-                success: true, results: testResults, summary: {
-                    total: testResults.length, success: testResults.filter(r => r.status === 'success').length,
-                    failed: testResults.filter(r => r.status === 'error').length, totalDuration: totalDuration + 'ms',
+                success: true, 
+                results: testResults, 
+                summary: {
+                    total: testResults.length, 
+                    success: testResults.filter(r => r.status === 'success').length,
+                    failed: testResults.filter(r => r.status === 'error').length, 
+                    totalDuration: totalDuration + 'ms',
                     successRate: ((testResults.filter(r => r.status === 'success').length / testResults.length) * 100).toFixed(1) + '%'
                 }
             });
@@ -705,27 +824,29 @@ function createApiDebugRouter(wsManager = null, gistManager = null) {
             res.status(500).json({ success: false, error: error.message });
         }
     });
-    
+
     return apiDebugRouter;
 }
 
-// کلاس تحلیل تکنیکال برای API
+// کلاس تحلیل تکنیکال برای front-end
 class TechnicalAnalysisAPI {
     constructor() {
+        const TechnicalAnalysisEngine = require('./TechnicalAnalysis');
         this.engine = new TechnicalAnalysisEngine();
     }
 
     // تحلیل پیشرفته برای front-end
     async getTechnicalAnalysis(symbol, timeframe = '24h') {
         try {
-            const chartData = await this.getCoinCharts(symbol, timeframe, false);
+            const apiClient = new AdvancedCoinStatsAPIClient();
+            const chartData = await apiClient.getCoinCharts(symbol, timeframe, false);
             if (!chartData.success) {
                 throw new Error('Failed to fetch chart data');
             }
 
             const priceData = this.prepareChartDataForAnalysis(chartData.data);
-            const indicators = TechnicalAnalysisEngine.calculateAllIndicators(priceData);
-            
+            const indicators = this.engine.calculateAllIndicators(priceData);
+
             return {
                 success: true,
                 data: {
@@ -747,7 +868,6 @@ class TechnicalAnalysisAPI {
     prepareChartDataForAnalysis(chartData) {
         // پیاده‌سازی مشابه تابع preparePriceDataForAnalysis
         if (!chartData || !chartData.chart) return [];
-        
         return chartData.chart.map((point, index) => ({
             timestamp: point[0],
             open: point[1] * 0.99,
@@ -771,12 +891,10 @@ class TechnicalAnalysisAPI {
     calculateSentiment(indicators) {
         // محاسبه احساسات بازار بر اساس اندیکاتورها
         let score = 0;
-        
         if (indicators.rsi < 30) score += 2;
         if (indicators.rsi > 70) score -= 2;
         if (indicators.macd > indicators.macd_signal) score += 1;
         if (indicators.moving_avg_20 > indicators.moving_avg_50) score += 1;
-        
         if (score > 1) return 'BULLISH';
         if (score < -1) return 'BEARISH';
         return 'NEUTRAL';
@@ -797,7 +915,6 @@ class TechnicalAnalysisAPI {
 
     assessRisk(indicators) {
         const volatility = Math.abs(indicators.bollinger_upper - indicators.bollinger_lower) / indicators.bollinger_middle;
-        
         if (volatility > 0.1) return 'HIGH';
         if (volatility > 0.05) return 'MEDIUM';
         return 'LOW';
@@ -805,14 +922,13 @@ class TechnicalAnalysisAPI {
 
     generateRecommendations(indicators) {
         const recommendations = [];
-        
-        if (indicators.rsi < 30) recommendations.push('سیگنال خرید بر اساس RSI');
-        if (indicators.rsi > 70) recommendations.push('سیگنال فروش بر اساس RSI');
-        if (indicators.macd_hist > 0) recommendations.push('تغییر روند مثبت در MACD');
-        
+        if (indicators.rsi < 30) recommendations.push("سیگنال خرید بر اساس RSI");
+        if (indicators.rsi > 70) recommendations.push("سیگنال فروش بر اساس RSI");
+        if (indicators.macd_hist > 0) recommendations.push("تغییر روند مثبت در MACD");
         return recommendations;
     }
 }
+
 // Export برای backward compatibility
 const apiDebugRouter = createApiDebugRouter();
 
