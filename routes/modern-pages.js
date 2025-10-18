@@ -1,8 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { generateNavigationHTML } = require('./navigation-generator');
+const { generateNavigationHTML } = require('./navigation-generation');
 
-// تابع تولید صفحه
 function generateModernPage(title, content, currentPage = 'home') {
     return `
     <!DOCTYPE html>
@@ -64,6 +63,16 @@ function generateModernPage(title, content, currentPage = 'home') {
                 font-size: 0.8rem;
                 margin: 5px 0;
             }
+            .status-indicator.error {
+                background: rgba(239,68,68,0.2);
+                border-color: rgba(239,68,68,0.4);
+                color: #ef4444;
+            }
+            .status-indicator.warning {
+                background: rgba(245,158,11,0.2);
+                border-color: rgba(245,158,11,0.4);
+                color: #f59e0b;
+            }
             .btn {
                 display: inline-block;
                 padding: 10px 20px;
@@ -74,6 +83,7 @@ function generateModernPage(title, content, currentPage = 'home') {
                 text-decoration: none;
                 margin: 5px;
                 cursor: pointer;
+                font-size: 0.9rem;
             }
             .data-table {
                 width: 100%;
@@ -86,7 +96,7 @@ function generateModernPage(title, content, currentPage = 'home') {
                 border-bottom: 1px solid rgba(255,255,255,0.1);
                 text-align: right;
             }
-            .tabs { display: flex; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+            .tabs { display: flex; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); flex-wrap: wrap; }
             .tab {
                 padding: 10px 20px;
                 background: none;
@@ -94,10 +104,12 @@ function generateModernPage(title, content, currentPage = 'home') {
                 color: rgba(255,255,255,0.6);
                 cursor: pointer;
                 border-bottom: 2px solid transparent;
+                transition: all 0.3s ease;
             }
             .tab.active {
                 color: #667eea;
                 border-bottom-color: #667eea;
+                background: rgba(102,126,234,0.1);
             }
             .tab-content { display: none; }
             .tab-content.active { display: block; }
@@ -110,10 +122,53 @@ function generateModernPage(title, content, currentPage = 'home') {
                 font-size: 0.8rem;
                 max-height: 200px;
                 overflow-y: auto;
+                white-space: pre-wrap;
+            }
+            .log-entry {
+                padding: 8px 12px;
+                margin: 5px 0;
+                border-radius: 6px;
+                border-right: 3px solid #667eea;
+                background: rgba(255,255,255,0.05);
+            }
+            .log-entry.error {
+                border-right-color: #ef4444;
+                background: rgba(239,68,68,0.1);
+            }
+            .log-entry.success {
+                border-right-color: #10b981;
+                background: rgba(16,185,129,0.1);
+            }
+            .metric-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+                gap: 10px;
+                margin: 15px 0;
+            }
+            .metric-card {
+                background: rgba(255,255,255,0.03);
+                padding: 15px;
+                border-radius: 10px;
+                text-align: center;
+                border: 1px solid rgba(255,255,255,0.05);
+            }
+            .metric-value {
+                font-size: 1.4rem;
+                font-weight: bold;
+                background: linear-gradient(135deg, #667eea, #f115f9);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                margin-bottom: 5px;
+            }
+            .metric-label {
+                font-size: 0.7rem;
+                color: rgba(255,255,255,0.6);
             }
             @media (max-width: 768px) {
                 .content-grid { grid-template-columns: 1fr; }
                 .title { font-size: 2rem; }
+                .tabs { flex-direction: column; }
+                .tab { text-align: right; }
             }
         </style>
     </head>
@@ -126,6 +181,28 @@ function generateModernPage(title, content, currentPage = 'home') {
             ${content}
         </div>
         ${generateNavigationHTML(currentPage)}
+        
+        <script>
+            function openTab(evt, tabName) {
+                const tabcontent = document.getElementsByClassName("tab-content");
+                for (let i = 0; i < tabcontent.length; i++) {
+                    tabcontent[i].classList.remove("active");
+                }
+                
+                const tablinks = document.getElementsByClassName("tab");
+                for (let i = 0; i < tablinks.length; i++) {
+                    tablinks[i].classList.remove("active");
+                }
+                
+                document.getElementById(tabName).classList.add("active");
+                evt.currentTarget.classList.add("active");
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+                const firstTab = document.querySelector('.tab');
+                if (firstTab) firstTab.click();
+            });
+        </script>
     </body>
     </html>`;
 }
@@ -142,12 +219,26 @@ module.exports = (dependencies) => {
                         <div class="card-icon">📊</div>
                         <h3>وضعیت سیستم</h3>
                     </div>
-                    <div class="status-indicator">✅ سیستم فعال</div>
-                    <div style="margin-top: 15px;">
-                        <div>🟢 WebSocket: متصل</div>
-                        <div>🟢 API: فعال</div>
-                        <div>🟢 دیتابیس: آماده</div>
+                    <div class="status-indicator">✅ سیستم فعال و پایدار</div>
+                    <div class="metric-grid">
+                        <div class="metric-card">
+                            <div class="metric-value" id="uptime">--</div>
+                            <div class="metric-label">زمان فعالیت</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value" id="requestCount">--</div>
+                            <div class="metric-label">درخواست‌ها</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value" id="successRate">--%</div>
+                            <div class="metric-label">موفقیت</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value" id="memory">--</div>
+                            <div class="metric-label">حافظه</div>
+                        </div>
                     </div>
+                    <button class="btn" onclick="loadSystemStats()">بروزرسانی آمار</button>
                 </div>
 
                 <div class="content-card">
@@ -156,9 +247,9 @@ module.exports = (dependencies) => {
                         <h3>دسترسی سریع</h3>
                     </div>
                     <div style="margin-top: 15px;">
-                        <a href="/scan-page" class="btn">🔍 اسکن</a>
-                        <a href="/analysis-page" class="btn">📊 تحلیل</a>
-                        <a href="/markets-page" class="btn">📈 بازار</a>
+                        <a href="/scan-page" class="btn">🔍 اسکن بازار</a>
+                        <a href="/analysis-page" class="btn">📊 تحلیل تکنیکال</a>
+                        <a href="/markets-page" class="btn">📈 مشاهده بازار</a>
                         <a href="/settings" class="btn">⚙️ تنظیمات</a>
                     </div>
                 </div>
@@ -169,13 +260,33 @@ module.exports = (dependencies) => {
                         <h3>آمار زنده</h3>
                     </div>
                     <div style="margin-top: 15px;">
-                        <div>📊 300+ ارز فعال</div>
-                        <div>⚡ 40+ اندیکاتور</div>
-                        <div>🔗 50+ اندپوینت</div>
+                        <div>🔗 300+ ارز فعال</div>
+                        <div>📊 40+ اندیکاتور</div>
+                        <div>🌐 50+ اندپوینت</div>
                         <div>❤️ 100% سلامت</div>
                     </div>
                 </div>
             </div>
+
+            <script>
+                async function loadSystemStats() {
+                    try {
+                        const response = await fetch('/api/system/stats');
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            const perf = data.data.performance;
+                            document.getElementById('uptime').textContent = perf.uptime;
+                            document.getElementById('requestCount').textContent = perf.totalRequests;
+                            document.getElementById('successRate').textContent = perf.successRate;
+                            document.getElementById('memory').textContent = perf.memoryUsage;
+                        }
+                    } catch (error) {
+                        console.error('Error loading stats:', error);
+                    }
+                }
+                loadSystemStats();
+            </script>
         `;
         res.send(generateModernPage("داشبورد", content, 'home'));
     });
@@ -188,36 +299,58 @@ module.exports = (dependencies) => {
                     <div class="card-icon">🔍</div>
                     <h3>اسکن بازار ارزها</h3>
                 </div>
-                <div class="status-indicator">🔄 در حال توسعه</div>
-                <p style="margin: 15px 0; color: rgba(255,255,255,0.7);">
-                    سیستم اسکن پیشرفته 300 ارز برتر بازار
-                </p>
-                <div>
+                <div class="status-indicator">🔄 سیستم اسکن فعال</div>
+                <div style="margin: 15px 0;">
+                    <input type="number" id="scanLimit" value="100" min="10" max="300" 
+                           style="padding: 8px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: white; width: 100px;">
                     <button class="btn" onclick="runScan()">اجرای اسکن</button>
-                    <button class="btn">تنظیمات فیلتر</button>
+                </div>
+                <div id="scanResult">
+                    <div class="status-indicator">برای اسکن بازار دکمه بالا را بزنید</div>
                 </div>
             </div>
 
             <script>
-                function runScan() {
-                    alert('سیستم اسکن به زودی راه‌اندازی می‌شود');
+                async function runScan() {
+                    const limit = document.getElementById('scanLimit').value;
+                    document.getElementById('scanResult').innerHTML = '<div class="status-indicator">🔄 در حال اسکن بازار...</div>';
+                    
+                    try {
+                        const response = await fetch('/api/scan?limit=' + limit);
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            document.getElementById('scanResult').innerHTML = \`
+                                <div class="status-indicator">✅ اسکن کامل شد</div>
+                                <div style="margin-top: 10px;">
+                                    <div>📊 تعداد ارزها: \${data.data.length}</div>
+                                    <div>💰 اولین ارز: \${data.data[0]?.name || 'N/A'}</div>
+                                    <div>💎 قیمت: \${data.data[0]?.price || 'N/A'} USD</div>
+                                </div>
+                            \`;
+                        } else {
+                            document.getElementById('scanResult').innerHTML = '<div class="status-indicator error">❌ خطا در اسکن</div>';
+                        }
+                    } catch (error) {
+                        document.getElementById('scanResult').innerHTML = '<div class="status-indicator error">❌ خطا در ارتباط</div>';
+                    }
                 }
             </script>
         `;
         res.send(generateModernPage("اسکن بازار", content, 'scan'));
     });
 
-    // صفحه تحلیل
+    // صفحه تحلیل تکنیکال
     router.get("/analysis-page", (req, res) => {
         const symbol = req.query.symbol || 'bitcoin';
         const content = `
             <div class="content-card">
                 <div class="card-header">
                     <div class="card-icon">📊</div>
-                    <h3>تحلیل تکنیکال</h3>
+                    <h3>تحلیل تکنیکال پیشرفته</h3>
                 </div>
                 <div style="margin: 15px 0;">
-                    <input type="text" id="symbolInput" value="${symbol}" placeholder="نماد ارز (مثال: bitcoin)" 
+                    <input type="text" id="symbolInput" value="${symbol}" placeholder="نماد ارز (bitcoin, ethereum...)" 
                            style="padding: 8px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: white; width: 200px;">
                     <button class="btn" onclick="loadAnalysis()">بارگذاری تحلیل</button>
                 </div>
@@ -231,7 +364,7 @@ module.exports = (dependencies) => {
                     const symbol = document.getElementById('symbolInput').value;
                     if (!symbol) return;
                     
-                    document.getElementById('analysisResult').innerHTML = '<div class="status-indicator">🔄 در حال بارگذاری...</div>';
+                    document.getElementById('analysisResult').innerHTML = '<div class="status-indicator">🔄 در حال بارگذاری تحلیل...</div>';
                     
                     try {
                         const response = await fetch('/api/analysis/technical?symbol=' + symbol);
@@ -251,30 +384,425 @@ module.exports = (dependencies) => {
                     const html = \`
                         <div style="margin-top: 15px;">
                             <div class="status-indicator">✅ تحلیل بارگذاری شد</div>
-                            <div>💰 قیمت: \${data.current_price} USD</div>
-                            <div>📈 RSI: \${data.indicators.rsi}</div>
-                            <div>🎯 سیگنال: \${data.signals.trend}</div>
-                            <div>💪 قدرت: \${data.signals.strength}%</div>
+                            <div class="metric-grid">
+                                <div class="metric-card">
+                                    <div class="metric-value">\${data.current_price?.toFixed(2) || '0'}</div>
+                                    <div class="metric-label">قیمت (USD)</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-value">\${data.indicators?.rsi || '0'}</div>
+                                    <div class="metric-label">RSI</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-value">\${data.signals?.trend || 'NEUTRAL'}</div>
+                                    <div class="metric-label">سیگنال</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-value">\${data.signals?.strength || '0'}%</div>
+                                    <div class="metric-label">قدرت</div>
+                                </div>
+                            </div>
                         </div>
                     \`;
                     document.getElementById('analysisResult').innerHTML = html;
                 }
 
-                // اگر نماد در URL وجود دارد
                 ${symbol !== 'bitcoin' ? `setTimeout(loadAnalysis, 500);` : ''}
             </script>
         `;
         res.send(generateModernPage("تحلیل تکنیکال", content, 'analyze'));
     });
 
-    // صفحه تنظیمات (تمام دیباگ و لاگ‌ها)
+    // صفحه بازار
+    router.get("/markets-page", (req, res) => {
+        const content = `
+            <div class="content-grid">
+                <div class="content-card">
+                    <div class="card-header">
+                        <div class="card-icon">📈</div>
+                        <h3>داده‌های بازار</h3>
+                    </div>
+                    <div class="status-indicator">🔄 داده‌های زنده فعال</div>
+                    <div style="margin: 15px 0;">
+                        <button class="btn" onclick="loadMarketData()">بارگذاری داده‌ها</button>
+                        <button class="btn" onclick="loadTopGainers()">برترین سودها</button>
+                    </div>
+                    <div id="marketResult">
+                        <div class="status-indicator">برای مشاهده داده‌ها دکمه بالا را بزنید</div>
+                    </div>
+                </div>
+
+                <div class="content-card">
+                    <div class="card-header">
+                        <div class="card-icon">💰</div>
+                        <h3>مارکت کپ جهانی</h3>
+                    </div>
+                    <button class="btn" onclick="loadMarketCap()">بارگذاری مارکت کپ</button>
+                    <div id="marketCapResult" style="margin-top: 15px;">
+                        <div class="status-indicator">آماده بارگذاری</div>
+                    </div>
+                </div>
+            </div>
+
+            <script>
+                async function loadMarketData() {
+                    try {
+                        document.getElementById('marketResult').innerHTML = '<div class="status-indicator">🔄 در حال بارگذاری داده‌ها...</div>';
+                        
+                        const response = await fetch('/api/coins?limit=10');
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            let html = '<div class="status-indicator">✅ داده‌ها بارگذاری شد</div><div style="margin-top: 10px;">';
+                            data.data.forEach(coin => {
+                                html += \`<div style="margin: 5px 0; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 5px;">
+                                    <strong>\${coin.name}</strong>: \${coin.price} USD
+                                </div>\`;
+                            });
+                            html += '</div>';
+                            document.getElementById('marketResult').innerHTML = html;
+                        }
+                    } catch (error) {
+                        document.getElementById('marketResult').innerHTML = '<div class="status-indicator error">❌ خطا در بارگذاری</div>';
+                    }
+                }
+
+                async function loadTopGainers() {
+                    try {
+                        document.getElementById('marketResult').innerHTML = '<div class="status-indicator">🔄 در حال بارگذاری برترین‌ها...</div>';
+                        
+                        const response = await fetch('/api/dashboard/top-gainers?limit=5');
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            let html = '<div class="status-indicator">✅ برترین سودها</div><div style="margin-top: 10px;">';
+                            data.data.forEach(coin => {
+                                html += \`<div style="margin: 5px 0; padding: 8px; background: rgba(16,185,129,0.1); border-radius: 5px;">
+                                    <strong>\${coin.name}</strong>: +\${coin.priceChange24h}%
+                                </div>\`;
+                            });
+                            html += '</div>';
+                            document.getElementById('marketResult').innerHTML = html;
+                        }
+                    } catch (error) {
+                        document.getElementById('marketResult').innerHTML = '<div class="status-indicator error">❌ خطا در بارگذاری</div>';
+                    }
+                }
+
+                async function loadMarketCap() {
+                    try {
+                        document.getElementById('marketCapResult').innerHTML = '<div class="status-indicator">🔄 در حال بارگذاری...</div>';
+                        
+                        const response = await fetch('/api/markets/cap');
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            document.getElementById('marketCapResult').innerHTML = \`
+                                <div class="status-indicator">✅ مارکت کپ بارگذاری شد</div>
+                                <div style="margin-top: 10px;">
+                                    <div>💰 مارکت کپ جهانی: \${data.data[0]?.market_cap || 'N/A'}</div>
+                                    <div>📊 حجم معاملات: \${data.data[0]?.volume || 'N/A'}</div>
+                                </div>
+                            \`;
+                        }
+                    } catch (error) {
+                        document.getElementById('marketCapResult').innerHTML = '<div class="status-indicator error">❌ خطا در بارگذاری</div>';
+                    }
+                }
+            </script>
+        `;
+        res.send(generateModernPage("بازار سرمایه", content, 'market'));
+    });
+
+    // صفحه بینش‌ها
+    router.get("/insights-page", (req, res) => {
+        const content = `
+            <div class="content-grid">
+                <div class="content-card">
+                    <div class="card-header">
+                        <div class="card-icon">💡</div>
+                        <h3>بینش‌های بازار</h3>
+                    </div>
+                    <div class="status-indicator">🔄 تحلیل‌های هوشمند فعال</div>
+                    <div style="margin: 15px 0;">
+                        <button class="btn" onclick="loadDashboard()">بارگذاری دشبورد</button>
+                        <button class="btn" onclick="loadFearGreed()">شاخص ترس و طمع</button>
+                    </div>
+                    <div id="insightsResult">
+                        <div class="status-indicator">برای مشاهده بینش‌ها دکمه بالا را بزنید</div>
+                    </div>
+                </div>
+
+                <div class="content-card">
+                    <div class="card-header">
+                        <div class="card-icon">₿</div>
+                        <h3>تسلط بیت‌کوین</h3>
+                    </div>
+                    <button class="btn" onclick="loadBTCDominance()">بارگذاری تسلط</button>
+                    <div id="btcDominanceResult" style="margin-top: 15px;">
+                        <div class="status-indicator">آماده بارگذاری</div>
+                    </div>
+                </div>
+            </div>
+
+            <script>
+                async function loadDashboard() {
+                    try {
+                        document.getElementById('insightsResult').innerHTML = '<div class="status-indicator">🔄 در حال بارگذاری دشبورد...</div>';
+                        
+                        const response = await fetch('/api/insights/dashboard');
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            const dashboard = data.data;
+                            document.getElementById('insightsResult').innerHTML = \`
+                                <div class="status-indicator">✅ دشبورد بارگذاری شد</div>
+                                <div style="margin-top: 10px;">
+                                    <div>₿ تسلط بیت‌کوین: \${dashboard.btc_dominance || 'N/A'}%</div>
+                                    <div>😨 شاخص ترس و طمع: \${dashboard.fear_greed || 'N/A'}</div>
+                                    <div>💰 مارکت کپ: \${dashboard.market_cap || 'N/A'}</div>
+                                </div>
+                            \`;
+                        }
+                    } catch (error) {
+                        document.getElementById('insightsResult').innerHTML = '<div class="status-indicator error">❌ خطا در بارگذاری</div>';
+                    }
+                }
+
+                async function loadFearGreed() {
+                    try {
+                        document.getElementById('insightsResult').innerHTML = '<div class="status-indicator">🔄 در حال بارگذاری شاخص...</div>';
+                        
+                        const response = await fetch('/api/insights/fear-greed');
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            document.getElementById('insightsResult').innerHTML = \`
+                                <div class="status-indicator">✅ شاخص ترس و طمع</div>
+                                <div style="margin-top: 10px;">
+                                    <div>🎯 مقدار: \${data.data || 'N/A'}</div>
+                                    <div>📊 وضعیت: \${getFearGreedStatus(data.data)}</div>
+                                </div>
+                            \`;
+                        }
+                    } catch (error) {
+                        document.getElementById('insightsResult').innerHTML = '<div class="status-indicator error">❌ خطا در بارگذاری</div>';
+                    }
+                }
+
+                async function loadBTCDominance() {
+                    try {
+                        document.getElementById('btcDominanceResult').innerHTML = '<div class="status-indicator">🔄 در حال بارگذاری...</div>';
+                        
+                        const response = await fetch('/api/insights/btc-dominance');
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            document.getElementById('btcDominanceResult').innerHTML = \`
+                                <div class="status-indicator">✅ تسلط بیت‌کوین</div>
+                                <div style="margin-top: 10px;">
+                                    <div>₿ تسلط: \${data.data || 'N/A'}%</div>
+                                    <div>📈 وضعیت بازار: \${getDominanceStatus(data.data)}</div>
+                                </div>
+                            \`;
+                        }
+                    } catch (error) {
+                        document.getElementById('btcDominanceResult').innerHTML = '<div class="status-indicator error">❌ خطا در بارگذاری</div>';
+                    }
+                }
+
+                function getFearGreedStatus(value) {
+                    if (value >= 80) return '💀 طمع شدید';
+                    if (value >= 60) return '😊 طمع';
+                    if (value >= 40) return '😐 خنثی';
+                    if (value >= 20) return '😨 ترس';
+                    return '💀 ترس شدید';
+                }
+
+                function getDominanceStatus(value) {
+                    if (value >= 60) return 'قوی بیت‌کوین';
+                    if (value >= 45) return 'متوازن';
+                    return 'ضعیف بیت‌کوین';
+                }
+            </script>
+        `;
+        res.send(generateModernPage("بینش‌های بازار", content, 'insights'));
+    });
+
+    // صفحه اخبار
+    router.get("/news-page", (req, res) => {
+        const content = `
+            <div class="content-card">
+                <div class="card-header">
+                    <div class="card-icon">📰</div>
+                    <h3>اخبار کریپتو</h3>
+                </div>
+                <div class="status-indicator">🔄 سیستم اخبار فعال</div>
+                <div style="margin: 15px 0;">
+                    <button class="btn" onclick="loadNews()">بارگذاری اخبار</button>
+                    <button class="btn" onclick="loadTrendingNews()">اخبار ترند</button>
+                </div>
+                <div id="newsResult">
+                    <div class="status-indicator">برای مشاهده اخبار دکمه بالا را بزنید</div>
+                </div>
+            </div>
+
+            <script>
+                async function loadNews() {
+                    try {
+                        document.getElementById('newsResult').innerHTML = '<div class="status-indicator">🔄 در حال بارگذاری اخبار...</div>';
+                        
+                        const response = await fetch('/api/news?limit=5');
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            let html = '<div class="status-indicator">✅ اخبار بارگذاری شد</div><div style="margin-top: 10px;">';
+                            data.data.forEach((news, index) => {
+                                if (index < 3) {
+                                    html += \`<div style="margin: 10px 0; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                                        <strong>\${news.title || 'بدون عنوان'}</strong><br>
+                                        <small>\${news.description || 'بدون توضیح'}</small>
+                                    </div>\`;
+                                }
+                            });
+                            html += '</div>';
+                            document.getElementById('newsResult').innerHTML = html;
+                        }
+                    } catch (error) {
+                        document.getElementById('newsResult').innerHTML = '<div class="status-indicator error">❌ خطا در بارگذاری اخبار</div>';
+                    }
+                }
+
+                async function loadTrendingNews() {
+                    try {
+                        document.getElementById('newsResult').innerHTML = '<div class="status-indicator">🔄 در حال بارگذاری اخبار ترند...</div>';
+                        
+                        const response = await fetch('/api/news/trending?limit=3');
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            let html = '<div class="status-indicator">✅ اخبار ترند</div><div style="margin-top: 10px;">';
+                            data.data.forEach(news => {
+                                html += \`<div style="margin: 10px 0; padding: 10px; background: rgba(102,126,234,0.1); border-radius: 8px;">
+                                    <strong>🔥 \${news.title || 'بدون عنوان'}</strong><br>
+                                    <small>\${news.description || 'بدون توضیح'}</small>
+                                </div>\`;
+                            });
+                            html += '</div>';
+                            document.getElementById('newsResult').innerHTML = html;
+                        }
+                    } catch (error) {
+                        document.getElementById('newsResult').innerHTML = '<div class="status-indicator error">❌ خطا در بارگذاری</div>';
+                    }
+                }
+            </script>
+        `;
+        res.send(generateModernPage("اخبار کریپتو", content, 'news'));
+    });
+
+    // صفحه سلامت
+    router.get("/health-page", (req, res) => {
+        const content = `
+            <div class="content-grid">
+                <div class="content-card">
+                    <div class="card-header">
+                        <div class="card-icon">❤️</div>
+                        <h3>سلامت سیستم</h3>
+                    </div>
+                    <div class="status-indicator">🔄 مانیتورینگ فعال</div>
+                    <button class="btn" onclick="checkSystemHealth()">بررسی سلامت</button>
+                    <div id="healthResult" style="margin-top: 15px;">
+                        <div class="status-indicator">برای بررسی سلامت دکمه بالا را بزنید</div>
+                    </div>
+                </div>
+
+                <div class="content-card">
+                    <div class="card-header">
+                        <div class="card-icon">📊</div>
+                        <h3>آمار لحظه‌ای</h3>
+                    </div>
+                    <div class="metric-grid">
+                        <div class="metric-card">
+                            <div class="metric-value" id="liveUptime">--</div>
+                            <div class="metric-label">آپتایم</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value" id="liveRequests">--</div>
+                            <div class="metric-label">درخواست‌ها</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value" id="liveSuccess">--%</div>
+                            <div class="metric-label">موفقیت</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value" id="liveMemory">--</div>
+                            <div class="metric-label">حافظه</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <script>
+                async function checkSystemHealth() {
+                    try {
+                        document.getElementById('healthResult').innerHTML = '<div class="status-indicator">🔄 در حال بررسی سلامت...</div>';
+                        
+                        const response = await fetch('/api/health/combined');
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            const health = data.data;
+                            document.getElementById('healthResult').innerHTML = \`
+                                <div class="status-indicator">✅ سیستم سالم است</div>
+                                <div style="margin-top: 15px;">
+                                    <div>🟢 وضعیت کلی: \${health.status}</div>
+                                    <div>🟢 WebSocket: \${health.websocket_status.status}</div>
+                                    <div>🟢 دیتابیس: \${health.gist_status.status}</div>
+                                    <div>🟢 API: \${health.api_status.status}</div>
+                                    <div>🟢 سرور: \${health.system_status?.status || 'سالم'}</div>
+                                </div>
+                            \`;
+                        }
+                    } catch (error) {
+                        document.getElementById('healthResult').innerHTML = '<div class="status-indicator error">❌ خطا در بررسی سلامت</div>';
+                    }
+                }
+
+                async function updateLiveStatus() {
+                    try {
+                        const response = await fetch('/api/system/stats');
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            const perf = data.data.performance;
+                            document.getElementById('liveUptime').textContent = perf.uptime;
+                            document.getElementById('liveRequests').textContent = perf.totalRequests;
+                            document.getElementById('liveSuccess').textContent = perf.successRate;
+                            document.getElementById('liveMemory').textContent = perf.memoryUsage;
+                        }
+                    } catch (error) {
+                        console.error('Error updating live status:', error);
+                    }
+                }
+
+                // بارگذاری اولیه
+                document.addEventListener('DOMContentLoaded', function() {
+                    updateLiveStatus();
+                    setInterval(updateLiveStatus, 10000);
+                });
+            </script>
+        `;
+        res.send(generateModernPage("سلامت سیستم", content, 'health'));
+    });
+
+    // صفحه تنظیمات
     router.get("/settings", (req, res) => {
         const content = `
             <div class="tabs">
                 <button class="tab active" onclick="openTab(event, 'logs')">📝 لاگ‌ها</button>
                 <button class="tab" onclick="openTab(event, 'debug')">🐛 دیباگ</button>
-                <button class="tab" onclick="openTab(event, 'health')">❤️ سلامت</button>
                 <button class="tab" onclick="openTab(event, 'performance')">📊 عملکرد</button>
+                <button class="tab" onclick="openTab(event, 'health')">❤️ سلامت</button>
             </div>
 
             <!-- تب لاگ‌ها -->
@@ -286,42 +814,22 @@ module.exports = (dependencies) => {
                     </div>
                     <button class="btn" onclick="loadLogs()">بارگذاری لاگ‌ها</button>
                     <div id="logContent" class="code-block">
-                        لاگ‌ها در اینجا نمایش داده می‌شوند...
+                        برای مشاهده لاگ‌ها دکمه بالا را بزنید
                     </div>
                 </div>
             </div>
 
             <!-- تب دیباگ -->
             <div id="debug" class="tab-content">
-                <div class="content-grid">
-                    <div class="content-card">
-                        <div class="card-header">
-                            <div class="card-icon">🔧</div>
-                            <h3>تست API</h3>
-                        </div>
-                        <button class="btn" onclick="testAPI()">اجرای تست‌ها</button>
-                        <div id="apiTestResult" style="margin-top: 10px;"></div>
-                    </div>
-
-                    <div class="content-card">
-                        <div class="card-header">
-                            <div class="card-icon">📡</div>
-                            <h3>وضعیت WebSocket</h3>
-                        </div>
-                        <div id="wsStatus">در حال بارگذاری...</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- تب سلامت -->
-            <div id="health" class="tab-content">
                 <div class="content-card">
                     <div class="card-header">
-                        <div class="card-icon">❤️</div>
-                        <h3>سلامت سیستم</h3>
+                        <div class="card-icon">🔧</div>
+                        <h3>تست سیستم</h3>
                     </div>
-                    <button class="btn" onclick="checkHealth()">بررسی سلامت</button>
-                    <div id="healthResult" style="margin-top: 15px;"></div>
+                    <button class="btn" onclick="testAPI()">تست API</button>
+                    <div id="apiTestResult" style="margin-top: 15px;">
+                        <div class="status-indicator">آماده تست</div>
+                    </div>
                 </div>
             </div>
 
@@ -333,108 +841,140 @@ module.exports = (dependencies) => {
                         <h3>آمار عملکرد</h3>
                     </div>
                     <button class="btn" onclick="loadPerformance()">بارگذاری آمار</button>
-                    <div id="performanceResult" style="margin-top: 15px;"></div>
+                    <div id="performanceResult" style="margin-top: 15px;">
+                        <div class="status-indicator">آماده بارگذاری</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- تب سلامت -->
+            <div id="health" class="tab-content">
+                <div class="content-card">
+                    <div class="card-header">
+                        <div class="card-icon">❤️</div>
+                        <h3>بررسی سلامت</h3>
+                    </div>
+                    <button class="btn" onclick="checkHealth()">بررسی سلامت</button>
+                    <div id="healthResult" style="margin-top: 15px;">
+                        <div class="status-indicator">آماده بررسی</div>
+                    </div>
                 </div>
             </div>
 
             <script>
-                // مدیریت تب‌ها
-                function openTab(evt, tabName) {
-                    const tabcontent = document.getElementsByClassName("tab-content");
-                    for (let i = 0; i < tabcontent.length; i++) {
-                        tabcontent[i].classList.remove("active");
-                    }
-                    
-                    const tablinks = document.getElementsByClassName("tab");
-                    for (let i = 0; i < tablinks.length; i++) {
-                        tablinks[i].classList.remove("active");
-                    }
-                    
-                    document.getElementById(tabName).classList.add("active");
-                    evt.currentTarget.classList.add("active");
-                }
-
-                // لاگ‌ها
                 async function loadLogs() {
                     try {
+                        document.getElementById('logContent').innerHTML = '<div class="status-indicator">🔄 در حال بارگذاری لاگ‌ها...</div>';
+                        
                         const response = await fetch('/api/system/stats');
                         const data = await response.json();
                         
                         if (data.success) {
                             let logHTML = '';
-                            data.data.recent_activity.errors.forEach(error => {
-                                logHTML += \`❌ \${new Date(error.timestamp).toLocaleString('fa-IR')} - \${error.message}\\n\`;
-                            });
-                            data.data.recent_activity.requests.forEach(req => {
-                                logHTML += \`📡 \${req.method} \${req.endpoint} - \${req.status}\\n\`;
-                            });
                             
-                            document.getElementById('logContent').textContent = logHTML || 'هیچ لاگی یافت نشد';
+                            if (data.data.recent_activity && data.data.recent_activity.errors) {
+                                data.data.recent_activity.errors.forEach(error => {
+                                    logHTML += \`<div class="log-entry error">
+                                        <strong>\${error.endpoint}</strong><br>
+                                        \${error.message}<br>
+                                        <small>\${new Date(error.timestamp).toLocaleString('fa-IR')}</small>
+                                    </div>\`;
+                                });
+                            }
+                            
+                            if (data.data.recent_activity && data.data.recent_activity.requests) {
+                                data.data.recent_activity.requests.forEach(req => {
+                                    const statusClass = req.status === 'error' ? 'error' : 'success';
+                                    logHTML += \`<div class="log-entry \${statusClass}">
+                                        <strong>\${req.method} \${req.endpoint}</strong><br>
+                                        وضعیت: \${req.status} | زمان: \${req.duration || 'N/A'}
+                                    </div>\`;
+                                });
+                            }
+                            
+                            document.getElementById('logContent').innerHTML = logHTML || '<div class="status-indicator">✅ هیچ لاگی یافت نشد</div>';
                         }
                     } catch (error) {
-                        document.getElementById('logContent').textContent = 'خطا در بارگذاری لاگ‌ها';
+                        document.getElementById('logContent').innerHTML = '<div class="status-indicator error">❌ خطا در بارگذاری لاگ‌ها</div>';
                     }
                 }
 
-                // تست API
                 async function testAPI() {
-                    document.getElementById('apiTestResult').innerHTML = '<div class="status-indicator">🔄 در حال تست...</div>';
-                    
                     try {
+                        document.getElementById('apiTestResult').innerHTML = '<div class="status-indicator">🔄 در حال تست API...</div>';
+                        
                         const response = await fetch('/api/health');
                         const data = await response.json();
                         
                         if (data.success) {
-                            document.getElementById('apiTestResult').innerHTML = '<div class="status-indicator">✅ API فعال است</div>';
+                            document.getElementById('apiTestResult').innerHTML = \`
+                                <div class="status-indicator">✅ API فعال است</div>
+                                <div style="margin-top: 10px;">
+                                    <div>🟢 وضعیت: \${data.status}</div>
+                                    <div>🟢 سرویس: \${data.service}</div>
+                                    <div>🟢 نسخه: \${data.version}</div>
+                                </div>
+                            \`;
                         }
                     } catch (error) {
                         document.getElementById('apiTestResult').innerHTML = '<div class="status-indicator error">❌ API مشکل دارد</div>';
                     }
                 }
 
-                // سلامت
-                async function checkHealth() {
-                    document.getElementById('healthResult').innerHTML = '<div class="status-indicator">🔄 در حال بررسی...</div>';
-                    
-                    try {
-                        const response = await fetch('/api/health/combined');
-                        const data = await response.json();
-                        
-                        if (data.success) {
-                            let healthHTML = '';
-                            healthHTML += \`<div>🔗 WebSocket: \${data.data.websocket_status.status}</div>\`;
-                            healthHTML += \`<div>💾 دیتابیس: \${data.data.gist_status.status}</div>\`;
-                            healthHTML += \`<div>🌐 API: \${data.data.api_status.status}</div>\`;
-                            
-                            document.getElementById('healthResult').innerHTML = healthHTML;
-                        }
-                    } catch (error) {
-                        document.getElementById('healthResult').innerHTML = '<div class="status-indicator error">❌ خطا در بررسی سلامت</div>';
-                    }
-                }
-
-                // عملکرد
                 async function loadPerformance() {
-                    document.getElementById('performanceResult').innerHTML = '<div class="status-indicator">🔄 در حال بارگذاری...</div>';
-                    
                     try {
+                        document.getElementById('performanceResult').innerHTML = '<div class="status-indicator">🔄 در حال بارگذاری آمار...</div>';
+                        
                         const response = await fetch('/api/system/stats');
                         const data = await response.json();
                         
                         if (data.success) {
                             const perf = data.data.performance;
-                            let perfHTML = \`
-                                <div>📊 درخواست‌ها: \${perf.totalRequests}</div>
-                                <div>✅ موفق: \${perf.successfulRequests}</div>
-                                <div>❌ خطا: \${perf.errorCount}</div>
-                                <div>⚡ زمان متوسط: \${perf.averageDuration}</div>
-                                <div>📈 نرخ موفقیت: \${perf.successRate}</div>
+                            document.getElementById('performanceResult').innerHTML = \`
+                                <div class="metric-grid">
+                                    <div class="metric-card">
+                                        <div class="metric-value">\${perf.totalRequests}</div>
+                                        <div class="metric-label">درخواست‌ها</div>
+                                    </div>
+                                    <div class="metric-card">
+                                        <div class="metric-value">\${perf.successRate}</div>
+                                        <div class="metric-label">موفقیت</div>
+                                    </div>
+                                    <div class="metric-card">
+                                        <div class="metric-value">\${perf.averageDuration}</div>
+                                        <div class="metric-label">زمان متوسط</div>
+                                    </div>
+                                    <div class="metric-card">
+                                        <div class="metric-value">\${perf.memoryUsage}</div>
+                                        <div class="metric-label">حافظه</div>
+                                    </div>
+                                </div>
                             \`;
-                            
-                            document.getElementById('performanceResult').innerHTML = perfHTML;
                         }
                     } catch (error) {
                         document.getElementById('performanceResult').innerHTML = '<div class="status-indicator error">❌ خطا در بارگذاری آمار</div>';
+                    }
+                }
+
+                async function checkHealth() {
+                    try {
+                        document.getElementById('healthResult').innerHTML = '<div class="status-indicator">🔄 در حال بررسی سلامت...</div>';
+                        
+                        const response = await fetch('/api/health/combined');
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            document.getElementById('healthResult').innerHTML = \`
+                                <div class="status-indicator">✅ سیستم سالم است</div>
+                                <div style="margin-top: 10px;">
+                                    <div>🟢 وضعیت کلی: \${data.data.status}</div>
+                                    <div>🟢 WebSocket: \${data.data.websocket_status.status}</div>
+                                    <div>🟢 API: \${data.data.api_status.status}</div>
+                                </div>
+                            \`;
+                        }
+                    } catch (error) {
+                        document.getElementById('healthResult').innerHTML = '<div class="status-indicator error">❌ خطا در بررسی سلامت</div>';
                     }
                 }
 
@@ -446,35 +986,6 @@ module.exports = (dependencies) => {
             </script>
         `;
         res.send(generateModernPage("تنظیمات و دیباگ", content, 'settings'));
-    });
-
-    // صفحات دیگر
-    const simplePages = [
-        { path: '/markets-page', title: 'بازار سرمایه', icon: '📈', desc: 'داده‌های جامع بازار' },
-        { path: '/insights-page', title: 'بینش‌ها', icon: '💡', desc: 'تحلیل احساسات بازار' },
-        { path: '/news-page', title: 'اخبار', icon: '📰', desc: 'آخرین اخبار کریپتو' },
-        { path: '/health-page', title: 'سلامت', icon: '❤️', desc: 'بررسی وضعیت سیستم' }
-    ];
-
-    simplePages.forEach(page => {
-        router.get(page.path, (req, res) => {
-            const content = `
-                <div class="content-card">
-                    <div class="card-header">
-                        <div class="card-icon">${page.icon}</div>
-                        <h3>${page.title}</h3>
-                    </div>
-                    <div class="status-indicator">🔄 در حال توسعه</div>
-                    <p style="margin: 15px 0; color: rgba(255,255,255,0.7);">
-                        ${page.desc}
-                    </p>
-                    <div>
-                        <button class="btn" onclick="alert('به زودی راه‌اندازی می‌شود')">مشاهده</button>
-                    </div>
-                </div>
-            `;
-            res.send(generateModernPage(page.title, content, page.path.replace('-page', '').replace('/', '')));
-        });
     });
 
     return router;
