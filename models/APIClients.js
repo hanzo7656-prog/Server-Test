@@ -338,3 +338,412 @@ const apiDebugSystem = {
         console.log('✅ API statistics reset');
     }
 };
+// کلاینت اصلی API با endpointهای سالم
+class AdvancedCoinStatsAPIClient {
+    constructor() {
+        this.base_url = constants.API_URLS.base;
+        this.api_key = constants.COINSTATS_API_KEY;
+        this.request_count = 0;
+        this.last_request_time = Date.now();
+        this.ratelimitDelay = 1000;
+        
+        console.log("✅ API Client initialized with healthy endpoints");
+    }
+    
+    async _rateLimit() {
+        const currentTime = Date.now();
+        const timeDiff = currentTime - this.last_request_time;
+        
+        if (timeDiff < this.ratelimitDelay) {
+            const waitTime = this.ratelimitDelay - timeDiff;
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+        }
+        
+        this.last_request_time = Date.now();
+        this.request_count++;
+    }
+    
+    // اندپوینت‌های اصلی سالم
+    async getCoins(limit = 100, currency = 'USD') {
+        const startTime = Date.now();
+        const request = apiDebugSystem.logRequest('GET', `${this.base_url}/coins`, { limit, currency });
+        
+        await this._rateLimit();
+        
+        try {
+            const url = `${this.base_url}/coins?limit=${limit}&currency=${currency}`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'X-API-KEY': this.api_key,
+                    'Accept': 'application/json'
+                }
+            });
+            
+            if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            
+            const data = await response.json();
+            const duration = Date.now() - startTime;
+            
+            apiDebugSystem.logResponse(request, { coinCount: data.length }, duration);
+            return { success: true, data };
+            
+        } catch (error) {
+            const duration = Date.now() - startTime;
+            apiDebugSystem.logError(request, error, error.stack);
+            return { success: false, error: error.message };
+        }
+    }
+    
+    async getMarketCap() {
+        const startTime = Date.now();
+        const request = apiDebugSystem.logRequest('GET', `${this.base_url}/markets`, {});
+        
+        await this._rateLimit();
+        
+        try {
+            const url = `${this.base_url}/markets`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'X-API-KEY': this.api_key,
+                    'Accept': 'application/json'
+                }
+            });
+            
+            if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            
+            const data = await response.json();
+            const duration = Date.now() - startTime;
+            
+            apiDebugSystem.logResponse(request, data, duration);
+            return { success: true, data };
+            
+        } catch (error) {
+            const duration = Date.now() - startTime;
+            apiDebugSystem.logError(request, error, error.stack);
+            return { success: false, error: error.message };
+        }
+    }
+    
+    async getCurrencies() {
+        const startTime = Date.now();
+        const request = apiDebugSystem.logRequest('GET', `${this.base_url}/currencies`, {});
+        
+        await this._rateLimit();
+        
+        try {
+            const url = `${this.base_url}/currencies`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'X-API-KEY': this.api_key,
+                    'Accept': 'application/json'
+                }
+            });
+            
+            if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            
+            const data = await response.json();
+            const duration = Date.now() - startTime;
+            
+            apiDebugSystem.logResponse(request, { currenciesCount: data.length }, duration);
+            return { success: true, data };
+            
+        } catch (error) {
+            const duration = Date.now() - startTime;
+            apiDebugSystem.logError(request, error, error.stack);
+            return { success: false, error: error.message };
+        }
+    }
+    
+    async getNews(page = 1, limit = 20) {
+        const startTime = Date.now();
+        const request = apiDebugSystem.logRequest('GET', `${this.base_url}/news`, { page, limit });
+        
+        await this._rateLimit();
+        
+        try {
+            const url = `${this.base_url}/news?page=${page}&limit=${limit}`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'X-API-KEY': this.api_key,
+                    'Accept': 'application/json'
+                }
+            });
+            
+            if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            
+            const data = await response.json();
+            const duration = Date.now() - startTime;
+            
+            apiDebugSystem.logResponse(request, { articlesCount: data.result?.length || 0 }, duration);
+            return { success: true, data };
+            
+        } catch (error) {
+            const duration = Date.now() - startTime;
+            apiDebugSystem.logError(request, error, error.stack);
+            return { success: false, error: error.message };
+        }
+    }
+    
+    async getNewsByType(type = 'trending', page = 1, limit = 20) {
+        const startTime = Date.now();
+        const request = apiDebugSystem.logRequest('GET', `${this.base_url}/news/type/${type}`, { type, page, limit });
+        
+        await this._rateLimit();
+        
+        try {
+            const url = `${this.base_url}/news/type/${type}?page=${page}&limit=${limit}`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'X-API-KEY': this.api_key,
+                    'Accept': 'application/json'
+                }
+            });
+            
+            if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            
+            const data = await response.json();
+            const duration = Date.now() - startTime;
+            
+            apiDebugSystem.logResponse(request, { articlesCount: data.length || 0, type }, duration);
+            return { success: true, data };
+            
+        } catch (error) {
+            const duration = Date.now() - startTime;
+            apiDebugSystem.logError(request, error, error.stack);
+            return { success: false, error: error.message };
+        }
+    }
+    
+    async getFearGreedIndex() {
+        const startTime = Date.now();
+        const request = apiDebugSystem.logRequest('GET', `${this.base_url}/insights/fear-and-greed`, {});
+        
+        await this._rateLimit();
+        
+        try {
+            const url = `${this.base_url}/insights/fear-and-greed`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'X-API-KEY': this.api_key,
+                    'Accept': 'application/json'
+                }
+            });
+            
+            if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            
+            const data = await response.json();
+            const duration = Date.now() - startTime;
+            
+            apiDebugSystem.logResponse(request, data, duration);
+            return { success: true, data };
+            
+        } catch (error) {
+            const duration = Date.now() - startTime;
+            apiDebugSystem.logError(request, error, error.stack);
+            return { success: false, error: error.message };
+        }
+    }
+    
+    async getTickerExchanges() {
+        const startTime = Date.now();
+        const request = apiDebugSystem.logRequest('GET', `${this.base_url}/tickers/exchanges`, {});
+        
+        await this._rateLimit();
+        
+        try {
+            const url = `${this.base_url}/tickers/exchanges`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'X-API-KEY': this.api_key,
+                    'Accept': 'application/json'
+                }
+            });
+            
+            if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            
+            const data = await response.json();
+            const duration = Date.now() - startTime;
+            
+            apiDebugSystem.logResponse(request, { exchangesCount: data.length || 0 }, duration);
+            return { success: true, data };
+            
+        } catch (error) {
+            const duration = Date.now() - startTime;
+            apiDebugSystem.logError(request, error, error.stack);
+            return { success: false, error: error.message };
+        }
+    }
+}
+// سیستم سلامت پیشرفته
+class AdvancedHealthMonitor {
+    constructor(wsManager, gistManager) {
+        this.wsManager = wsManager;
+        this.gistManager = gistManager;
+        this.healthChecks = [];
+        this.lastFullCheck = null;
+    }
+    
+    async performFullHealthCheck() {
+        const checkStart = Date.now();
+        const healthReport = {
+            timestamp: new Date().toISOString(),
+            overallStatus: 'healthy',
+            components: {},
+            recommendations: []
+        };
+        
+        // 1. بررسی اتصال APIهای حیاتی
+        const apiHealth = await apiDebugSystem.testAllCriticalConnections();
+        healthReport.components.apiConnectivity = apiHealth;
+        
+        // 2. بررسی وضعیت WebSocket
+        if (this.wsManager) {
+            const wsStatus = this.wsManager.getConnectionStatus();
+            healthReport.components.websocket = {
+                status: wsStatus.connected ? 'healthy' : 'unhealthy',
+                connected: wsStatus.connected,
+                activeCoins: wsStatus.active_coins,
+                totalSubscribed: wsStatus.total_subscribed,
+                provider: 'LBank'
+            };
+        }
+        
+        // 3. بررسی وضعیت Gist
+        if (this.gistManager) {
+            const gistStatus = this.gistManager.getStatus();
+            healthReport.components.gistDatabase = {
+                status: gistStatus.active ? 'healthy' : 'unhealthy',
+                active: gistStatus.active,
+                totalCoins: gistStatus.total_coins,
+                lastUpdated: gistStatus.last_updated,
+                hasData: gistStatus.has_data
+            };
+        }
+        
+        // 4. بررسی سلامت سرور
+        healthReport.components.server = {
+            status: 'healthy',
+            uptime: process.uptime() + 's',
+            memoryUsage: `${(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2)} MB`,
+            nodeVersion: process.version,
+            platform: process.platform
+        };
+        
+        // 5. بررسی endpointهای داخلی
+        const endpointHealth = apiDebugSystem.checkAllEndpointsHealth();
+        healthReport.components.endpoints = endpointHealth;
+        
+        // محاسبه وضعیت کلی
+        const failedComponents = [];
+        
+        if (apiHealth.summary.successRate < 80) failedComponents.push('API Connectivity');
+        if (healthReport.components.websocket && !healthReport.components.websocket.connected) failedComponents.push('WebSocket');
+        if (healthReport.components.gistDatabase && !healthReport.components.gistDatabase.active) failedComponents.push('Gist Database');
+        if (endpointHealth.summary.healthPercentage < 80) failedComponents.push('Internal Endpoints');
+        
+        if (failedComponents.length > 0) {
+            healthReport.overallStatus = 'degraded';
+            healthReport.failedComponents = failedComponents;
+            healthReport.recommendations = failedComponents.map(comp => `بررسی و تعمیر ${comp}`);
+        }
+        
+        healthReport.checkDuration = (Date.now() - checkStart) + 'ms';
+        this.lastFullCheck = healthReport;
+        this.healthChecks.push(healthReport);
+        
+        if (this.healthChecks.length > 50) {
+            this.healthChecks.shift();
+        }
+        
+        return healthReport;
+    }
+    
+    getHealthHistory() {
+        return this.healthChecks;
+    }
+    
+    getLastHealthCheck() {
+        return this.lastFullCheck;
+    }
+}
+
+// ایجاد Router برای دیباگ و مانیتورینگ
+function createApiDebugRouter(wsManager = null, gistManager = null) {
+    const apiDebugRouter = express.Router();
+    const healthMonitor = new AdvancedHealthMonitor(wsManager, gistManager);
+    
+    // آمار عملکرد API
+    apiDebugRouter.get('/api-stats', (req, res) => {
+        try {
+            const performanceStats = apiDebugSystem.getPerformanceStats();
+            const errorAnalysis = apiDebugSystem.analyzeErrors();
+            
+            res.json({
+                success: true,
+                performance: performanceStats,
+                errorAnalysis: errorAnalysis,
+                recentErrors: apiDebugSystem.errors.slice(-10),
+                recentRequests: apiDebugSystem.requests.slice(-20).map(req => ({
+                    id: req.id,
+                    method: req.method,
+                    url: req.url,
+                    duration: req.duration,
+                    status: req.status,
+                    timestamp: req.timestamp,
+                    error: req.error ? req.error.message : null
+                }))
+            });
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+    
+    // سلامت endpointها
+    apiDebugRouter.get('/endpoints-health', (req, res) => {
+        try {
+            const health = apiDebugSystem.checkAllEndpointsHealth();
+            res.json({
+                success: true,
+                ...health
+            });
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+    
+    // تست اتصال به endpoint خاص
+    apiDebugRouter.post('/test-endpoint', express.json(), async (req, res) => {
+        try {
+            const { endpointUrl, timeout = 10000 } = req.body;
+            
+            if (!endpointUrl) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Endpoint URL is required'
+                });
+            }
+            
+            const result = await apiDebugSystem.testEndpointConnection(endpointUrl, timeout);
+            res.json(result);
+            
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+    
