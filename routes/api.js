@@ -316,18 +316,18 @@ module.exports = ({ gistManager, wsManager }) => {
             if (Array.isArray(point) && point.length >= 4) {
                 return {
                     timestamp: point[0],
-                    open: point[1] * 0.99, // شبیه‌سازی open
-                    high: point[1] * 1.02, // شبیه‌سازی high
-                    low: point[1] * 0.98, // شبیه‌سازی low
+                    open: point[1] * 0.998, // شبیه‌سازی open
+                    high: point[1] * 1.005, // شبیه‌سازی high
+                    low: point[1] * 0.995, // شبیه‌سازی low
                     price: point[1], // close price
                     volume: point[2] || 1000
                 };
             }
             return {
                 timestamp: Date.now() - (index * 3600000),
-                open: point * 0.99,
-                high: point * 1.02,
-                low: point * 0.98,
+                open: point * 0.998,
+                high: point * 1.005,
+                low: point * 0.995,
                 price: point,
                 volume: 1000
             };
