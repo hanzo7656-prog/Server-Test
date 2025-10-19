@@ -388,7 +388,7 @@ const server = app.listen(PORT, '0.0.0.0', () => {
     
     console.log('\n📊 Available Endpoints:');
     console.log('   • API Routes: /api/*');
-    console.log('   • Modern Pages: /, /scan-page, /analysis-page, /markets-page, /insights-page, /news-page, /health-page, /settings');
+    console.log('   • Modern Pages: /home-page, /scan-page, /analysis-page, /markets-page, /insights-page, /news-page, /health-page, /settings');
     console.log('   • Health Check: /health');
     console.log('   • Server Info: /server/info');
     console.log('   • Test Route: /test-simple');
