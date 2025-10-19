@@ -5,8 +5,23 @@ module.exports = (dependencies) => {
     const { apiClient } = dependencies;
     
     return async (req, res) => {
-        const { type = 'basic', limit = 50, filter = 'volume' } = req.query;
+        const { type = 'basic', limit = 50, filter = 'volume', auto_scan } = req.query;
         
+        // اگر auto_scan وجود دارد، اسکن خودکار انجام شود
+        let autoScanScript = '';
+        if (auto_scan === 'true') {
+            autoScanScript = `
+                <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        setTimeout(() => {
+                            console.log('🔍 Auto-scan triggered');
+                            runScan();
+                        }, 1000);
+                    });
+                </script>
+            `;
+        }
+
         const content = `
         <div class="content-card">
             <div class="card-header">
@@ -27,8 +42,6 @@ module.exports = (dependencies) => {
                         <label style="display: block; margin-bottom: 5px; font-size: 0.8rem; opacity: 0.8;">نوع اسکن:</label>
                         <select id="scanType" class="input-field">
                             <option value="basic">اسکن ساده</option>
-                            <option value="advanced">اسکن پیشرفته</option>
-                            <option value="ai">اسکن هوش مصنوعی</option>
                         </select>
                     </div>
 
@@ -45,8 +58,6 @@ module.exports = (dependencies) => {
                             <option value="volume">حجم معاملات</option>
                             <option value="momentum">مومنتوم</option>
                             <option value="change">تغییرات قیمت</option>
-                            <option value="volatility">نوسانات</option>
-                            <option value="trend">روند بازار</option>
                         </select>
                     </div>
 
@@ -54,10 +65,7 @@ module.exports = (dependencies) => {
                     <div>
                         <label style="display: block; margin-bottom: 5px; font-size: 0.8rem; opacity: 0.8;">بازه زمانی:</label>
                         <select id="timeframe" class="input-field">
-                            <option value="1h">1 ساعت</option>
-                            <option value="4h">4 ساعت</option>
                             <option value="24h" selected>24 ساعت</option>
-                            <option value="7d">7 روز</option>
                         </select>
                     </div>
 
@@ -125,7 +133,7 @@ module.exports = (dependencies) => {
         </div>
 
         <script>
-        // توابع فرمت که در اسکریپت فراخوانی می‌شوند اما تعریف نشده بودند
+        // توابع فرمت
         function formatPrice(price) {
             if (!price || isNaN(price)) return '$0.00';
             const num = parseFloat(price);
@@ -163,9 +171,8 @@ module.exports = (dependencies) => {
             updateProgress(10, 'دریافت داده از CoinStats API');
 
             try {
+                // فقط از endpoint اصلی استفاده می‌کنیم
                 let endpoint = '/api/scan';
-                if (scanType === 'advanced') endpoint = '/api/scan/advanced';
-                if (scanType === 'ai') endpoint = '/api/scan/ai-signal';
 
                 const params = new URLSearchParams({ 
                     limit, 
@@ -178,14 +185,33 @@ module.exports = (dependencies) => {
                 // شبیه‌سازی پیشرفت
                 simulateProgress();
 
-                // 🔧 اصلاح: استفاده از مسیر کامل API
+                // 🔧 درخواست به API با دیباگ کامل
+                console.log('🔍 Making API request to:', \`\${endpoint}?\${params}\`);
                 const response = await fetch(\`\${endpoint}?\${params}\`);
                 
-                if (!response.ok) throw new Error('خطای شبکه: ' + response.status);
+                // 🔧 دیباگ پاسخ
+                console.log('📡 API Response:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    url: response.url,
+                    ok: response.ok
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('❌ API Error details:', errorText);
+                    throw new Error(\`خطای سرور: \${response.status} - \${response.statusText}\`);
+                }
 
                 updateProgress(80, 'پردازش داده‌ها');
 
                 const data = await response.json();
+                console.log('📊 API Data received:', {
+                    success: data.success,
+                    hasData: !!data.data,
+                    coinsCount: data.data?.coins?.length,
+                    dataStructure: Object.keys(data)
+                });
 
                 clearInterval(scanInterval);
                 updateProgress(100, 'تکمیل اسکن');
@@ -201,10 +227,13 @@ module.exports = (dependencies) => {
 
             } catch (error) {
                 clearInterval(scanInterval);
-                console.error('Scan error', error);
+                console.error('❌ Scan error details:', error);
                 document.getElementById('scanResult').innerHTML = \`
                     <div class="status-indicator error">
                         ❌ خطا در اسکن: \${error.message}
+                        <div style="font-size: 0.7rem; margin-top: 5px; opacity: 0.7;">
+                            لطفاً اتصال اینترنت را بررسی کرده و مجدد تلاش کنید
+                        </div>
                     </div>
                 \`;
             } finally {
@@ -236,9 +265,18 @@ module.exports = (dependencies) => {
         }
 
         function displayScanResults(scanData, scanType) {
-            const coins = scanData.coins || scanData.results || [];
+            // 🔧 تطبیق پذیری با ساختارهای مختلف داده
+            const coins = scanData.coins || scanData.result || [];
             const totalScanned = scanData.total_scanned || coins.length;
             const marketStats = scanData.market_stats || {};
+
+            console.log('🔍 Displaying scan results:', {
+                scanDataType: typeof scanData,
+                hasCoins: !!scanData.coins,
+                hasResult: !!scanData.result,
+                coinsCount: coins.length,
+                scanType: scanType
+            });
 
             if (coins.length === 0) {
                 document.getElementById('scanResult').innerHTML = 
@@ -268,12 +306,12 @@ module.exports = (dependencies) => {
             \`;
 
             coins.forEach((coin, index) => {
-                const change = coin.priceChange24h || coin.change24h || coin.priceChange1d || 0;
+                // 🔧 تطبیق فیلدهای مختلف برای تغییرات قیمت
+                const change = coin.priceChange24h || coin.priceChange1d || coin.change24h || 0;
                 const changeClass = change >= 0 ? 'positive' : 'negative';
                 const price = coin.current_price || coin.price || 0;
                 const volume = coin.volume || coin.total_volume || 0;
                 const marketCap = coin.marketCap || coin.market_cap || 0;
-                const signal = coin.signal || coin.trend || 'neutral';
 
                 html += \`
                     <div class="market-item" onclick="showCoinDetails('\${coin.id || coin.symbol}')" style="cursor: pointer;">
@@ -322,7 +360,10 @@ module.exports = (dependencies) => {
         function updateQuickStats(scanData) {
             const coins = scanData.coins || [];
             const totalCoins = scanData.total_available || 300;
-            const avgChange = coins.reduce((sum, coin) => sum + (coin.priceChange24h || 0), 0) / coins.length;
+            const avgChange = coins.reduce((sum, coin) => {
+                const change = coin.priceChange24h || coin.priceChange1d || 0;
+                return sum + change;
+            }, 0) / coins.length;
 
             document.getElementById('totalCoins').textContent = totalCoins;
             document.getElementById('activeScans').textContent = '1';
@@ -332,9 +373,7 @@ module.exports = (dependencies) => {
 
         function getScanTypeName(scanType) {
             const types = {
-                'basic': 'ساده',
-                'advanced': 'پیشرفته',
-                'ai': 'هوش مصنوعی'
+                'basic': 'ساده'
             };
             return types[scanType] || scanType;
         }
@@ -368,12 +407,13 @@ module.exports = (dependencies) => {
 
             // اگر پارامترهای URL وجود دارند، اسکن خودکار
             const urlParams = new URLSearchParams(window.location.search);
-            const autoScan = urlParams.get('auto-scan');
+            const autoScan = urlParams.get('auto_scan');
             if (autoScan === 'true') {
                 setTimeout(runScan, 1000);
             }
         });
-        </script>`;
+        </script>
+        \${autoScanScript}`;
 
         res.send(generateModernPage("اسکن بازار", content, 'scan'));
     };
