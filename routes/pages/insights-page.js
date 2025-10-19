@@ -1,7 +1,7 @@
-import { generateModernPage } from '../page-generator.js';
-import DataProcessor from '../../models/DataProcessor.js';
+const { generateModernPage } = require('../page-generator');
+const DataProcessor = require('../../models/DataProcessor');
 
-export default (dependencies) => {
+module.exports = (dependencies) => {
     const { apiClient } = dependencies;
     
     return async (req, res) => {
