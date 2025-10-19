@@ -13,6 +13,7 @@ const { apiClient } = require('./utils/api-client'); // جدید
 const GistManager = require('./models/GistManager');
 const WebSocketManager = require('./models/WebSocketManager');
 const DataProcessor = require('./models/DataProcessor'); // جدید
+const {TechnicalAnalysisEngine} = require('./models/TechnicalAnalysis');
 const { AdvancedCoinStatsAPIClient, apiDebugSystem } = require('./models/APIClients');
 
 // ایمپورت ماژول های روتر
@@ -85,6 +86,7 @@ const dependencies = {
     wsManager,
     apiClient: advancedApiClient,
     dataProcessor: DataProcessor, // جدید
+    technicalAnalysis: TechnicalAnalysisEngine,
     errorHandler, // جدید
     cache // جدید
 };
@@ -95,6 +97,7 @@ console.log('📋 Dependencies status:', {
     wsManager: !!wsManager,
     apiClient: !!advancedApiClient,
     dataProcessor: !!DataProcessor,
+    technicalAnalysis: !! TechnicalAnalysisEngine,
     errorHandler: !!errorHandler
 });
 
@@ -308,7 +311,7 @@ app.get('/server/info', (req, res) => {
                 modules: {
                     config: ['constants', 'logger', 'api-endpoints', 'error-codes'],
                     utils: ['api-client', 'formatters', 'validators', 'helpers'],
-                    models: ['DataProcessor', 'APIClients', 'WebSocketManager', 'GistManager'],
+                    models: ['DataProcessor', 'APIClients', 'WebSocketManager', 'GistManager', 'TechnicalAnalysis'],
                     routes: ['api', 'modern-pages', 'page-generator', 'navigation-generator']
                 }
             }
@@ -394,6 +397,7 @@ const server = app.listen(PORT, '0.0.0.0', () => {
     console.log('🔧 New Architecture Features:');
     console.log('   • Enhanced API Client with retry logic');
     console.log('   • Advanced Error Handling system');
+    console.log('   • Technical Analysis Engine');
     console.log('   • Data Processing pipeline');
     console.log('   • Formatters & Validators');
     console.log('   • Modern Navigation & Page Generator');
