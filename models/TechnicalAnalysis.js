@@ -1,3 +1,7 @@
+const { errorHandler, ERROR_CODES } = require('../config/error-codes');
+const { formatPrice, formatPercentage } = require('../utils/formatters');
+const { isValidSymbol, isValidTimeframe } = require('../utils/validators');
+
 class TechnicalIndicators {
     constructor(data = {}) {
         // اندیکاتورهای موجود
@@ -83,9 +87,198 @@ class TechnicalIndicators {
         this.pattern_bat = data.pattern_bat || false;
         this.pattern_crab = data.pattern_crab || false;
     }
+
+    /**
+     * تبدیل به فرمت استاندارد برای API
+     */
+    toJSON() {
+        return {
+            indicators: {
+                rsi: this.rsi,
+                macd: this.macd,
+                macd_signal: this.macd_signal,
+                macd_hist: this.macd_hist,
+                bollinger_upper: this.bollinger_upper,
+                bollinger_middle: this.bollinger_middle,
+                bollinger_lower: this.bollinger_lower,
+                moving_avg_20: this.moving_avg_20,
+                moving_avg_50: this.moving_avg_50,
+                moving_avg_200: this.moving_avg_200,
+                stochastic_k: this.stochastic_k,
+                stochastic_d: this.stochastic_d,
+                atr: this.atr,
+                adx: this.adx,
+                obv: this.obv,
+                mfi: this.mfi,
+                williams_r: this.williams_r,
+                cci: this.cci,
+                roc: this.roc
+            },
+            advanced_indicators: {
+                ichimoku: {
+                    conversion: this.ichimoku_conversion,
+                    base: this.ichimoku_base,
+                    span_a: this.ichimoku_span_a,
+                    span_b: this.ichimoku_span_b
+                },
+                fibonacci: {
+                    level_236: this.fibonacci_236,
+                    level_382: this.fibonacci_382,
+                    level_500: this.fibonacci_500,
+                    level_618: this.fibonacci_618,
+                    level_786: this.fibonacci_786
+                },
+                pivot_points: {
+                    pivot: this.pivot_point,
+                    r1: this.pivot_r1,
+                    r2: this.pivot_r2,
+                    s1: this.pivot_s1,
+                    s2: this.pivot_s2
+                }
+            },
+            patterns: {
+                continuation: {
+                    flag: this.pattern_flag,
+                    triangle_ascending: this.pattern_triangle_ascending,
+                    triangle_descending: this.pattern_triangle_descending,
+                    triangle_symmetrical: this.pattern_triangle_symmetrical,
+                    wedge_ascending: this.pattern_wedge_ascending,
+                    wedge_descending: this.pattern_wedge_descending,
+                    rectangle: this.pattern_rectangle,
+                    pennant: this.pattern_pennant
+                },
+                reversal: {
+                    double_top: this.pattern_double_top,
+                    double_bottom: this.pattern_double_bottom,
+                    triple_top: this.pattern_triple_top,
+                    triple_bottom: this.pattern_triple_bottom,
+                    head_shoulders: this.pattern_head_shoulders,
+                    head_shoulders_inverse: this.pattern_head_shoulders_inverse
+                },
+                candlestick: {
+                    hammer: this.pattern_hammer,
+                    shooting_star: this.pattern_shooting_star,
+                    engulfing_bullish: this.pattern_engulfing_bullish,
+                    engulfing_bearish: this.pattern_engulfing_bearish,
+                    harami: this.pattern_harami,
+                    doji: this.pattern_doji,
+                    dark_cloud_cover: this.pattern_dark_cloud_cover,
+                    piercing_line: this.pattern_piercing_line
+                },
+                harmonic: {
+                    gartley: this.pattern_gartley,
+                    butterfly: this.pattern_butterfly,
+                    bat: this.pattern_bat,
+                    crab: this.pattern_crab
+                }
+            }
+        };
+    }
 }
 
 class TechnicalAnalysisEngine {
+    /**
+     * تحلیل تکنیکال کامل برای یک ارز
+     */
+    static async analyze(symbol, timeframe = '24h', priceData = []) {
+        try {
+            // اعتبارسنجی ورودی‌ها
+            if (!isValidSymbol(symbol)) {
+                throw errorHandler.createError(
+                    ERROR_CODES.VALIDATION.INVALID_SYMBOL,
+                    `Invalid symbol: ${symbol}`
+                );
+            }
+
+            if (!isValidTimeframe(timeframe)) {
+                throw errorHandler.createError(
+                    ERROR_CODES.VALIDATION.INVALID_TIMEFRAME,
+                    `Invalid timeframe: ${timeframe}`
+                );
+            }
+
+            if (!priceData || priceData.length < 20) {
+                throw errorHandler.createError(
+                    ERROR_CODES.VALIDATION.MISSING_REQUIRED_FIELD,
+                    'Insufficient price data for analysis'
+                );
+            }
+
+            // محاسبه اندیکاتورها
+            const indicators = this.calculateAllIndicators(priceData);
+            
+            // تولید سیگنال‌ها
+            const signals = this.generateSignals(indicators, priceData);
+            
+            // تحلیل روند
+            const trendAnalysis = this.analyzeTrend(indicators, priceData);
+
+            return {
+                success: true,
+                data: {
+                    symbol,
+                    timeframe,
+                    current_price: priceData[priceData.length - 1]?.price || 0,
+                    indicators: indicators.toJSON(),
+                    signals,
+                    trend: trendAnalysis,
+                    analysis_timestamp: new Date().toISOString(),
+                    confidence: this.calculateConfidence(indicators, signals)
+                }
+            };
+
+        } catch (error) {
+            errorHandler.logError(error, { 
+                symbol, 
+                timeframe,
+                data_points: priceData?.length || 0 
+            });
+            
+            return {
+                success: false,
+                error: error.message,
+                code: error.code,
+                timestamp: new Date().toISOString()
+            };
+        }
+    }
+
+    /**
+     * تحلیل سریع برای چندین ارز
+     */
+    static async batchAnalyze(symbols, timeframe = '24h', priceDataMap = {}) {
+        const results = await Promise.allSettled(
+            symbols.map(symbol => 
+                this.analyze(symbol, timeframe, priceDataMap[symbol])
+            )
+        );
+
+        const successful = results
+            .filter(result => result.status === 'fulfilled' && result.value.success)
+            .map(result => result.value.data);
+
+        const failed = results
+            .filter(result => result.status === 'rejected' || !result.value.success)
+            .map(result => ({
+                symbol: result.value?.data?.symbol || 'unknown',
+                error: result.reason?.message || result.value?.error || 'Unknown error'
+            }));
+
+        return {
+            success: true,
+            data: {
+                analyses: successful,
+                failed_analyses: failed,
+                total_analyzed: successful.length,
+                total_failed: failed.length,
+                batch_timestamp: new Date().toISOString()
+            }
+        };
+    }
+
+    /**
+     * محاسبه تمام اندیکاتورها
+     */
     static calculateAllIndicators(priceData) {
         if (!priceData || priceData.length < 20) {
             return new TechnicalIndicators();
@@ -183,7 +376,97 @@ class TechnicalAnalysisEngine {
         });
     }
 
-    // ==================== متدهای موجود ====================
+    /**
+     * تولید سیگنال‌های معاملاتی
+     */
+    static generateSignals(indicators, priceData) {
+        const signals = [];
+        const currentPrice = priceData[priceData.length - 1]?.price || 0;
+
+        // سیگنال RSI
+        if (indicators.rsi < 30) signals.push('RSI_OVERSOLD');
+        if (indicators.rsi > 70) signals.push('RSI_OVERBOUGHT');
+
+        // سیگنال MACD
+        if (indicators.macd > indicators.macd_signal && indicators.macd_hist > 0) {
+            signals.push('MACD_BULLISH_CROSSOVER');
+        }
+        if (indicators.macd < indicators.macd_signal && indicators.macd_hist < 0) {
+            signals.push('MACD_BEARISH_CROSSOVER');
+        }
+
+        // سیگنال بولینگر باند
+        if (currentPrice < indicators.bollinger_lower) signals.push('BOLLINGER_OVERSOLD');
+        if (currentPrice > indicators.bollinger_upper) signals.push('BOLLINGER_OVERBOUGHT');
+
+        // سیگنال الگوها
+        if (indicators.pattern_hammer) signals.push('PATTERN_HAMMER');
+        if (indicators.pattern_engulfing_bullish) signals.push('PATTERN_BULLISH_ENGULFING');
+        if (indicators.pattern_double_bottom) signals.push('PATTERN_DOUBLE_BOTTOM');
+
+        return {
+            buy_signals: signals.filter(s => s.includes('BULLISH') || s.includes('OVERSOLD')),
+            sell_signals: signals.filter(s => s.includes('BEARISH') || s.includes('OVERBOUGHT')),
+            neutral_signals: signals.filter(s => !s.includes('BULLISH') && !s.includes('BEARISH')),
+            all_signals: signals,
+            signal_strength: this.calculateSignalStrength(indicators, signals)
+        };
+    }
+
+    /**
+     * تحلیل روند
+     */
+    static analyzeTrend(indicators, priceData) {
+        const prices = priceData.map(p => p.price);
+        const ma20 = indicators.moving_avg_20;
+        const ma50 = indicators.moving_avg_50;
+        const currentPrice = prices[prices.length - 1];
+
+        let trend = 'NEUTRAL';
+        let strength = 0;
+
+        if (currentPrice > ma20 && ma20 > ma50) {
+            trend = 'BULLISH';
+            strength = 0.8;
+        } else if (currentPrice < ma20 && ma20 < ma50) {
+            trend = 'BEARISH';
+            strength = 0.8;
+        } else if (currentPrice > ma20) {
+            trend = 'BULLISH';
+            strength = 0.5;
+        } else if (currentPrice < ma20) {
+            trend = 'BEARISH';
+            strength = 0.5;
+        }
+
+        return {
+            trend,
+            strength,
+            moving_averages: {
+                above_20: currentPrice > ma20,
+                above_50: currentPrice > ma50,
+                ma20_above_ma50: ma20 > ma50
+            }
+        };
+    }
+
+    /**
+     * محاسبه اطمینان تحلیل
+     */
+    static calculateConfidence(indicators, signals) {
+        let confidence = 0.5; // پایه
+
+        // افزایش اطمینان بر اساس تعداد سیگنال‌ها
+        const totalSignals = signals.all_signals.length;
+        confidence += Math.min(totalSignals * 0.1, 0.3);
+
+        // افزایش اطمینان بر اساس قدرت سیگنال
+        confidence += signals.signal_strength * 0.2;
+
+        return Math.min(confidence, 1.0);
+    }
+
+    // ==================== متدهای محاسباتی اصلی ====================
 
     static calculateRSI(prices, period = 14) {
         if (prices.length < period + 1) return 50;
@@ -425,26 +708,40 @@ class TechnicalAnalysisEngine {
             prediction_confidence: 0.7,
             top_opportunities: [],
             risk_level: 'MEDIUM',
-            ai_insights: []
+            ai_insights: [],
+            timestamp: new Date().toISOString()
         };
 
-        const priceChanges = Object.values(realtimeData).map(d => d.change || 0);
-        const avgChange = priceChanges.reduce((a, b) => a + b, 0) / priceChanges.length;
+        try {
+            const priceChanges = Object.values(realtimeData).map(d => d.change || 0);
+            const avgChange = priceChanges.reduce((a, b) => a + b, 0) / priceChanges.length;
 
-        if (avgChange > 2) analysis.market_sentiment = 'BULLISH';
-        else if (avgChange < -2) analysis.market_sentiment = 'BEARISH';
+            if (avgChange > 2) analysis.market_sentiment = 'BULLISH';
+            else if (avgChange < -2) analysis.market_sentiment = 'BEARISH';
 
-        analysis.top_opportunities = Object.entries(realtimeData)
-            .filter(([symbol, data]) => Math.abs(data.change || 0) > 3)
-            .slice(0, 5)
-            .map(([symbol, data]) => ({
-                symbol,
-                change: data.change,
-                signal: data.change > 0 ? 'BUY' : 'SELL',
-                confidence: Math.min(Math.abs(data.change) / 10, 0.9)
-            }));
+            analysis.top_opportunities = Object.entries(realtimeData)
+                .filter(([symbol, data]) => Math.abs(data.change || 0) > 3)
+                .slice(0, 5)
+                .map(([symbol, data]) => ({
+                    symbol,
+                    change: data.change,
+                    signal: data.change > 0 ? 'BUY' : 'SELL',
+                    confidence: Math.min(Math.abs(data.change) / 10, 0.9)
+                }));
 
-        return analysis;
+            return {
+                success: true,
+                data: analysis
+            };
+
+        } catch (error) {
+            errorHandler.logError(error, { method: 'analyzeWithAI' });
+            return {
+                success: false,
+                error: error.message,
+                code: error.code
+            };
+        }
     }
 
     // ==================== متدهای جدید ====================
@@ -870,4 +1167,7 @@ class TechnicalAnalysisEngine {
     }
 }
 
-module.exports = TechnicalAnalysisEngine;
+module.exports = {
+    TechnicalAnalysisEngine,
+    TechnicalIndicators
+};
