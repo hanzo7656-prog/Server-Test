@@ -53,7 +53,7 @@ async function handleApiRequest(apiCall, req, res, endpointName) {
 module.exports = ({ gistManager, wsManager }) => {
     const apiClient = new AdvancedCoinStatsAPIClient();
 
-    // ==================== ENDPOINT اصلی اسکن ====================
+    // ==================== SCAN ENDPOINTS ====================
     router.get("/scan", async (req, res) => {
         try {
             const { limit = 100, filter = 'volume', timeframe = '24h' } = req.query;
@@ -71,7 +71,7 @@ module.exports = ({ gistManager, wsManager }) => {
                 });
             }
 
-            // تطبیق ساختار داده - استفاده از "result" که در API اصلی وجود دارد
+            // تطبیق ساختار داده
             let coins = result.data?.result || result.data || [];
             
             console.log('📊 Raw data structure analysis:', {
@@ -85,7 +85,6 @@ module.exports = ({ gistManager, wsManager }) => {
             if (filter === 'volume') {
                 coins = coins.sort((a, b) => (b.volume || 0) - (a.volume || 0));
             } else if (filter === 'momentum') {
-                // استفاده از priceChange1d که در API اصلی وجود دارد
                 coins = coins.sort((a, b) => (b.priceChange1d || 0) - (a.priceChange1d || 0));
             } else if (filter === 'change') {
                 coins = coins.sort((a, b) => Math.abs(b.priceChange1d || 0) - Math.abs(a.priceChange1d || 0));
@@ -94,17 +93,16 @@ module.exports = ({ gistManager, wsManager }) => {
             // محدود کردن نتایج
             coins = coins.slice(0, parseInt(limit));
 
-            // ساخت پاسخ با ساختار مورد انتظار front-end
+            // ساخت پاسخ
             const response = {
                 success: true,
                 data: {
                     coins: coins.map(coin => ({
-                        // تطبیق فیلدها با front-end
                         id: coin.id,
                         symbol: coin.symbol,
                         name: coin.name,
                         price: coin.price,
-                        priceChange24h: coin.priceChange1d, // استفاده از priceChange1d که در داده اصلی است
+                        priceChange24h: coin.priceChange1d,
                         volume: coin.volume,
                         marketCap: coin.marketCap,
                         rank: coin.rank,
@@ -141,13 +139,10 @@ module.exports = ({ gistManager, wsManager }) => {
         }
     });
 
-    // ==================== ENDPOINT تست اسکن ====================
     router.get("/scan/test", async (req, res) => {
         try {
-            // تست مستقیم API Client
             const testResult = await apiClient.getCoins(3, 'USD', false);
             
-            // بررسی ساختار داده
             const dataStructure = {
                 hasSuccess: testResult.hasOwnProperty('success'),
                 hasData: testResult.hasOwnProperty('data'),
@@ -157,7 +152,6 @@ module.exports = ({ gistManager, wsManager }) => {
                 resultIsArray: Array.isArray(testResult.data?.result)
             };
             
-            // نمونه داده برای بررسی
             const sampleData = testResult.data?.result?.[0] || testResult.data?.[0] || testResult.data || 'No data';
             
             res.json({
@@ -178,9 +172,27 @@ module.exports = ({ gistManager, wsManager }) => {
         }
     });
 
-    // ==================== سایر endpointهای موجود ====================
-    
-    // مارکت کپ جهانی
+    // ==================== COINS ENDPOINTS ====================
+    router.get("/coins", async (req, res) => {
+        await handleApiRequest(
+            apiClient.getCoins(
+                parseInt(req.query.limit) || 100,
+                req.query.currency || 'USD',
+                false
+            ),
+            req, res, '/coins'
+        );
+    });
+
+    router.get("/coins/:id/details", async (req, res) => {
+        const { id } = req.params;
+        await handleApiRequest(
+            apiClient.getCoinDetails(id, req.query.currency || 'USD', false),
+            req, res, `/coins/${id}/details`
+        );
+    });
+
+    // ==================== MARKETS ENDPOINTS ====================
     router.get("/markets/cap", async (req, res) => {
         await handleApiRequest(
             apiClient.getMarketCap(false),
@@ -188,19 +200,99 @@ module.exports = ({ gistManager, wsManager }) => {
         );
     });
 
-    // دشبورد بینش ترکیبی
+    router.get("/markets/summary", async (req, res) => {
+        await handleApiRequest(
+            apiClient.getMarketCap(false),
+            req, res, '/markets/summary'
+        );
+    });
+
+    router.get("/markets/exchanges", async (req, res) => {
+        await handleApiRequest(
+            apiClient.getTickerExchanges(false),
+            req, res, '/markets/exchanges'
+        );
+    });
+
+    // ==================== NEWS ENDPOINTS ====================
+    router.get("/news", async (req, res) => {
+        await handleApiRequest(
+            apiClient.getNews({
+                page: parseInt(req.query.page) || 1,
+                limit: parseInt(req.query.limit) || 20
+            }, false),
+            req, res, '/news'
+        );
+    });
+
+    router.get("/news/latest", async (req, res) => {
+        await handleApiRequest(
+            apiClient.getNewsByType('latest', {
+                limit: parseInt(req.query.limit) || 20
+            }, false),
+            req, res, '/news/latest'
+        );
+    });
+
+    router.get("/news/trending", async (req, res) => {
+        await handleApiRequest(
+            apiClient.getNewsByType('trending', {
+                limit: parseInt(req.query.limit) || 15
+            }, false),
+            req, res, '/news/trending'
+        );
+    });
+
+    router.get("/news/handpicked", async (req, res) => {
+        await handleApiRequest(
+            apiClient.getNewsByType('handpicked', {
+                limit: parseInt(req.query.limit) || 15
+            }, false),
+            req, res, '/news/handpicked'
+        );
+    });
+
+    router.get("/news/bullish", async (req, res) => {
+        await handleApiRequest(
+            apiClient.getNewsByType('bullish', {
+                limit: parseInt(req.query.limit) || 15
+            }, false),
+            req, res, '/news/bullish'
+        );
+    });
+
+    router.get("/news/bearish", async (req, res) => {
+        await handleApiRequest(
+            apiClient.getNewsByType('bearish', {
+                limit: parseInt(req.query.limit) || 15
+            }, false),
+            req, res, '/news/bearish'
+        );
+    });
+
+    router.get("/news/sources", async (req, res) => {
+        await handleApiRequest(
+            apiClient.getNewsSources(false),
+            req, res, '/news/sources'
+        );
+    });
+
+    // ==================== INSIGHTS ENDPOINTS ====================
     router.get("/insights/dashboard", async (req, res) => {
         try {
-            const [btcDominance, fearGreed, marketCap] = await Promise.all([
+            const [marketData, btcDominance, fearGreed] = await Promise.all([
+                apiClient.getMarketCap(false),
                 apiClient.getBTCDominance('all', false),
-                apiClient.getFearGreedIndex(false),
-                apiClient.getMarketCap(false)
+                apiClient.getFearGreedIndex(false)
             ]);
 
             const dashboardData = {
-                btc_dominance: btcDominance.success ? btcDominance.data : null,
-                fear_greed: fearGreed.success ? fearGreed.data : null,
-                market_cap: marketCap.success ? marketCap.data : null,
+                totalCoins: 100,
+                totalMarketCap: marketData.success ? (marketData.data?.totalMarketCap || marketData.data?.market_cap || 0) : 0,
+                totalVolume: marketData.success ? (marketData.data?.totalVolume || marketData.data?.volume_24h || 0) : 0,
+                btcDominance: btcDominance.success ? (btcDominance.data?.value || btcDominance.data?.percentage || 0) : 0,
+                fearGreedIndex: fearGreed.success ? (fearGreed.data?.value || fearGreed.data?.score || 0) : 0,
+                marketAnalysis: "بازار در حالت نوسانی قرار دارد. توصیه می‌شود با احتیاط معامله کنید.",
                 timestamp: new Date().toISOString()
             };
 
@@ -212,7 +304,68 @@ module.exports = ({ gistManager, wsManager }) => {
         }
     });
 
-    // سلامت سیستم
+    router.get("/insights/fear-greed", async (req, res) => {
+        await handleApiRequest(
+            apiClient.getFearGreedIndex(false),
+            req, res, '/insights/fear-greed'
+        );
+    });
+
+    router.get("/insights/btc-dominance", async (req, res) => {
+        await handleApiRequest(
+            apiClient.getBTCDominance(req.query.type || 'all', false),
+            req, res, '/insights/btc-dominance'
+        );
+    });
+
+    router.get("/insights/rainbow-chart", async (req, res) => {
+        await handleApiRequest(
+            apiClient.getRainbowChart(req.query.coin || 'bitcoin', false),
+            req, res, '/insights/rainbow-chart'
+        );
+    });
+
+    // ==================== ANALYSIS ENDPOINTS ====================
+    router.get("/analysis/technical", async (req, res) => {
+        const { symbol, timeframe = '24h' } = req.query;
+
+        if (!symbol) {
+            return res.status(400).json(createResponse(false, null, 'Symbol parameter is required'));
+        }
+
+        try {
+            // دریافت داده‌های بازار
+            const marketData = await apiClient.getCoins(200, 'USD', false);
+            
+            if (!marketData.success) {
+                throw new Error(`Failed to fetch market data: ${marketData.error}`);
+            }
+
+            const coins = marketData.data?.result || marketData.data || [];
+            const targetCoin = coins.find(coin => 
+                coin.id === symbol || 
+                coin.symbol?.toLowerCase() === symbol.toLowerCase()
+            );
+
+            if (!targetCoin) {
+                throw new Error(`Coin "${symbol}" not found`);
+            }
+
+            // تحلیل ساده
+            const analysis = generateSimpleAnalysis(targetCoin, timeframe);
+            
+            res.json(createResponse(true, analysis, null, {
+                endpoint: '/analysis/technical',
+                data_source: 'market_data'
+            }));
+
+        } catch (error) {
+            console.error('❌ Technical Analysis Error:', error);
+            res.status(500).json(createResponse(false, null, error.message));
+        }
+    });
+
+    // ==================== HEALTH ENDPOINTS ====================
     router.get("/health", async (req, res) => {
         try {
             const wsStatus = wsManager.getConnectionStatus();
@@ -222,7 +375,7 @@ module.exports = ({ gistManager, wsManager }) => {
             const healthData = {
                 status: 'healthy',
                 service: 'VortexAI Crypto Scanner',
-                version: '7.0 - Enhanced API',
+                version: '8.0 - Enhanced API',
                 components: {
                     websocket: {
                         connected: wsStatus.connected,
@@ -250,227 +403,16 @@ module.exports = ({ gistManager, wsManager }) => {
         }
     });
 
-    // لیست کوین ها
-    router.get("/coins", async (req, res) => {
-        await handleApiRequest(
-            apiClient.getCoins(
-                parseInt(req.query.limit) || 100,
-                req.query.currency || 'USD',
-                false
-            ),
-            req, res, '/coins'
-        );
-    });
-
-    // تحلیل تکنیکال
-     router.get("/analysis/technical", async (req, res) => {
-         const { symbol, timeframe = '24h' } = req.query;
-
-        if (!symbol) {
-            return res.status(400).json(createResponse(false, null, 'Symbol parameter is required'));
-        }
-
-        try {
-            console.log('🔍 Technical Analysis Request:', { symbol, timeframe });
-
-            // دریافت داده‌های بازار
-            const marketData = await apiClient.getCoins(200, 'USD', false);
-        
-            if (!marketData.success) {
-                throw new Error(`Failed to fetch market data: ${marketData.error}`);
-            }
- 
-            const coins = marketData.data?.result || marketData.data || [];
-            const targetCoin = coins.find(coin => 
-                coin.id === symbol || 
-                coin.symbol?.toLowerCase() === symbol.toLowerCase()
-            );
-
-            if (!targetCoin) {
-                throw new Error(`Coin "${symbol}" not found`);
-            }
-
-            console.log('📊 Coin Data:', {
-                name: targetCoin.name,
-                price: targetCoin.price,
-                change24h: targetCoin.priceChange1d
-            });
-
-            // ساخت تحلیل بر اساس داده‌های موجود
-            const analysis = await this.generateAnalysisFromCoinData(targetCoin, timeframe);
-          
-            res.json(createResponse(true, analysis, null, {
-                endpoint: '/analysis/technical',
-                data_source: 'market_data'
-            }));
-
-        } catch (error) {
-            console.error('❌ Technical Analysis Error:', error);
-            res.status(500).json(createResponse(false, null, error.message));
-        }
-    });
-
-    // تابع جدید برای تحلیل از داده‌های کوین
-    async function generateAnalysisFromCoinData(coin, timeframe) {
-        const basePrice = coin.price || 1;
-        const priceChange = coin.priceChange1d || coin.priceChange24h || 0;
-        const volume = coin.volume || 0;
-        const marketCap = coin.marketCap || 0;
-    
-        // محاسبه اندیکاتورهای ساده از داده‌های موجود
-        const rsi = this.calculateSimpleRSI(priceChange);
-        const trend = this.analyzeSimpleTrend(priceChange, volume);
-    
-        return {
-            symbol: coin.symbol,
-            name: coin.name,
-            timeframe: timeframe,
-            current_price: basePrice,
-            price_change_24h: priceChange,
-            volume: volume,
-            market_cap: marketCap,
-            indicators: {
-                rsi: rsi,
-                trend_strength: trend.strength,
-                volume_power: this.calculateVolumePower(volume, marketCap),
-                momentum: Math.abs(priceChange) / 2
-            },
-            signals: this.generateSimpleSignals(rsi, priceChange, trend),
-            trend: {
-                direction: trend.direction,
-                strength: trend.strength,
-                description: trend.description
-            },
-            support_resistance: this.calculateSimpleSupportResistance(basePrice, priceChange),
-            analysis_timestamp: new Date().toISOString(),
-            note: "تحلیل بر اساس داده‌های فعلی بازار - داده‌های تاریخی در دسترس نیست"
-        };
-    }
-
-// توابع کمکی ساده
-    function calculateSimpleRSI(priceChange) {
-    // RSI ساده بر اساس تغییرات قیمت
-        if (priceChange > 10) return 75; // اشباع خرید
-        if (priceChange > 5) return 65;  // نزدیک به اشباع خرید
-        if (priceChange < -10) return 25; // اشباع فروش
-        if (priceChange < -5) return 35;  // نزدیک به اشباع فروش
-        return 50; // خنثی
-    }
-
-    function analyzeSimpleTrend(priceChange, volume) {
-        if (priceChange > 3 && volume > 1000000) {
-            return { direction: 'BULLISH', strength: 0.8, description: 'روند صعودی قوی' };
-        } else if (priceChange > 1) {
-            return { direction: 'BULLISH', strength: 0.6, description: 'روند صعودی' };
-        } else if (priceChange < -3 && volume > 1000000) {
-            return { direction: 'BEARISH', strength: 0.8, description: 'روند نزولی قوی' };
-        } else if (priceChange < -1) {
-            return { direction: 'BEARISH', strength: 0.6, description: 'روند نزولی' };
-        } else {
-            return { direction: 'NEUTRAL', strength: 0.4, description: 'روند خنثی' };
-        }
-    }
-
-    function generateSimpleSignals(rsi, priceChange, trend) {
-        const signals = [];
-    
-        if (rsi < 30) signals.push('RSI_OVERSOLD');
-        if (rsi > 70) signals.push('RSI_OVERBOUGHT');
-        if (trend.direction === 'BULLISH') signals.push('TREND_BULLISH');
-        if (trend.direction === 'BEARISH') signals.push('TREND_BEARISH');
-        if (priceChange > 8) signals.push('STRONG_UPTREND');
-        if (priceChange < -8) signals.push('STRONG_DOWNTREND');
-    
-        return {
-            buy_signals: signals.filter(s => s.includes('BULLISH') || s.includes('OVERSOLD')),
-            sell_signals: signals.filter(s => s.includes('BEARISH') || s.includes('OVERBOUGHT')),
-            all_signals: signals,
-            signal_strength: Math.min(Math.abs(priceChange) / 20, 1.0)
-        };
-    }
-
-    function calculateSimpleSupportResistance(price, change) {
-        const support = price * (1 - Math.max(Math.abs(change) / 100, 0.05));
-        const resistance = price * (1 + Math.max(Math.abs(change) / 100, 0.05));
-    
-        return {
-            support: [support, support * 0.98],
-            resistance: [resistance, resistance * 1.02],
-            current_price: price
-        };
-    }
-
-    function calculateVolumePower(volume, marketCap) {
-        if (!volume || !marketCap) return 0;
-        const ratio = volume / marketCap;
-        return Math.min(ratio * 1000, 1.0);
-    }
-
-    // داده تاریخی
-    router.get("/coin/:symbol/history/:timeframe", async (req, res) => {
-        const { symbol, timeframe } = req.params;
-        await handleApiRequest(
-            apiClient.getCoinCharts(symbol, timeframe, false),
-            req, res, `/coin/${symbol}/history/${timeframe}`
-        );
-    });
-
-    // جزئیات کوین
-    router.get("/coins/:id/details", async (req, res) => {
-        const { id } = req.params;
-        await handleApiRequest(
-            apiClient.getCoinDetails(id, req.query.currency || 'USD', false),
-            req, res, `/coins/${id}/details`
-        );
-    });
-
-    // همه اخبار
-    router.get("/news", async (req, res) => {
-        await handleApiRequest(
-            apiClient.getNews({
-                page: parseInt(req.query.page) || 1,
-                limit: parseInt(req.query.limit) || 20
-            }, false),
-            req, res, '/news'
-        );
-    });
-
-    // تسلط بیت‌کوین
-    router.get("/insights/btc-dominance", async (req, res) => {
-        await handleApiRequest(
-            apiClient.getBTCDominance(req.query.type || 'all', false),
-            req, res, '/insights/btc-dominance'
-        );
-    });
-
-    // شاخص ترس و طمع
-    router.get("/insights/fear-greed", async (req, res) => {
-        await handleApiRequest(
-            apiClient.getFearGreedIndex(false),
-            req, res, '/insights/fear-greed'
-        );
-    });
-
-    // مارکت کپ اصلی
-    router.get("/markets/summary", async (req, res) => {
-        await handleApiRequest(
-            apiClient.getMarketCap(false),
-            req, res, '/markets/summary'
-        );
-    });
-
-    // سلامت ترکیبی
     router.get("/health/combined", async (req, res) => {
         try {
             const wsStatus = wsManager.getConnectionStatus();
             const gistData = gistManager.getAllData();
             const performanceStats = apiDebugSystem.getPerformanceStats();
-            const endpointHealth = apiDebugSystem.checkAllEndpointsHealth();
 
             const healthData = {
                 status: 'healthy',
                 service: 'VortexAI Combined System',
-                version: '7.0 - Enhanced API',
+                version: '8.0 - Enhanced API',
                 timestamp: new Date().toISOString(),
                 websocket_status: {
                     connected: wsStatus.connected,
@@ -489,7 +431,6 @@ module.exports = ({ gistManager, wsManager }) => {
                     requests_count: performanceStats.totalRequests,
                     success_rate: performanceStats.successRate,
                     average_response_time: performanceStats.averageDuration,
-                    endpoint_health: endpointHealth.summary.healthPercentage,
                     status: performanceStats.successRate > 80 ? 'healthy' : 'degraded'
                 }
             };
@@ -501,6 +442,148 @@ module.exports = ({ gistManager, wsManager }) => {
             res.status(500).json(createResponse(false, null, error.message));
         }
     });
+
+    // ==================== SYSTEM ENDPOINTS ====================
+    router.get("/system/stats", async (req, res) => {
+        try {
+            const performanceStats = apiDebugSystem.getPerformanceStats();
+            const errorAnalysis = apiDebugSystem.analyzeErrors();
+
+            const systemStats = {
+                performance: performanceStats,
+                error_analysis: errorAnalysis,
+                system_info: {
+                    uptime: process.uptime(),
+                    memory_usage: `${(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2)} MB`,
+                    node_version: process.version,
+                    platform: process.platform
+                },
+                timestamp: new Date().toISOString()
+            };
+
+            res.json(createResponse(true, systemStats, null, {
+                endpoint: '/system/stats'
+            }));
+        } catch (error) {
+            console.error('❌ System stats error:', error);
+            res.status(500).json(createResponse(false, null, error.message));
+        }
+    });
+
+    router.get("/websocket/status", async (req, res) => {
+        try {
+            const wsStatus = wsManager.getConnectionStatus();
+            
+            const statusData = {
+                connected: wsStatus.connected,
+                active_coins: wsStatus.active_coins,
+                total_subscribed: wsStatus.total_subscribed,
+                provider: "LBank",
+                timestamp: new Date().toISOString()
+            };
+
+            res.json(createResponse(true, statusData, null, {
+                endpoint: '/websocket/status'
+            }));
+        } catch (error) {
+            res.status(500).json(createResponse(false, null, error.message));
+        }
+    });
+
+    // ==================== HELPER FUNCTIONS ====================
+    function generateSimpleAnalysis(coin, timeframe) {
+        const basePrice = coin.price || 1;
+        const priceChange = coin.priceChange1d || coin.priceChange24h || 0;
+        const volume = coin.volume || 0;
+        const marketCap = coin.marketCap || 0;
+        
+        // محاسبه اندیکاتورهای ساده
+        const rsi = calculateSimpleRSI(priceChange);
+        const trend = analyzeSimpleTrend(priceChange, volume);
+        
+        return {
+            symbol: coin.symbol,
+            name: coin.name,
+            timeframe: timeframe,
+            current_price: basePrice,
+            price_change_24h: priceChange,
+            volume: volume,
+            market_cap: marketCap,
+            indicators: {
+                rsi: rsi,
+                trend_strength: trend.strength,
+                volume_power: calculateVolumePower(volume, marketCap),
+                momentum: Math.abs(priceChange) / 2,
+                price_volatility: Math.abs(priceChange)
+            },
+            signals: generateSimpleSignals(rsi, priceChange, trend),
+            trend: {
+                direction: trend.direction,
+                strength: trend.strength,
+                description: trend.description
+            },
+            support_resistance: calculateSimpleSupportResistance(basePrice, priceChange),
+            analysis_timestamp: new Date().toISOString(),
+            note: "تحلیل بر اساس داده‌های فعلی بازار"
+        };
+    }
+
+    function calculateSimpleRSI(priceChange) {
+        if (priceChange > 10) return 75;
+        if (priceChange > 5) return 65;
+        if (priceChange < -10) return 25;
+        if (priceChange < -5) return 35;
+        return 50;
+    }
+
+    function analyzeSimpleTrend(priceChange, volume) {
+        if (priceChange > 3 && volume > 1000000) {
+            return { direction: 'BULLISH', strength: 0.8, description: 'روند صعودی قوی' };
+        } else if (priceChange > 1) {
+            return { direction: 'BULLISH', strength: 0.6, description: 'روند صعودی' };
+        } else if (priceChange < -3 && volume > 1000000) {
+            return { direction: 'BEARISH', strength: 0.8, description: 'روند نزولی قوی' };
+        } else if (priceChange < -1) {
+            return { direction: 'BEARISH', strength: 0.6, description: 'روند نزولی' };
+        } else {
+            return { direction: 'NEUTRAL', strength: 0.4, description: 'روند خنثی' };
+        }
+    }
+
+    function generateSimpleSignals(rsi, priceChange, trend) {
+        const signals = [];
+        
+        if (rsi < 30) signals.push('RSI_OVERSOLD');
+        if (rsi > 70) signals.push('RSI_OVERBOUGHT');
+        if (trend.direction === 'BULLISH') signals.push('TREND_BULLISH');
+        if (trend.direction === 'BEARISH') signals.push('TREND_BEARISH');
+        if (priceChange > 8) signals.push('STRONG_UPTREND');
+        if (priceChange < -8) signals.push('STRONG_DOWNTREND');
+        
+        return {
+            buy_signals: signals.filter(s => s.includes('BULLISH') || s.includes('OVERSOLD')),
+            sell_signals: signals.filter(s => s.includes('BEARISH') || s.includes('OVERBOUGHT')),
+            all_signals: signals,
+            signal_strength: Math.min(Math.abs(priceChange) / 20, 1.0)
+        };
+    }
+
+    function calculateSimpleSupportResistance(price, change) {
+        const support = price * (1 - Math.max(Math.abs(change) / 100, 0.05));
+        const resistance = price * (1 + Math.max(Math.abs(change) / 100, 0.05));
+        
+        return {
+            support: [support, support * 0.98],
+            resistance: [resistance, resistance * 1.02],
+            current_price: price
+        };
+    }
+
+    function calculateVolumePower(volume, marketCap) {
+        if (!volume || !marketCap) return 0;
+        const ratio = volume / marketCap;
+        return Math.min(ratio * 1000, 1.0);
+    }
 
     return router;
 };
