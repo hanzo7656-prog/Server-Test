@@ -1,5 +1,4 @@
 const { generateModernPage } = require('../page-generator');
-const DataProcessor = require('../../models/DataProcessor');
 
 module.exports = (dependencies) => {
     const { apiClient, wsManager } = dependencies;
@@ -51,14 +50,69 @@ module.exports = (dependencies) => {
         </div>
 
         <script>
+        // توابع کمکی
+        function formatRelativeTime(timestamp) {
+            if (!timestamp) return 'نامشخص';
+            try {
+                const now = new Date();
+                const time = new Date(timestamp);
+                const diffMs = now - time;
+                const diffMins = Math.floor(diffMs / 60000);
+                const diffHours = Math.floor(diffMs / 3600000);
+                
+                if (diffMins < 1) return 'همین الان';
+                if (diffMins < 60) return \\${diffMins} دقیقه پیش\;
+                if (diffHours < 24) return \\${diffHours} ساعت پیش\;
+                return time.toLocaleString('fa-IR');
+            } catch (e) {
+                return 'نامشخص';
+            }
+        }
+
+        function formatUptime(seconds) {
+            if (!seconds || isNaN(seconds)) return 'N/A';
+            const days = Math.floor(seconds / 86400);
+            const hours = Math.floor((seconds % 86400) / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            if (days > 0) return \\${days} روز و \${hours} ساعت\;
+            if (hours > 0) return \\${hours} ساعت \${minutes} دقیقه\;
+            return \\${minutes} دقیقه\;
+        }
+
+        function setLoading(elementId, isLoading) {
+            const element = document.getElementById(elementId);
+            if (isLoading) {
+                element.innerHTML = '<div class="status-indicator">🔄 در حال بارگذاری...</div>';
+            }
+        }
+
+        function handleApiError(error, elementId) {
+            console.error('API Error:', error);
+            const element = document.getElementById(elementId);
+            element.innerHTML = \`
+                <div class="status-indicator error">
+                    ❌ خطا در ارتباط: \${error.message}
+                    <div style="font-size: 0.7rem; margin-top: 5px; opacity: 0.7;">
+                        لطفا اتصال اینترنت را بررسی کرده و مجدد تلاش کنید
+                    </div>
+                </div>
+            \`;
+        }
+
+        // توابع اصلی
         async function checkSystemHealth() {
             setLoading('healthResult', true);
             
             try {
                 const response = await fetch('/api/health/combined');
-                if (!response.ok) throw new Error('خطای شبکه: ' + response.status);
+                console.log('🔍 Health check response:', { status: response.status, ok: response.ok });
+                
+                if (!response.ok) {
+                    throw new Error(\`خطای شبکه: \${response.status}\`);
+                }
 
                 const data = await response.json();
+                console.log('📊 Health data:', data);
                 
                 if (data.success && data.data) {
                     displayHealthStatus(data.data);
@@ -77,9 +131,14 @@ module.exports = (dependencies) => {
             
             try {
                 const response = await fetch('/api/system/stats');
-                if (!response.ok) throw new Error('خطای شبکه: ' + response.status);
+                console.log('🔍 Live stats response:', { status: response.status, ok: response.ok });
+                
+                if (!response.ok) {
+                    throw new Error(\`خطای شبکه: \${response.status}\`);
+                }
 
                 const data = await response.json();
+                console.log('📊 Live stats data:', data);
                 
                 if (data.success && data.data) {
                     displayLiveStats(data.data);
@@ -119,7 +178,7 @@ module.exports = (dependencies) => {
                             <div class="metric-label">WebSocket</div>
                         </div>
                         <div class="metric-card">
-                            <div class="metric-value">\${healthData.components.database?.status === 'connected' ? '✅' : '❌'}</div>
+                            <div class="metric-value">\${healthData.components.database?.status === 'healthy' ? '✅' : '❌'}</div>
                             <div class="metric-label">دیتابیس</div>
                         </div>
                         <div class="metric-card">
@@ -191,7 +250,7 @@ module.exports = (dependencies) => {
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
                     <span>🔗 WebSocket</span>
                     <span class="status-indicator \${wsStatus?.connected ? '' : 'error'}">
-                        \${wsStatus?.connected ? 'متصل (' + (wsStatus.activeCoins || 0) + ' ارز)' : 'قطع'}
+                        \${wsStatus?.connected ? 'متصل (' + (wsStatus.active_coins || wsStatus.activeCoins || 0) + ' ارز)' : 'قطع'}
                     </span>
                 </div>
             \`;
@@ -201,8 +260,8 @@ module.exports = (dependencies) => {
             html += \`
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
                     <span>💾 دیتابیس</span>
-                    <span class="status-indicator \${dbStatus?.status === 'connected' ? '' : 'error'}">
-                        \${dbStatus?.status === 'connected' ? 'متصل (' + (dbStatus.storedCoins || 0) + ' ارز)' : dbStatus?.status || 'نامشخص'}
+                    <span class="status-indicator \${dbStatus?.status === 'healthy' ? '' : 'error'}">
+                        \${dbStatus?.status === 'healthy' ? 'متصل (' + (dbStatus.stored_coins || dbStatus.storedCoins || 0) + ' ارز)' : dbStatus?.status || 'نامشخص'}
                     </span>
                 </div>
             \`;
@@ -213,7 +272,7 @@ module.exports = (dependencies) => {
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
                     <span>🌐 API</span>
                     <span class="status-indicator \${apiStatus?.status === 'healthy' ? '' : 'warning'}">
-                        \${apiStatus?.status === 'healthy' ? 'سالم (' + (apiStatus.successRate || '0%') + ')' : apiStatus?.status || 'نامشخص'}
+                        \${apiStatus?.status === 'healthy' ? 'سالم (' + (apiStatus.success_rate || apiStatus.successRate || '0%') + ')' : apiStatus?.status || 'نامشخص'}
                     </span>
                 </div>
             \`;
@@ -228,19 +287,19 @@ module.exports = (dependencies) => {
             const html = \`
                 <div class="metric-grid">
                     <div class="metric-card">
-                        <div class="metric-value">\${performance.successfulRequests || 0}</div>
+                        <div class="metric-value">\${performance.successfulRequests || performance.success_count || 0}</div>
                         <div class="metric-label">درخواست‌های موفق</div>
                     </div>
                     <div class="metric-card">
-                        <div class="metric-value">\${performance.errorCount || 0}</div>
+                        <div class="metric-value">\${performance.errorCount || performance.error_count || 0}</div>
                         <div class="metric-label">خطاها</div>
                     </div>
                     <div class="metric-card">
-                        <div class="metric-value">\${performance.endpointCount || 0}</div>
+                        <div class="metric-value">\${performance.endpointCount || performance.endpoint_count || 0}</div>
                         <div class="metric-label">تعداد endpointها</div>
                     </div>
                     <div class="metric-card">
-                        <div class="metric-value">\${performance.completedRequests || 0}</div>
+                        <div class="metric-value">\${performance.completedRequests || performance.completed_requests || 0}</div>
                         <div class="metric-label">درخواست‌های کامل</div>
                     </div>
                 </div>
@@ -251,6 +310,7 @@ module.exports = (dependencies) => {
 
         // بارگذاری خودکار
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Health page loaded - starting auto checks');
             checkSystemHealth();
             loadLiveStats();
             
@@ -259,17 +319,6 @@ module.exports = (dependencies) => {
                 loadLiveStats();
             }, 30000);
         });
-
-        // تابع formatUptime برای نمایش زمان فعالیت
-        function formatUptime(seconds) {
-            if (!seconds || isNaN(seconds)) return 'N/A';
-            const days = Math.floor(seconds / 86400);
-            const hours = Math.floor((seconds % 86400) / 3600);
-            const minutes = Math.floor((seconds % 3600) / 60);
-            if (days > 0) return \`\${days} روز و \${hours} ساعت\`;
-            if (hours > 0) return \`\${hours} ساعت \${minutes} دقیقه\`;
-            return \`\${minutes} دقیقه\`;
-        }
         </script>`;
 
         res.send(generateModernPage("سلامت سیستم", content, 'health'));
