@@ -7,31 +7,6 @@ module.exports = (dependencies) => {
     return async (req, res) => {
         const { type = 'basic', limit = 50, filter = 'volume' } = req.query;
         
-        // اضافه کردن توابع فرمت که تعریف نشده بودند
-        const formatFunctions = `
-        <script>
-        // توابع فرمت که در اسکریپت فراخوانی می‌شوند اما تعریف نشده بودند
-        function formatPrice(price) {
-            if (!price || isNaN(price)) return '$0.00';
-            const num = parseFloat(price);
-            if (num < 0.01) return '$' + num.toFixed(6);
-            return '$' + num.toLocaleString('en-US', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 6
-            });
-        }
-
-        function formatNumber(num) {
-            if (!num || isNaN(num)) return '0';
-            const number = parseFloat(num);
-            if (number >= 1000000000) return (number / 1000000000).toFixed(2) + 'B';
-            if (number >= 1000000) return (number / 1000000).toFixed(2) + 'M';
-            if (number >= 1000) return (number / 1000).toFixed(2) + 'K';
-            return number.toLocaleString('en-US');
-        }
-        </script>
-        `;
-
         const content = `
         <div class="content-card">
             <div class="card-header">
@@ -149,9 +124,27 @@ module.exports = (dependencies) => {
             </div>
         </div>
 
-        ${formatFunctions}
-
         <script>
+        // توابع فرمت که در اسکریپت فراخوانی می‌شوند اما تعریف نشده بودند
+        function formatPrice(price) {
+            if (!price || isNaN(price)) return '$0.00';
+            const num = parseFloat(price);
+            if (num < 0.01) return '$' + num.toFixed(6);
+            return '$' + num.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 6
+            });
+        }
+
+        function formatNumber(num) {
+            if (!num || isNaN(num)) return '0';
+            const number = parseFloat(num);
+            if (number >= 1000000000) return (number / 1000000000).toFixed(2) + 'B';
+            if (number >= 1000000) return (number / 1000000).toFixed(2) + 'M';
+            if (number >= 1000) return (number / 1000).toFixed(2) + 'K';
+            return number.toLocaleString('en-US');
+        }
+
         let scanInterval;
         let currentProgress = 0;
 
@@ -170,9 +163,9 @@ module.exports = (dependencies) => {
             updateProgress(10, 'دریافت داده از CoinStats API');
 
             try {
-                let endpoint = '/scan';
-                if (scanType === 'advanced') endpoint = '/scan/advanced';
-                if (scanType === 'ai') endpoint = '/scan/ai-signal';
+                let endpoint = '/api/scan';
+                if (scanType === 'advanced') endpoint = '/api/scan/advanced';
+                if (scanType === 'ai') endpoint = '/api/scan/ai-signal';
 
                 const params = new URLSearchParams({ 
                     limit, 
@@ -185,8 +178,8 @@ module.exports = (dependencies) => {
                 // شبیه‌سازی پیشرفت
                 simulateProgress();
 
-                // 🔧 اصلاح: اضافه کردن /api به مسیر
-                const response = await fetch(\`/api\${endpoint}?\${params}\`);
+                // 🔧 اصلاح: استفاده از مسیر کامل API
+                const response = await fetch(\`\${endpoint}?\${params}\`);
                 
                 if (!response.ok) throw new Error('خطای شبکه: ' + response.status);
 
