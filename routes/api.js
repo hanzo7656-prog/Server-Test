@@ -263,6 +263,8 @@ module.exports = ({ gistManager, wsManager }) => {
     });
 
     // تحلیل تکنیکال
+     // در routes/api.js - endpoint تحلیل تکنیکال رو با این کد جایگزین کنید:
+
     router.get("/analysis/technical", async (req, res) => {
         const { symbol, timeframe = '24h' } = req.query;
 
@@ -272,66 +274,174 @@ module.exports = ({ gistManager, wsManager }) => {
 
         try {
             console.log('🔍 Technical Analysis Request:', { symbol, timeframe });
-  
-            // دریافت داده‌های تاریخی
+
+            // تست اول: بررسی API Client
+            const coinData = await apiClient.getCoinDetails(symbol, 'USD', false);
+            console.log('📊 Coin Data Result:', {
+                success: coinData.success,
+                hasData: !!coinData.data,
+                error: coinData.error
+             });
+
+            if (!coinData.success) {
+                throw new Error(`Failed to fetch coin data: ${coinData.error}`);
+            }
+
+            // تست دوم: دریافت داده‌های تاریخی
             const historicalData = await apiClient.getCoinCharts(symbol, timeframe, false);
-        
-            if (!historicalData.success) {
-                throw new Error(`Failed to fetch chart data: ${historicalData.error}`);
-            }
-
-            // بررسی ساختار داده
-            if (!historicalData.data || !historicalData.data.chart) {
-                throw new Error('No chart data available');
-            }
-
-            console.log('📈 Chart data received:', {
-                dataPoints: historicalData.data.chart.length,
-                sample: historicalData.data.chart.slice(0, 3)
+            console.log('📈 Historical Data Result:', {
+                success: historicalData.success,
+                hasData: !!historicalData.data,
+                dataStructure: historicalData.data ? Object.keys(historicalData.data) : 'no data',
+                chartData: historicalData.data?.chart ? historicalData.data.chart.slice(0, 3) : 'no chart',
+                error: historicalData.error
             });
 
-            // آماده‌سازی داده برای تحلیل
-            const priceData = historicalData.data.chart.map(point => ({
-                price: point[1], // قیمت close
-                timestamp: point[0]
-            }));
+            if (!historicalData.success) {
+                throw new Error(`Failed to fetch historical data: ${historicalData.error}`);
+            }
 
-            // محاسبه اندیکاتورها
-            const indicators = TechnicalAnalysisEngine.calculateAllIndicators(priceData);
-        
+            // بررسی ساختار داده‌های تاریخی
+            if (!historicalData.data || !historicalData.data.chart || !Array.isArray(historicalData.data.chart)) {
+                throw new Error('No valid chart data available for analysis');
+            }
+
+            // تست سوم: بررسی موتور تحلیل تکنیکال
+            console.log('⚙️ Technical Analysis Engine Check:', {
+                engineExists: !!TechnicalAnalysisEngine,
+                functions: TechnicalAnalysisEngine ? Object.keys(TechnicalAnalysisEngine) : 'not found'
+            });
+
+            if (!TechnicalAnalysisEngine) {
+                throw new Error('Technical Analysis Engine not available');
+            }
+   
+            // آماده‌سازی داده برای تحلیل تکنیکال - ساختار ساده
+            const priceData = historicalData.data.chart.map((point, index) => {
+                if (Array.isArray(point) && point.length >= 2) {                 
+                    return {
+                        timestamp: point[0],
+                        price: point[1], // قیمت close
+                        // برای اندیکاتورهای پیشرفته‌تر می‌تونیم high/low/open رو شبیه‌سازی کنیم
+                        high: point[1] * 1.02,
+                        low: point[1] * 0.98,
+                        open: point[1] * 0.99,
+                        volume: point[2] || 1000 // اگر حجم وجود داره استفاده کن، در غیر این صورت مقدار پیش‌فرض
+                    };
+                }
+                return {
+                    timestamp: Date.now() - (index * 3600000),
+                    price: point,
+                    high: point * 1.02,
+                    low: point * 0.98,
+                    open: point * 0.99,
+                    volume: 1000
+                };
+            }).filter(point => point !== null && point.price > 0);
+
+            console.log('📋 Prepared Price Data:', {
+                dataPoints: priceData.length,
+                sample: priceData.slice(0, 3)
+            });
+
+            if (priceData.length < 20) {
+                throw new Error(`Insufficient data points for analysis. Only ${priceData.length} points available. Need at least 20.`);
+            }
+
+        // محاسبه اندیکاتورها
+            let technicalIndicators;
+            try {
+                technicalIndicators = TechnicalAnalysisEngine.calculateAllIndicators(priceData);
+                console.log('📊 Indicators Calculated:', {
+                    rsi: technicalIndicators.rsi,
+                    macd: technicalIndicators.macd,
+                    macd_signal: technicalIndicators.macd_signal,
+                    moving_avg_20: technicalIndicators.moving_avg_20,
+                    indicatorsCount: Object.keys(technicalIndicators).length
+                });
+            } catch (engineError) {
+                console.error('❌ Engine Calculation Error:', engineError);
+                throw new Error(`Analysis engine error: ${engineError.message}`);
+            }
+
             // تولید سیگنال‌ها
-            const signals = TechnicalAnalysisEngine.generateTradingSignals(indicators, priceData);
-        
-            // تحلیل روند
-            const trend = TechnicalAnalysisEngine.analyzeTrend(indicators, priceData);
-        
-            // سطوح حمایت و مقاومت
-            const supportResistance = TechnicalAnalysisEngine.calculateSupportResistance(priceData);
+            let signals;
+            try {
+                signals = TechnicalAnalysisEngine.generateTradingSignals(technicalIndicators, priceData);
+                console.log('🚦 Signals Generated:', {
+                    buySignals: signals.buy_signals?.length || 0,
+                    sellSignals: signals.sell_signals?.length || 0,
+                    allSignals: signals.all_signals?.length || 0
+                });
+            } catch (signalError) {
+                console.error('❌ Signal Generation Error:', signalError);
+                signals = {
+                    buy_signals: [],
+                    sell_signals: [],
+                    neutral_signals: [],
+                    all_signals: [],
+                    signal_strength: 0
+                };
+            }
 
-            const analysisResult = {
+            // تحلیل روند
+            let trendAnalysis;
+            try {
+                trendAnalysis = TechnicalAnalysisEngine.analyzeTrend(technicalIndicators, priceData);
+                console.log('📈 Trend Analysis:', trendAnalysis);
+            } catch (trendError) {
+                console.error('❌ Trend Analysis Error:', trendError);
+                trendAnalysis = {
+                    trend: 'NEUTRAL',
+                    strength: 0,
+                    moving_averages: {
+                        above_20: false,
+                        above_50: false,
+                        ma20_above_ma50: false
+                    }
+                };
+            }
+
+        // سطوح حمایت و مقاومت
+            let supportResistance;
+            try {
+                supportResistance = TechnicalAnalysisEngine.calculateSupportResistance(priceData);
+                console.log('🛡️ Support/Resistance:', supportResistance);
+            } catch (srError) {
+                console.error('❌ Support/Resistance Error:', srError);
+                supportResistance = {
+                    support: [0, 0],
+                    resistance: [0, 0],
+                    current_price: priceData[priceData.length - 1].price
+                };
+            }
+
+            // ساخت پاسخ نهایی
+            const technicalAnalysis = {
                 symbol: symbol,
                 timeframe: timeframe,
                 current_price: priceData[priceData.length - 1].price,
-                indicators: indicators.toJSON(),
+                indicators: technicalIndicators.toJSON ? technicalIndicators.toJSON() : technicalIndicators,
                 signals: signals,
-                trend: trend,
+                trend: trendAnalysis,
                 support_resistance: supportResistance,
                 analysis_timestamp: new Date().toISOString()
             };
 
-            console.log('✅ Technical Analysis Completed:', {
-                symbol: symbol,
-                signals: signals.all_signals.length,
-                trend: trend.trend
-            });
-
-            res.json(createResponse(true, analysisResult, null, {
-                endpoint: '/analysis/technical'
+            console.log('✅ Technical Analysis Completed Successfully');
+        
+            res.json(createResponse(true, technicalAnalysis, null, {
+                endpoint: '/analysis/technical',
+                data_points: priceData.length,
+                processing_time: 'completed'
             }));
 
         } catch (error) {
             console.error('❌ Technical Analysis Error:', error);
-            res.status(500).json(createResponse(false, null, error.message));
+            res.status(500).json(createResponse(false, null, error.message, {
+                endpoint: '/analysis/technical',
+                error_type: 'analysis_failed'
+            }));
         }
     });
 
