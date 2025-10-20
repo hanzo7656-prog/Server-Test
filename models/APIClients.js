@@ -441,15 +441,14 @@ class AdvancedCoinStatsAPIClient {
                     'X-API-KEY': '40QRC4gdyzWIGwsvGkqWtcDOf0bk+FV217KmLxQ/Wmw='
                 }
             };
- 
-            console.log('🔗 REAL: Fetching from:', url);
+  
             const response = await fetch(url, options);
             console.log('📡 REAL: Response status:', response.status);
 
             const data = await response.json();
             console.log('📊 REAL: Full API response:', JSON.stringify(data, null, 2));
 
-              // 🔥 بررسی همه فیلدهای ممکن برای پیدا کردن مقدار
+        // بررسی همه فیلدهای ممکن
             let fearGreedValue = null;
             let classification = null;
 
@@ -464,22 +463,11 @@ class AdvancedCoinStatsAPIClient {
                 fearGreedValue = data.index;
             }
 
-        // بررسی classification
-            if (data.classification !== undefined) {
-                classification = data.classification;
-            } else if (data.sentiment !== undefined) {
-                classification = data.sentiment;
-            } else if (data.value_classification !== undefined) {
-                classification = data.value_classification;
-            }
-
-            console.log('🔍 Extracted values:', { fearGreedValue, classification });
-
-        // اگر مقدار پیدا شد
+        // اگر مقداری پیدا شد
             if (fearGreedValue !== null) {
                 const result = {
                     value: fearGreedValue,
-                    classification: classification || this.getFearGreedClassification(fearGreedValue),
+                    classification: this.getFearGreedClassification(fearGreedValue),
                     interpretation: this.getFearGreedInterpretation(fearGreedValue),
                     timestamp: new Date().toISOString()
                 };
@@ -506,7 +494,7 @@ class AdvancedCoinStatsAPIClient {
         }
     }
 
-    // تابع کمکی برای classification
+// توابع کمکی
     getFearGreedClassification(value) {
         if (value >= 80) return 'Extreme Fear';
         if (value >= 60) return 'Fear'; 
@@ -515,14 +503,13 @@ class AdvancedCoinStatsAPIClient {
         return 'Extreme Greed';
     }
 
-    // تابع کمکی برای تفسیر
     getFearGreedInterpretation(value) {
         if (value >= 80) return 'بازار در وضعیت ترس شدید قرار دارد - ممکن است فرصت خرید خوبی باشد';
         if (value >= 60) return 'بازار در وضعیت ترس قرار دارد';
         if (value >= 40) return 'بازار در وضعیت خنثی قرار دارد';
-        if (value >= 20) return 'بازار در وضعیت طمع قرار دارد';       return 'بازار در وضعیت طمع شدید قرار دارد - احتیاط کنید';
+        if (value >= 20) return 'بازار در وضعیت طمع قرار دارد';
+        return 'بازار در وضعیت طمع شدید قرار دارد - احتیاط کنید';
     }
-
     async getFearGreedChart(raw = false) {
         try {
             const result = await this._makeRequest('/insights/fear-and-greed/chart', {}, raw);
