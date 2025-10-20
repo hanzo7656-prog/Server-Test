@@ -341,39 +341,28 @@ module.exports = ({ gistManager, wsManager }) => {
 
     router.get("/insights/fear-greed", async (req, res) => {
         try {
-            console.log('🔍 Fetching fear greed index...');
+            console.log('🔍 Fetching fear greed index from CoinStats...');
             const result = await apiClient.getFearGreedIndex(false);
-          
-            console.log('📊 Fear greed raw data:', result);
+        
+            console.log('📊 Fear greed API result:', result);
 
-            const fearGreedData = {
-                value: result.success ? (result.data?.value || result.data?.score || result.data?.fear_greed_index || 65) : 65,
-                classification: result.success ? (result.data?.classification || 'ترس') : 'ترس',
-                interpretation: result.success ? (result.data?.interpretation || 'بازار در وضعیت ترس قرار دارد') : 'بازار در وضعیت ترس قرار دارد',
-                timestamp: new Date().toISOString()
-            };
-
-            console.log('✅ Final fear greed data:', fearGreedData);
-          
-            res.json(createResponse(true, fearGreedData, null, {
-                endpoint: '/insights/fear-greed'
-            }));
+            if (result.success) {
+                res.json(createResponse(true, result.data, null, {
+                    endpoint: '/insights/fear-greed'
+                }));
+            } else {
+                res.status(500).json(createResponse(false, null, result.error, {
+                    endpoint: '/insights/fear-greed'
+                }));
+            }
 
         } catch (error) {
-            console.error('❌ Fear greed error:', error);
-            // داده نمونه برگردو
-            const sampleData = {
-                value: 65,
-                classification: 'ترس',
-                interpretation: 'بازار در وضعیت ترس قرار دارد',
-                timestamp: new Date().toISOString()
-            };
-            res.json(createResponse(true, sampleData, null, {
+            console.error('❌ Fear greed endpoint error:', error);
+            res.status(500).json(createResponse(false, null, error.message, {
                 endpoint: '/insights/fear-greed'
             }));
         }
     });
-
     router.get("/insights/btc-dominance", async (req, res) => {
         await handleApiRequest(
             apiClient.getBTCDominance(req.query.type || 'all', false),
