@@ -340,14 +340,15 @@ module.exports = ({ gistManager, wsManager }) => {
     }
 
     // در فایل routes/api.js این رو اضافه کنید:
+        // ==================== FEAR AND GREED ENDPOINTS ====================
+
+// Fear and Greed Index
     router.get("/insights/fear-greed", async (req, res) => {
         try {
-            console.log('🔍 Fetching fear greed index from CoinStats...');
+            console.log('🔍 Fetching Fear and Greed Index...');
         
-            // استفاده از apiClient که در بالای فایل تعریف شده
             const result = await apiClient.getFearGreedIndex(false);
-  
-            console.log('📊 Fear greed API result:', result);
+            console.log('📊 Fear Greed Index result:', result);
 
             if (result.success) {
                 res.json({
@@ -370,7 +371,7 @@ module.exports = ({ gistManager, wsManager }) => {
             }
 
         } catch (error) {
-            console.error('❌ Fear greed endpoint error:', error);
+            console.error('❌ Fear Greed Index endpoint error:', error);
             res.status(500).json({
                 success: false,
                 error: error.message,
@@ -381,6 +382,93 @@ module.exports = ({ gistManager, wsManager }) => {
             });
         }
     });
+
+// Fear and Greed Chart
+    router.get("/insights/fear-greed-chart", async (req, res) => {
+        try {
+            console.log('📈 Fetching Fear and Greed Chart...');
+        
+            const result = await apiClient.getFearGreedChart(false);
+            console.log('📊 Fear Greed Chart result:', result);
+
+            if (result.success) {
+                res.json({
+                    success: true,
+                    data: result.data,
+                    metadata: {
+                        timestamp: new Date().toISOString(),
+                        endpoint: '/api/insights/fear-greed-chart'
+                    }
+                });
+            } else {
+            // Fallback to sample data if API fails
+                const sampleData = this.generateSampleFearGreedChart();
+            
+                res.json({
+                    success: true,
+                    data: sampleData,
+                    metadata: {
+                        timestamp: new Date().toISOString(),
+                        endpoint: '/api/insights/fear-greed-chart',
+                        note: 'Using sample data - API unavailable: ' + result.error
+                    }
+                });
+            }
+
+        } catch (error) {
+            console.error('❌ Fear Greed Chart endpoint error:', error);
+        
+        // Fallback to sample data
+            const sampleData = this.generateSampleFearGreedChart();
+        
+            res.json({
+                success: true,
+                data: sampleData,
+                metadata: {
+                    timestamp: new Date().toISOString(),
+                    endpoint: '/api/insights/fear-greed-chart',
+                    note: 'Using sample data due to error: ' + error.message
+                }
+            });
+        }
+    });
+
+// تابع تولید داده نمونه برای چارت
+    function generateSampleFearGreedChart() {
+        const data = [];
+        const now = new Date();
+        const classifications = ['Extreme Fear', 'Fear', 'Neutral', 'Greed', 'Extreme Greed'];
+    
+        for (let i = 90; i >= 0; i--) {
+            const date = new Date(now);
+            date.setDate(date.getDate() - i);
+        
+        // شبیه‌سازی نوسانات واقعی
+            const baseValue = 45 + Math.sin(i / 10) * 25;
+            const noise = (Math.random() - 0.5) * 10;
+            const value = Math.max(0, Math.min(100, Math.round(baseValue + noise)));
+        
+            let classification;
+            if (value >= 80) classification = 'Extreme Greed';
+            else if (value >= 60) classification = 'Greed';
+            else if (value >= 40) classification = 'Neutral';
+            else if (value >= 20) classification = 'Fear';
+            else classification = 'Extreme Fear';
+         
+            data.push({
+                timestamp: date.toISOString().split('T')[0],
+                value: value,
+                value_classification: classification
+            });
+        }
+    
+        return {
+            data: data,
+            period: '90d',
+            lastUpdated: new Date().toISOString(),
+            note: 'Sample data for demonstration'
+        };
+    }
     router.get("/insights/btc-dominance", async (req, res) => {
         await handleApiRequest(
             apiClient.getBTCDominance(req.query.type || 'all', false),
