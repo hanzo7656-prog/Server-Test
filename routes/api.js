@@ -343,8 +343,10 @@ module.exports = ({ gistManager, wsManager }) => {
     router.get("/insights/fear-greed", async (req, res) => {
         try {
             console.log('🔍 Fetching fear greed index from CoinStats...');
-            const result = await req.dependencies.apiClient.getFearGreedIndex(false);
-      
+        
+            // استفاده از apiClient که در بالای فایل تعریف شده
+            const result = await apiClient.getFearGreedIndex(false);
+  
             console.log('📊 Fear greed API result:', result);
 
             if (result.success) {
