@@ -433,8 +433,7 @@ class AdvancedCoinStatsAPIClient {
     async getFearGreedIndex(raw = false) {
         try {
             console.log('🎯 REAL: Making request to CoinStats Fear Greed API...');
-          
-           // استفاده مستقیم از fetch برای دیدن پاسخ واقعی
+        
             const url = 'https://openapiv1.coinstats.app/insights/fear-and-greed';
             const options = {
                 method: 'GET',
@@ -447,35 +446,34 @@ class AdvancedCoinStatsAPIClient {
             console.log('🔗 REAL: Fetching from:', url);
             const response = await fetch(url, options);
             console.log('📡 REAL: Response status:', response.status);
+            console.log('📡 REAL: Response headers:', Object.fromEntries(response.headers.entries()));
         
             const rawResponse = await response.text();
-            console.log('📄 REAL: Raw response:', rawResponse);
-         
-            const data = JSON.parse(rawResponse);
-            console.log('📊 REAL: Parsed data:', data);
+            console.log('📄 REAL: Raw response text:', rawResponse);
 
-        // اگر داده معتبر داریم
-            if (data && (data.value !== undefined || data.score !== undefined)) {
-                const value = data.value || data.score;
-                console.log('✅ REAL: Valid fear greed value found:', value);
-            
-                return {
-                    success: true,
-                    data: {
-                        value: value,
-                        classification: this._getFearGreedClassification(value),
-                        interpretation: this._getFearGreedInterpretation(value),
-                        timestamp: new Date().toISOString()
-                    }
-                };
-            } else {
-                console.log('❌ REAL: No valid fear greed data in response');
+            // اگر response خالیه یا error میده
+            if (!rawResponse || rawResponse.trim() === '') {
+                console.log('❌ REAL: Empty response from CoinStats');
                 return {
                     success: false,
-                    error: 'No fear greed data in API response',
-                    rawResponse: data
+                    error: 'Empty response from CoinStats API'
                 };
             }
+
+            const data = JSON.parse(rawResponse);
+            console.log('📊 REAL: Parsed JSON data:', JSON.stringify(data, null, 2));
+
+        // بررسی همه فیلدهای ممکن
+            console.log('🔍 REAL: Checking all data fields:');
+            Object.keys(data).forEach(key => {
+                console.log(`   ${key}:`, data[key]);
+            });
+
+            return {
+                success: false,
+                error: 'CoinStats API returned data but no fear greed value found',
+                rawData: data
+            };
 
         } catch (error) {
             console.error('💥 REAL: Fear Greed API error:', error);
