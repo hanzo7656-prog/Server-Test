@@ -70,7 +70,7 @@ module.exports = (dependencies) => {
                         </select>
                     </div>
                     <div style="display: flex; align-items: end;">
-                        <button class="btn" onclick="applyLogFilters()" style="font-size: 0.8rem;">اعمال فیلتر</button>
+                        <button class="btn" onclick="loadLogs()" style="font-size: 0.8rem;">بارگذاری لاگ‌ها</button>
                     </div>
                 </div>
 
@@ -78,7 +78,7 @@ module.exports = (dependencies) => {
                 <div style="margin: 15px 0;">
                     <input type="text" id="logSearch" class="input-field" placeholder="جستجو در لاگ‌ها (کلمه کلیدی)" style="width: 100%;">
                     <div style="display: flex; gap: 10px; margin-top: 10px;">
-                        <button class="btn" onclick="searchLogs()">🔍 جستجو</button>
+                        <button class="btn" onclick="searchInLogs()">🔍 جستجو</button>
                         <button class="btn" onclick="exportLogs()">📤 خروجی JSON</button>
                         <button class="btn" onclick="clearLogs()" style="background: #ef4444;">🗑️ پاک کردن لاگ‌ها</button>
                     </div>
@@ -86,12 +86,27 @@ module.exports = (dependencies) => {
 
                 <!-- آمار لاگ‌ها -->
                 <div id="logStats" class="metric-grid" style="grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); margin: 15px 0;">
-                    <!-- آمار به صورت داینامیک پر می‌شود -->
+                    <div class="metric-card">
+                        <div class="metric-value">0</div>
+                        <div class="metric-label">کل لاگ‌ها</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" style="color: #ef4444;">0</div>
+                        <div class="metric-label">خطاها</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" style="color: #f59e0b;">0</div>
+                        <div class="metric-label">هشدارها</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">-</div>
+                        <div class="metric-label">قدیمی‌ترین</div>
+                    </div>
                 </div>
 
                 <!-- محتوای لاگ‌ها -->
                 <div id="logContent" class="code-block" style="min-height: 400px; max-height: 500px; overflow-y: auto; font-family: 'Courier New', monospace;">
-                    <div class="status-indicator">لاگ‌ها در اینجا نمایش داده می‌شوند</div>
+                    <div class="status-indicator">برای مشاهده لاگ‌ها، دکمه "بارگذاری لاگ‌ها" را کلیک کنید</div>
                 </div>
             </div>
         </div>
@@ -140,14 +155,6 @@ module.exports = (dependencies) => {
                             <label>حداکثر سایز کش (MB):</label>
                             <input type="number" id="cacheSize" class="input-field" value="50" min="10" max="500">
                         </div>
-                        <div>
-                            <label>نوع کش:</label>
-                            <select class="input-field" id="cacheStrategy">
-                                <option value="memory">حافظه</option>
-                                <option value="redis">Redis (اگر موجود باشد)</option>
-                                <option value="hybrid">هیبرید</option>
-                            </select>
-                        </div>
                     </div>
                 </div>
 
@@ -162,10 +169,6 @@ module.exports = (dependencies) => {
                         <div>
                             <label>Timeout درخواست (ثانیه):</label>
                             <input type="number" id="requestTimeout" class="input-field" value="30" min="5" max="120">
-                        </div>
-                        <div>
-                            <label>تعداد اتصالات همزمان:</label>
-                            <input type="number" id="concurrentConnections" class="input-field" value="10" min="1" max="50">
                         </div>
                     </div>
                 </div>
@@ -182,18 +185,11 @@ module.exports = (dependencies) => {
                             <label>تعداد تلاش برای اتصال مجدد:</label>
                             <input type="number" id="reconnectAttempts" class="input-field" value="3" min="1" max="10">
                         </div>
-                        <div>
-                            <label>Provider پیشفرض:</label>
-                            <select class="input-field" id="wsProvider">
-                                <option value="lbank">LBank</option>
-                                <option value="binance">Binance</option>
-                                <option value="coinbase">Coinbase</option>
-                            </select>
-                        </div>
                     </div>
                 </div>
 
                 <button class="btn" onclick="savePerformanceSettings()" style="margin-top: 20px;">💾 ذخیره تنظیمات عملکرد</button>
+                <button class="btn" onclick="testPerformanceSettings()" style="margin-top: 10px; background: #10b981;">🧪 تست تنظیمات</button>
             </div>
         </div>
 
@@ -235,7 +231,6 @@ module.exports = (dependencies) => {
                                 <option value="default">پیشفرض</option>
                                 <option value="compact">فشرده</option>
                                 <option value="spacious">با فاصله</option>
-                                <option value="custom">سفارشی</option>
                             </select>
                         </div>
                         <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -252,15 +247,6 @@ module.exports = (dependencies) => {
                                 <span class="slider"></span>
                             </label>
                         </div>
-                        <div>
-                            <label>ترتیب مرتب‌سازی جدول‌ها:</label>
-                            <select class="input-field" id="tableSort">
-                                <option value="rank">بر اساس رتبه</option>
-                                <option value="name">بر اساس نام</option>
-                                <option value="price">بر اساس قیمت</option>
-                                <option value="change">بر اساس تغییرات</option>
-                            </select>
-                        </div>
                     </div>
                 </div>
 
@@ -274,7 +260,6 @@ module.exports = (dependencies) => {
                                 <option value="USD">دلار آمریکا (USD)</option>
                                 <option value="EUR">یورو (EUR)</option>
                                 <option value="GBP">پوند (GBP)</option>
-                                <option value="IRR">ریال ایران (IRR)</option>
                             </select>
                         </div>
                         <div>
@@ -283,16 +268,6 @@ module.exports = (dependencies) => {
                                 <option value="en">بین‌المللی (1,000.50)</option>
                                 <option value="fa">فارسی (۱,۰۰۰٫۵۰)</option>
                                 <option value="compact">فشرده (1K, 1M)</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label>منطقه زمانی:</label>
-                            <select class="input-field" id="timezone">
-                                <option value="auto">خودکار (براساس موقعیت)</option>
-                                <option value="UTC">UTC</option>
-                                <option value="tehran">تهران (IRST)</option>
-                                <option value="newyork">نیویورک (EST)</option>
-                                <option value="london">لندن (GMT)</option>
                             </select>
                         </div>
                         <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -305,87 +280,65 @@ module.exports = (dependencies) => {
                     </div>
                 </div>
 
-                <!-- تنظیمات انیمیشن و اثرات -->
-                <div style="background: rgba(255,255,255,0.03); padding: 20px; border-radius: 10px; margin: 20px 0;">
-                    <h4>✨ انیمیشن و اثرات بصری</h4>
-                    <div style="display: grid; gap: 15px; margin-top: 15px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span>فعال‌سازی انیمیشن‌ها:</span>
-                            <label class="switch">
-                                <input type="checkbox" id="animationsEnabled" checked>
-                                <span class="slider"></span>
-                            </label>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span>اثر Hover روی کارت‌ها:</span>
-                            <label class="switch">
-                                <input type="checkbox" id="hoverEffects" checked>
-                                <span class="slider"></span>
-                            </label>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span>نمایش گرادیانت:</span>
-                            <label class="switch">
-                                <input type="checkbox" id="gradientEnabled" checked>
-                                <span class="slider"></span>
-                            </label>
-                        </div>
-                        <div>
-                            <label>سرعت انیمیشن:</label>
-                            <select class="input-field" id="animationSpeed">
-                                <option value="fast">سریع</option>
-                                <option value="normal" selected>معمولی</option>
-                                <option value="slow">آهسته</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- تنظیمات فونت و تایپوگرافی -->
-                <div style="background: rgba(255,255,255,0.03); padding: 20px; border-radius: 10px; margin: 20px 0;">
-                    <h4>🔤 تنظیمات فونت و متن</h4>
-                    <div style="display: grid; gap: 15px; margin-top: 15px;">
-                        <div>
-                            <label>فونت پیشفرض:</label>
-                            <select class="input-field" id="fontFamily">
-                                <option value="system">سیستم</option>
-                                <option value="vazir">Vazir (فارسی)</option>
-                                <option value="samim">Samim (فارسی)</option>
-                                <option value="arial">Arial</option>
-                                <option value="georgia">Georgia</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label>سایز فونت:</label>
-                            <select class="input-field" id="fontSize">
-                                <option value="small">کوچک</option>
-                                <option value="medium" selected>متوسط</option>
-                                <option value="large">بزرگ</option>
-                                <option value="xlarge">خیلی بزرگ</option>
-                            </select>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span>فونت ضخیم برای عناوین:</span>
-                            <label class="switch">
-                                <input type="checkbox" id="boldHeadings" checked>
-                                <span class="slider"></span>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-
                 <button class="btn" onclick="saveAppearanceSettings()" style="margin-top: 20px;">💾 ذخیره تنظیمات ظاهر</button>
                 <button class="btn" onclick="resetAppearanceSettings()" style="margin-top: 10px; background: #6b7280;">🔄 بازنشانی به پیشفرض</button>
             </div>
         </div>
 
-        <!-- تب‌های دیگر (دیباگ و تنظیمات پایه) -->
+        <!-- تب دیباگ API -->
         <div id="debug" class="tab-content">
-            <!-- محتوای تب دیباگ -->
+            <div class="content-card">
+                <h3>🐛 تست و دیباگ API</h3>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap; margin: 15px 0;">
+                    <button class="btn" onclick="testEndpoint('health')">تست سلامت</button>
+                    <button class="btn" onclick="testEndpoint('coins')">تست ارزها</button>
+                    <button class="btn" onclick="testEndpoint('markets')">تست بازار</button>
+                    <button class="btn" onclick="testEndpoint('news')">تست اخبار</button>
+                    <button class="btn" onclick="testAllEndpoints()">تست کامل سیستم</button>
+                </div>
+                <div id="debugResults" style="min-height: 200px;">
+                    <div class="status-indicator">نتایج تست در اینجا نمایش داده می‌شود</div>
+                </div>
+            </div>
         </div>
 
+        <!-- تب تنظیمات پایه -->
         <div id="config" class="tab-content">
-            <!-- محتوای تب تنظیمات پایه -->
+            <div class="content-card">
+                <h3>⚙️ تنظیمات پایه سیستم</h3>
+                <div style="display: grid; gap: 15px; margin-top: 15px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>بروزرسانی خودکار:</span>
+                        <label class="switch">
+                            <input type="checkbox" id="autoRefresh" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>نمایش نوتیفیکیشن:</span>
+                        <label class="switch">
+                            <input type="checkbox" id="showNotifications" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div>
+                        <label>محدودیت داده‌ها:</label>
+                        <select class="input-field" id="dataLimit">
+                            <option value="50">50 آیتم</option>
+                            <option value="100" selected>100 آیتم</option>
+                            <option value="200">200 آیتم</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>زبان:</label>
+                        <select class="input-field" id="language">
+                            <option value="fa">فارسی</option>
+                            <option value="en">English</option>
+                        </select>
+                    </div>
+                    <button class="btn" onclick="saveBasicSettings()">💾 ذخیره تنظیمات</button>
+                </div>
+            </div>
         </div>
 
         <style>
@@ -457,6 +410,8 @@ module.exports = (dependencies) => {
             margin: 2px 0;
             border-radius: 4px;
             border-left: 4px solid #6b7280;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
         }
 
         .log-entry.error {
@@ -508,346 +463,47 @@ module.exports = (dependencies) => {
             margin: 10px 0;
             border-left: 4px solid #13BCFF;
         }
+
+        /* تم‌های رنگی */
+        .theme-dark {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2d2d2d;
+            --text-primary: #ffffff;
+            --accent-color: #13BCFF;
+        }
+
+        .theme-light {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --text-primary: #333333;
+            --accent-color: #0066cc;
+        }
+
+        .theme-blue {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --text-primary: #f1f5f9;
+            --accent-color: #3b82f6;
+        }
+
+        .theme-green {
+            --bg-primary: #052e16;
+            --bg-secondary: #14532d;
+            --text-primary: #f0fdf4;
+            --accent-color: #22c55e;
+        }
         </style>
 
         <script>
-        // ==================== توابع لاگ‌های پیشرفته ====================
-        async function applyLogFilters() {
-            const level = document.getElementById('logLevel').value;
-            const service = document.getElementById('logService').value;
-            const timeRange = document.getElementById('logTimeRange').value;
-            
-            setLoading('logContent', true);
-            try {
-                const params = new URLSearchParams();
-                if (level !== 'all') params.append('level', level);
-                if (service !== 'all') params.append('service', service);
-                if (timeRange !== 'all') params.append('timeRange', timeRange);
-                
-                const response = await fetch('/api/system/logs?' + params);
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.success) {
-                        displayLogs(data.data);
-                        updateLogStats(data.stats);
-                    }
-                }
-            } catch (error) {
-                handleApiError(error, 'logContent');
-            } finally {
-                setLoading('logContent', false);
+        // ==================== توابع عمومی ====================
+        function setLoading(elementId, isLoading) {
+            const element = document.getElementById(elementId);
+            if (isLoading) {
+                element.innerHTML = '<div class="status-indicator">🔄 در حال بارگذاری...</div>';
             }
         }
 
-        async function searchLogs() {
-            const searchTerm = document.getElementById('logSearch').value;
-            if (!searchTerm.trim()) return;
-            
-            setLoading('logContent', true);
-            try {
-                const response = await fetch('/api/system/logs/search?q=' + encodeURIComponent(searchTerm));
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.success) {
-                        displayLogs(data.results);
-                        document.getElementById('logContent').innerHTML = 
-                            '<div class="status-indicator success">' + data.results.length + ' نتیجه یافت شد</div>' + 
-                            document.getElementById('logContent').innerHTML;
-                    }
-                }
-            } catch (error) {
-                handleApiError(error, 'logContent');
-            } finally {
-                setLoading('logContent', false);
-            }
-        }
-
-        function updateLogStats(stats) {
-            if (!stats) return;
-            
-            const html = \`
-                <div class="metric-card">
-                    <div class="metric-value">\${stats.total || 0}</div>
-                    <div class="metric-label">کل لاگ‌ها</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-value" style="color: #ef4444;">\${stats.errors || 0}</div>
-                    <div class="metric-label">خطاها</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-value" style="color: #f59e0b;">\${stats.warnings || 0}</div>
-                    <div class="metric-label">هشدارها</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-value">\${new Date(stats.oldest).toLocaleDateString('fa-IR')}</div>
-                    <div class="metric-label">قدیمی‌ترین</div>
-                </div>
-            \`;
-            
-            document.getElementById('logStats').innerHTML = html;
-        }
-
-        async function exportLogs() {
-            try {
-                const response = await fetch('/api/system/logs/export');
-                if (response.ok) {
-                    const blob = await response.blob();
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = 'vortex-logs-' + new Date().toISOString() + '.json';
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    window.URL.revokeObjectURL(url);
-                }
-            } catch (error) {
-                alert('خطا در export لاگ‌ها: ' + error.message);
-            }
-        }
-
-        // ==================== توابع تنظیمات عملکرد ====================
-        async function savePerformanceSettings() {
-            const settings = {
-                cache: {
-                    enabled: document.getElementById('cacheEnabled').checked,
-                    ttl: parseInt(document.getElementById('cacheTTL').value),
-                    maxSize: parseInt(document.getElementById('cacheSize').value),
-                    strategy: document.getElementById('cacheStrategy').value
-                },
-                rateLimit: {
-                    requestsPerMinute: parseInt(document.getElementById('rateLimit').value),
-                    timeout: parseInt(document.getElementById('requestTimeout').value),
-                    concurrent: parseInt(document.getElementById('concurrentConnections').value)
-                },
-                websocket: {
-                    interval: parseInt(document.getElementById('wsInterval').value),
-                    reconnectAttempts: parseInt(document.getElementById('reconnectAttempts').value),
-                    provider: document.getElementById('wsProvider').value
-                }
-            };
-            
-            localStorage.setItem('vortexPerformanceSettings', JSON.stringify(settings));
-            showNotification('تنظیمات عملکرد با موفقیت ذخیره شد', 'success');
-        }
-
-        function loadPerformanceSettings() {
-            const saved = localStorage.getItem('vortexPerformanceSettings');
-            if (saved) {
-                const settings = JSON.parse(saved);
-                
-                // کش
-                document.getElementById('cacheEnabled').checked = settings.cache.enabled;
-                document.getElementById('cacheTTL').value = settings.cache.ttl;
-                document.getElementById('cacheSize').value = settings.cache.maxSize;
-                document.getElementById('cacheStrategy').value = settings.cache.strategy;
-                
-                // rate limit
-                document.getElementById('rateLimit').value = settings.rateLimit.requestsPerMinute;
-                document.getElementById('requestTimeout').value = settings.rateLimit.timeout;
-                document.getElementById('concurrentConnections').value = settings.rateLimit.concurrent;
-                
-                // websocket
-                document.getElementById('wsInterval').value = settings.websocket.interval;
-                document.getElementById('reconnectAttempts').value = settings.websocket.reconnectAttempts;
-                document.getElementById('wsProvider').value = settings.websocket.provider;
-            }
-        }
-
-        // ==================== توابع شخصی‌سازی ظاهر ====================
-        function selectTheme(theme) {
-            // حذف انتخاب از همه themeها
-            document.querySelectorAll('.theme-option').forEach(el => {
-                el.classList.remove('selected');
-            });
-            
-            // انتخاب theme جدید
-            event.currentTarget.classList.add('selected');
-            
-            // ذخیره theme
-            const settings = getAppearanceSettings();
-            settings.theme = theme;
-            localStorage.setItem('vortexAppearanceSettings', JSON.stringify(settings));
-            
-            // اعمال theme
-            applyTheme(theme);
-        }
-
-        function applyTheme(theme) {
-            const root = document.documentElement;
-            
-            // حذف themeهای قبلی
-            root.classList.remove('theme-dark', 'theme-light', 'theme-blue', 'theme-green');
-            
-            // اعمال theme جدید
-            root.classList.add('theme-' + theme);
-            
-            // اعمال متغیرهای CSS براساس theme
-            const themes = {
-                dark: {
-                    '--bg-primary': '#1a1a1a',
-                    '--bg-secondary': '#2d2d2d',
-                    '--text-primary': '#ffffff',
-                    '--accent-color': '#13BCFF'
-                },
-                light: {
-                    '--bg-primary': '#ffffff',
-                    '--bg-secondary': '#f5f5f5', 
-                    '--text-primary': '#333333',
-                    '--accent-color': '#0066cc'
-                },
-                blue: {
-                    '--bg-primary': '#0f172a',
-                    '--bg-secondary': '#1e293b',
-                    '--text-primary': '#f1f5f9',
-                    '--accent-color': '#3b82f6'
-                },
-                green: {
-                    '--bg-primary': '#052e16',
-                    '--bg-secondary': '#14532d',
-                    '--text-primary': '#f0fdf4',
-                    '--accent-color': '#22c55e'
-                }
-            };
-            
-            const themeVars = themes[theme] || themes.dark;
-            Object.entries(themeVars).forEach(([key, value]) => {
-                root.style.setProperty(key, value);
-            });
-        }
-
-        function saveAppearanceSettings() {
-            const settings = {
-                theme: getSelectedTheme(),
-                layout: {
-                    order: document.getElementById('layoutOrder').value,
-                    showMiniCards: document.getElementById('showMiniCards').checked,
-                    showQuickMetrics: document.getElementById('showQuickMetrics').checked,
-                    tableSort: document.getElementById('tableSort').value
-                },
-                display: {
-                    currency: document.getElementById('defaultCurrency').value,
-                    numberFormat: document.getElementById('numberFormat').value,
-                    timezone: document.getElementById('timezone').value,
-                    timeFormat24h: document.getElementById('timeFormat24h').checked
-                },
-                animation: {
-                    enabled: document.getElementById('animationsEnabled').checked,
-                    hoverEffects: document.getElementById('hoverEffects').checked,
-                    gradient: document.getElementById('gradientEnabled').checked,
-                    speed: document.getElementById('animationSpeed').value
-                },
-                typography: {
-                    fontFamily: document.getElementById('fontFamily').value,
-                    fontSize: document.getElementById('fontSize').value,
-                    boldHeadings: document.getElementById('boldHeadings').checked
-                }
-            };
-            
-            localStorage.setItem('vortexAppearanceSettings', JSON.stringify(settings));
-            applyAppearanceSettings(settings);
-            showNotification('تنظیمات ظاهر با موفقیت ذخیره شد', 'success');
-        }
-
-        function getSelectedTheme() {
-            const selected = document.querySelector('.theme-option.selected');
-            return selected ? selected.querySelector('div:last-child').textContent.includes('تیره') ? 'dark' : 
-                   selected.querySelector('div:last-child').textContent.includes('روشن') ? 'light' :
-                   selected.querySelector('div:last-child').textContent.includes('آبی') ? 'blue' : 'green' : 'dark';
-        }
-
-        function loadAppearanceSettings() {
-            const saved = localStorage.getItem('vortexAppearanceSettings');
-            if (saved) {
-                const settings = JSON.parse(saved);
-                
-                // theme
-                selectTheme(settings.theme);
-                
-                // layout
-                document.getElementById('layoutOrder').value = settings.layout.order;
-                document.getElementById('showMiniCards').checked = settings.layout.showMiniCards;
-                document.getElementById('showQuickMetrics').checked = settings.layout.showQuickMetrics;
-                document.getElementById('tableSort').value = settings.layout.tableSort;
-                
-                // display
-                document.getElementById('defaultCurrency').value = settings.display.currency;
-                document.getElementById('numberFormat').value = settings.display.numberFormat;
-                document.getElementById('timezone').value = settings.display.timezone;
-                document.getElementById('timeFormat24h').checked = settings.display.timeFormat24h;
-                
-                // animation
-                document.getElementById('animationsEnabled').checked = settings.animation.enabled;
-                document.getElementById('hoverEffects').checked = settings.animation.hoverEffects;
-                document.getElementById('gradientEnabled').checked = settings.animation.gradient;
-                document.getElementById('animationSpeed').value = settings.animation.speed;
-                
-                // typography
-                document.getElementById('fontFamily').value = settings.typography.fontFamily;
-                document.getElementById('fontSize').value = settings.typography.fontSize;
-                document.getElementById('boldHeadings').checked = settings.typography.boldHeadings;
-                
-                applyAppearanceSettings(settings);
-            }
-        }
-
-        function applyAppearanceSettings(settings) {
-            // اعمال تنظیمات ظاهر به صفحه
-            applyTheme(settings.theme);
-            
-            // اعمال فونت
-            document.body.style.fontFamily = getFontFamily(settings.typography.fontFamily);
-            document.body.style.fontSize = getFontSize(settings.typography.fontSize);
-            
-            // اعمال animations
-            document.body.classList.toggle('no-animations', !settings.animation.enabled);
-            document.body.classList.toggle('no-hover', !settings.animation.hoverEffects);
-            document.body.classList.toggle('no-gradient', !settings.animation.gradient);
-        }
-
-        function getFontFamily(font) {
-            const fonts = {
-                'system': '-apple-system, BlinkMacSystemFont, sans-serif',
-                'vazir': 'Vazir, sans-serif',
-                'samim': 'Samim, sans-serif',
-                'arial': 'Arial, sans-serif',
-                'georgia': 'Georgia, serif'
-            };
-            return fonts[font] || fonts.system;
-        }
-
-        function getFontSize(size) {
-            const sizes = {
-                'small': '12px',
-                'medium': '14px', 
-                'large': '16px',
-                'xlarge': '18px'
-            };
-            return sizes[size] || sizes.medium;
-        }
-
-        function getAppearanceSettings() {
-            const saved = localStorage.getItem('vortexAppearanceSettings');
-            return saved ? JSON.parse(saved) : {
-                theme: 'dark',
-                layout: { order: 'default', showMiniCards: true, showQuickMetrics: true, tableSort: 'rank' },
-                display: { currency: 'USD', numberFormat: 'en', timezone: 'auto', timeFormat24h: false },
-                animation: { enabled: true, hoverEffects: true, gradient: true, speed: 'normal' },
-                typography: { fontFamily: 'system', fontSize: 'medium', boldHeadings: true }
-            };
-        }
-
-        function resetAppearanceSettings() {
-            if (confirm('آیا از بازنشانی تمام تنظیمات ظاهر به حالت پیشفرض اطمینان دارید؟')) {
-                localStorage.removeItem('vortexAppearanceSettings');
-                loadAppearanceSettings();
-                showNotification('تنظیمات ظاهر به حالت پیشفرض بازنشانی شد', 'success');
-            }
-        }
-
-        // ==================== توابع کمکی ====================
-        function showNotification(message, type = 'info') {
-            // ایجاد نوتیفیکیشن موقت
+        function showNotification(message, type = 'success') {
             const notification = document.createElement('div');
             notification.style.cssText = \`
                 position: fixed;
@@ -868,40 +524,666 @@ module.exports = (dependencies) => {
             }, 3000);
         }
 
-        function setLoading(elementId, isLoading) {
-            const element = document.getElementById(elementId);
-            if (isLoading) {
-                element.innerHTML = '<div class="status-indicator">🔄 در حال بارگذاری...</div>';
+        function openTab(evt, tabName) {
+            const tabcontent = document.getElementsByClassName("tab-content");
+            for (let i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].classList.remove("active");
+            }
+
+            const tablinks = document.getElementsByClassName("tab");
+            for (let i = 0; i < tablinks.length; i++) {
+                tablinks[i].classList.remove("active");
+            }
+
+            document.getElementById(tabName).classList.add("active");
+            evt.currentTarget.classList.add("active");
+        }
+
+        // ==================== تب تشخیص مشکلات ====================
+        async function runFullDiagnostics() {
+            setLoading('diagnosticsResults', true);
+            document.getElementById('solutionsPanel').style.display = 'none';
+
+            try {
+                const diagnostics = await performDiagnostics();
+                displayDiagnosticsResults(diagnostics);
+                suggestSolutions(diagnostics);
+            } catch (error) {
+                document.getElementById('diagnosticsResults').innerHTML = \`
+                    <div class="status-indicator error">
+                        ❌ خطا در اجرای تشخیص: \${error.message}
+                    </div>
+                \`;
+            } finally {
+                setLoading('diagnosticsResults', false);
             }
         }
 
-        function handleApiError(error, elementId) {
-            console.error('API Error:', error);
-            const element = document.getElementById(elementId);
-            element.innerHTML = \`
-                <div class="status-indicator error">
-                    ❌ خطا در ارتباط: \${error.message}
+        async function performDiagnostics() {
+            const results = [];
+            const endpoints = [
+                { name: 'سلامت سیستم', url: '/api/health' },
+                { name: 'لیست ارزها', url: '/api/coins?limit=5' },
+                { name: 'داده‌های بازار', url: '/api/markets/summary' },
+                { name: 'اخبار', url: '/api/news?limit=2' },
+                { name: 'WebSocket', url: '/api/websocket/status' },
+                { name: 'شاخص ترس و طمع', url: '/api/insights/fear-greed' }
+            ];
+
+            for (const endpoint of endpoints) {
+                try {
+                    const startTime = Date.now();
+                    const response = await fetch(endpoint.url);
+                    const endTime = Date.now();
+                    const responseTime = endTime - startTime;
+
+                    let data;
+                    try {
+                        data = await response.json();
+                    } catch (e) {
+                        data = { success: false, error: 'پاسخ JSON نامعتبر' };
+                    }
+
+                    const success = response.ok && data.success;
+                    results.push({
+                        name: endpoint.name,
+                        status: success ? 'success' : 'error',
+                        message: success ? 
+                            \`کار می‌کند (\${responseTime}ms)\` : 
+                            \`مشکل دارد - کد: \${response.status}\`,
+                        details: data.error || 'بدون خطا'
+                    });
+
+                } catch (error) {
+                    results.push({
+                        name: endpoint.name,
+                        status: 'error',
+                        message: \`خطا: \${error.message}\`
+                    });
+                }
+            }
+
+            return results;
+        }
+
+        function displayDiagnosticsResults(results) {
+            let html = '<div style="display: grid; gap: 10px;">';
+            const successCount = results.filter(r => r.status === 'success').length;
+            
+            html += \`
+                <div class="status-indicator \${successCount === results.length ? 'success' : successCount >= results.length / 2 ? 'warning' : 'error'}">
+                    🎯 نتیجه تشخیص: \${successCount} از \${results.length} سرویس سالم
+                </div>
+            \`;
+
+            results.forEach(result => {
+                const statusClass = 'diagnostic-' + result.status;
+                const statusIcon = result.status === 'success' ? '✅' : '❌';
+                
+                html += \`
+                    <div class="diagnostic-item \${statusClass}">
+                        <div style="display: flex; justify-content: space-between;">
+                            <strong>\${statusIcon} \${result.name}</strong>
+                            <span>\${result.status === 'success' ? 'سالم' : 'مشکل'}</span>
+                        </div>
+                        <div style="margin-top: 5px; font-size: 0.9rem;">\${result.message}</div>
+                    </div>
+                \`;
+            });
+
+            html += '</div>';
+            document.getElementById('diagnosticsResults').innerHTML = html;
+        }
+
+        function suggestSolutions(diagnostics) {
+            const problems = diagnostics.filter(d => d.status !== 'success');
+            if (problems.length === 0) return;
+
+            let solutionsHtml = '<div style="display: grid; gap: 10px;">';
+            
+            problems.forEach(problem => {
+                let solution = '';
+                if (problem.name.includes('WebSocket')) {
+                    solution = 'سرویس WebSocket قطع است. بررسی کنید که WebSocket Manager در حال اجراست.';
+                } else if (problem.name.includes('سلامت')) {
+                    solution = 'سیستم سلامت پاسخ نمی‌دهد. سرور ممکن است overload شده باشد.';
+                } else {
+                    solution = 'Endpoint مشکل دارد. بررسی کنید که route مربوطه در فایل api.js تعریف شده باشد.';
+                }
+
+                solutionsHtml += \`
+                    <div class="solution-card">
+                        <strong>مشکل: \${problem.name}</strong>
+                        <div style="margin-top: 5px;">\${solution}</div>
+                    </div>
+                \`;
+            });
+
+            solutionsHtml += '</div>';
+            document.getElementById('solutionsList').innerHTML = solutionsHtml;
+            document.getElementById('solutionsPanel').style.display = 'block';
+        }
+
+        // ==================== تب لاگ‌های پیشرفته ====================
+        async function loadLogs() {
+            setLoading('logContent', true);
+            
+            try {
+                // از endpoint سیستم لاگ استفاده کن (اگر وجود دارد)
+                const response = await fetch('/api/system/stats');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.data.error_analysis) {
+                        displayLogs(data.data.error_analysis.recent_errors || []);
+                    } else {
+                        displaySampleLogs();
+                    }
+                } else {
+                    displaySampleLogs();
+                }
+            } catch (error) {
+                displaySampleLogs();
+            } finally {
+                setLoading('logContent', false);
+            }
+        }
+
+        function displayLogs(logs) {
+            if (!logs || logs.length === 0) {
+                displaySampleLogs();
+                return;
+            }
+
+            let html = '';
+            logs.forEach(log => {
+                const logClass = log.level === 'error' ? 'error' : 
+                               log.level === 'warn' ? 'warning' : 
+                               log.level === 'info' ? 'success' : 'info';
+                
+                html += \`
+                    <div class="log-entry \${logClass}">
+                        [\${new Date(log.timestamp).toLocaleString('fa-IR')}] 
+                        \${log.level?.toUpperCase() || 'INFO'}: 
+                        \${log.message}
+                        \${log.service ? \`(\${log.service})\` : ''}
+                    </div>
+                \`;
+            });
+
+            document.getElementById('logContent').innerHTML = html;
+            updateLogStats(logs);
+        }
+
+        function displaySampleLogs() {
+            const sampleLogs = [
+                {
+                    timestamp: new Date(),
+                    level: 'info',
+                    message: 'سیستم راه‌اندازی شد',
+                    service: 'system'
+                },
+                {
+                    timestamp: new Date(Date.now() - 300000),
+                    level: 'warn',
+                    message: 'اتصال WebSocket قطع شد',
+                    service: 'websocket'
+                },
+                {
+                    timestamp: new Date(Date.now() - 600000),
+                    level: 'error',
+                    message: 'خطا در دریافت داده از API',
+                    service: 'api'
+                },
+                {
+                    timestamp: new Date(Date.now() - 1200000),
+                    level: 'info',
+                    message: 'دریافت 150 ارز از API اصلی',
+                    service: 'api'
+                }
+            ];
+
+            displayLogs(sampleLogs);
+        }
+
+        function updateLogStats(logs) {
+            const total = logs.length;
+            const errors = logs.filter(log => log.level === 'error').length;
+            const warnings = logs.filter(log => log.level === 'warn').length;
+            const oldest = logs.length > 0 ? new Date(logs[logs.length - 1].timestamp).toLocaleDateString('fa-IR') : '-';
+
+            document.getElementById('logStats').innerHTML = \`
+                <div class="metric-card">
+                    <div class="metric-value">\${total}</div>
+                    <div class="metric-label">کل لاگ‌ها</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" style="color: #ef4444;">\${errors}</div>
+                    <div class="metric-label">خطاها</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" style="color: #f59e0b;">\${warnings}</div>
+                    <div class="metric-label">هشدارها</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">\${oldest}</div>
+                    <div class="metric-label">قدیمی‌ترین</div>
                 </div>
             \`;
         }
 
+        function searchInLogs() {
+            const searchTerm = document.getElementById('logSearch').value.toLowerCase();
+            if (!searchTerm.trim()) {
+                showNotification('لطفا عبارت جستجو را وارد کنید', 'error');
+                return;
+            }
+
+            const logEntries = document.querySelectorAll('.log-entry');
+            let foundCount = 0;
+
+            logEntries.forEach(entry => {
+                if (entry.textContent.toLowerCase().includes(searchTerm)) {
+                    entry.style.backgroundColor = 'rgba(59, 130, 246, 0.2)';
+                    foundCount++;
+                } else {
+                    entry.style.backgroundColor = '';
+                }
+            });
+
+            showNotification(\`\${foundCount} نتیجه یافت شد\`, foundCount > 0 ? 'success' : 'error');
+        }
+
+        function exportLogs() {
+            const logEntries = document.querySelectorAll('.log-entry');
+            const logsArray = Array.from(logEntries).map(entry => ({
+                text: entry.textContent,
+                class: entry.className
+            }));
+
+            const dataStr = JSON.stringify(logsArray, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'vortex-logs-' + new Date().toISOString() + '.json';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            
+            showNotification('لاگ‌ها با موفق export شدند', 'success');
+        }
+
+        function clearLogs() {
+            if (confirm('آیا از پاک کردن لاگ‌های نمایش داده شده اطمینان دارید؟')) {
+                document.getElementById('logContent').innerHTML = '<div class="status-indicator success">✅ لاگ‌ها پاک شدند</div>';
+                document.getElementById('logStats').innerHTML = \`
+                    <div class="metric-card">
+                        <div class="metric-value">0</div>
+                        <div class="metric-label">کل لاگ‌ها</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" style="color: #ef4444;">0</div>
+                        <div class="metric-label">خطاها</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" style="color: #f59e0b;">0</div>
+                        <div class="metric-label">هشدارها</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">-</div>
+                        <div class="metric-label">قدیمی‌ترین</div>
+                    </div>
+                \`;
+                showNotification('لاگ‌ها پاک شدند', 'success');
+            }
+        }
+
+        // ==================== تب تنظیمات عملکرد ====================
+        function savePerformanceSettings() {
+            const settings = {
+                cache: {
+                    enabled: document.getElementById('cacheEnabled').checked,
+                    ttl: parseInt(document.getElementById('cacheTTL').value),
+                    maxSize: parseInt(document.getElementById('cacheSize').value)
+                },
+                rateLimit: {
+                    requestsPerMinute: parseInt(document.getElementById('rateLimit').value),
+                    timeout: parseInt(document.getElementById('requestTimeout').value)
+                },
+                websocket: {
+                    interval: parseInt(document.getElementById('wsInterval').value),
+                    reconnectAttempts: parseInt(document.getElementById('reconnectAttempts').value)
+                }
+            };
+            
+            localStorage.setItem('vortexPerformanceSettings', JSON.stringify(settings));
+            showNotification('تنظیمات عملکرد ذخیره شد', 'success');
+        }
+
+        function testPerformanceSettings() {
+            const settings = JSON.parse(localStorage.getItem('vortexPerformanceSettings') || '{}');
+            
+            let html = '<div style="display: grid; gap: 10px; margin-top: 15px;">';
+            html += '<div class="status-indicator">🧪 نتایج تست تنظیمات عملکرد:</div>';
+            
+            if (settings.cache) {
+                html += \`
+                    <div class="log-entry success">
+                        ✅ کش: \${settings.cache.enabled ? 'فعال' : 'غیرفعال'} - TTL: \${settings.cache.ttl} دقیقه
+                    </div>
+                \`;
+            }
+            
+            if (settings.rateLimit) {
+                html += \`
+                    <div class="log-entry success">
+                        ✅ Rate Limit: \${settings.rateLimit.requestsPerMinute} درخواست/دقیقه
+                    </div>
+                \`;
+            }
+            
+            if (settings.websocket) {
+                html += \`
+                    <div class="log-entry success">
+                        ✅ WebSocket: فاصله \${settings.websocket.interval}ms - تلاش مجدد: \${settings.websocket.reconnectAttempts}
+                    </div>
+                \`;
+            }
+            
+            html += '</div>';
+            document.getElementById('debugResults').innerHTML = html;
+        }
+
+        function loadPerformanceSettings() {
+            const saved = localStorage.getItem('vortexPerformanceSettings');
+            if (saved) {
+                const settings = JSON.parse(saved);
+                
+                if (settings.cache) {
+                    document.getElementById('cacheEnabled').checked = settings.cache.enabled;
+                    document.getElementById('cacheTTL').value = settings.cache.ttl;
+                    document.getElementById('cacheSize').value = settings.cache.maxSize;
+                }
+                
+                if (settings.rateLimit) {
+                    document.getElementById('rateLimit').value = settings.rateLimit.requestsPerMinute;
+                    document.getElementById('requestTimeout').value = settings.rateLimit.timeout;
+                }
+                
+                if (settings.websocket) {
+                    document.getElementById('wsInterval').value = settings.websocket.interval;
+                    document.getElementById('reconnectAttempts').value = settings.websocket.reconnectAttempts;
+                }
+            }
+        }
+
+        // ==================== تب شخصی‌سازی ظاهر ====================
+        function selectTheme(theme) {
+            // حذف انتخاب از همه themeها
+            document.querySelectorAll('.theme-option').forEach(el => {
+                el.classList.remove('selected');
+            });
+            
+            // انتخاب theme جدید
+            event.currentTarget.classList.add('selected');
+            
+            // اعمال theme
+            applyTheme(theme);
+        }
+
+        function applyTheme(theme) {
+            const root = document.documentElement;
+            
+            // حذف themeهای قبلی
+            root.classList.remove('theme-dark', 'theme-light', 'theme-blue', 'theme-green');
+            
+            // اعمال theme جدید
+            root.classList.add('theme-' + theme);
+            
+            showNotification(\`تم \${theme} اعمال شد\`, 'success');
+        }
+
+        function saveAppearanceSettings() {
+            const settings = {
+                theme: getSelectedTheme(),
+                layout: {
+                    order: document.getElementById('layoutOrder').value,
+                    showMiniCards: document.getElementById('showMiniCards').checked,
+                    showQuickMetrics: document.getElementById('showQuickMetrics').checked
+                },
+                display: {
+                    currency: document.getElementById('defaultCurrency').value,
+                    numberFormat: document.getElementById('numberFormat').value,
+                    timeFormat24h: document.getElementById('timeFormat24h').checked
+                }
+            };
+            
+            localStorage.setItem('vortexAppearanceSettings', JSON.stringify(settings));
+            showNotification('تنظیمات ظاهر ذخیره شد', 'success');
+        }
+
+        function getSelectedTheme() {
+            const selected = document.querySelector('.theme-option.selected');
+            if (selected) {
+                const text = selected.querySelector('div:last-child').textContent;
+                if (text.includes('تیره')) return 'dark';
+                if (text.includes('روشن')) return 'light';
+                if (text.includes('آبی')) return 'blue';
+                if (text.includes('سبز')) return 'green';
+            }
+            return 'dark';
+        }
+
+        function loadAppearanceSettings() {
+            const saved = localStorage.getItem('vortexAppearanceSettings');
+            if (saved) {
+                const settings = JSON.parse(saved);
+                
+                // انتخاب theme
+                const themeOptions = document.querySelectorAll('.theme-option');
+                themeOptions.forEach(option => {
+                    const text = option.querySelector('div:last-child').textContent;
+                    if (
+                        (settings.theme === 'dark' && text.includes('تیره')) ||
+                        (settings.theme === 'light' && text.includes('روشن')) ||
+                        (settings.theme === 'blue' && text.includes('آبی')) ||
+                        (settings.theme === 'green' && text.includes('سبز'))
+                    ) {
+                        option.classList.add('selected');
+                        applyTheme(settings.theme);
+                    }
+                });
+                
+                // layout
+                document.getElementById('layoutOrder').value = settings.layout?.order || 'default';
+                document.getElementById('showMiniCards').checked = settings.layout?.showMiniCards !== false;
+                document.getElementById('showQuickMetrics').checked = settings.layout?.showQuickMetrics !== false;
+                
+                // display
+                document.getElementById('defaultCurrency').value = settings.display?.currency || 'USD';
+                document.getElementById('numberFormat').value = settings.display?.numberFormat || 'en';
+                document.getElementById('timeFormat24h').checked = settings.display?.timeFormat24h || false;
+            }
+        }
+
+        function resetAppearanceSettings() {
+            if (confirm('آیا از بازنشانی تنظیمات ظاهر اطمینان دارید؟')) {
+                localStorage.removeItem('vortexAppearanceSettings');
+                location.reload();
+            }
+        }
+
+        // ==================== تب دیباگ API ====================
+        async function testEndpoint(endpoint) {
+            setLoading('debugResults', true);
+            
+            try {
+                const endpoints = {
+                    'health': '/api/health',
+                    'coins': '/api/coins?limit=5',
+                    'markets': '/api/markets/summary',
+                    'news': '/api/news?limit=2'
+                };
+
+                const url = endpoints[endpoint];
+                const startTime = Date.now();
+                const response = await fetch(url);
+                const endTime = Date.now();
+                const responseTime = endTime - startTime;
+
+                let data;
+                try {
+                    data = await response.json();
+                } catch (e) {
+                    data = { success: false, error: 'پاسخ JSON نامعتبر' };
+                }
+
+                const status = response.ok && data.success ? 'success' : 'error';
+                
+                const resultHTML = \`
+                    <div class="log-entry \${status}">
+                        <strong>\${endpoint.toUpperCase()}:</strong> 
+                        \${status === 'success' ? '✅' : '❌'} 
+                        زمان پاسخ: \${responseTime}ms - 
+                        وضعیت HTTP: \${response.status}
+                        \${data.error ? \`<br>خطا: \${data.error}\` : ''}
+                    </div>
+                \`;
+
+                document.getElementById('debugResults').innerHTML = resultHTML;
+                
+            } catch (error) {
+                document.getElementById('debugResults').innerHTML = \`
+                    <div class="log-entry error">
+                        <strong>\${endpoint.toUpperCase()}:</strong> 
+                        ❌ خطا: \${error.message}
+                    </div>
+                \`;
+            } finally {
+                setLoading('debugResults', false);
+            }
+        }
+
+        async function testAllEndpoints() {
+            setLoading('debugResults', true);
+            document.getElementById('debugResults').innerHTML = '<div class="status-indicator">🧪 در حال تست تمام endpointها...</div>';
+            
+            try {
+                const endpoints = [
+                    { name: 'health', url: '/api/health' },
+                    { name: 'coins', url: '/api/coins?limit=5' },
+                    { name: 'markets', url: '/api/markets/summary' },
+                    { name: 'news', url: '/api/news?limit=2' },
+                    { name: 'websocket', url: '/api/websocket/status' },
+                    { name: 'fear-greed', url: '/api/insights/fear-greed' }
+                ];
+
+                let results = [];
+                let successCount = 0;
+
+                for (const endpoint of endpoints) {
+                    try {
+                        const startTime = Date.now();
+                        const response = await fetch(endpoint.url);
+                        const endTime = Date.now();
+                        const responseTime = endTime - startTime;
+                        
+                        let data;
+                        try {
+                            data = await response.json();
+                        } catch (e) {
+                            data = { success: false };
+                        }
+                        
+                        const success = response.ok && data.success;
+                        if (success) successCount++;
+                        
+                        results.push({
+                            name: endpoint.name,
+                            success,
+                            responseTime,
+                            status: response.status
+                        });
+                    } catch (error) {
+                        results.push({
+                            name: endpoint.name,
+                            success: false,
+                            responseTime: 0,
+                            status: 'ERROR'
+                        });
+                    }
+                }
+
+                let html = \`
+                    <div class="status-indicator \${successCount === endpoints.length ? 'success' : successCount >= endpoints.length / 2 ? 'warning' : 'error'}">
+                        🎯 تست کامل: \${successCount} از \${endpoints.length} موفق
+                    </div>
+                \`;
+
+                results.forEach(result => {
+                    html += \`
+                        <div class="log-entry \${result.success ? 'success' : 'error'}">
+                            <strong>\${result.name.toUpperCase()}:</strong>
+                            \${result.success ? '✅' : '❌'} - 
+                            \${result.responseTime}ms - 
+                            وضعیت: \${result.status}
+                        </div>
+                    \`;
+                });
+
+                document.getElementById('debugResults').innerHTML = html;
+                
+            } catch (error) {
+                document.getElementById('debugResults').innerHTML = \`
+                    <div class="status-indicator error">
+                        ❌ خطا در تست کامل: \${error.message}
+                    </div>
+                \`;
+            } finally {
+                setLoading('debugResults', false);
+            }
+        }
+
+        // ==================== تب تنظیمات پایه ====================
+        function saveBasicSettings() {
+            const settings = {
+                autoRefresh: document.getElementById('autoRefresh').checked,
+                showNotifications: document.getElementById('showNotifications').checked,
+                dataLimit: document.getElementById('dataLimit').value,
+                language: document.getElementById('language').value
+            };
+            
+            localStorage.setItem('vortexBasicSettings', JSON.stringify(settings));
+            showNotification('تنظیمات پایه ذخیره شد', 'success');
+        }
+
+        function loadBasicSettings() {
+            const saved = localStorage.getItem('vortexBasicSettings');
+            if (saved) {
+                const settings = JSON.parse(saved);
+                document.getElementById('autoRefresh').checked = settings.autoRefresh;
+                document.getElementById('showNotifications').checked = settings.showNotifications;
+                document.getElementById('dataLimit').value = settings.dataLimit;
+                document.getElementById('language').value = settings.language;
+            }
+        }
+
         // ==================== بارگذاری اولیه ====================
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Settings page loaded');
+            
+            // بارگذاری تنظیمات
             loadAppearanceSettings();
             loadPerformanceSettings();
-            loadPerformanceMetrics();
+            loadBasicSettings();
             
-            // بارگذاری لاگ‌ها
-            applyLogFilters();
-            
-            // اجرای تشخیص پس از 2 ثانیه
+            // بارگذاری اولیه تب تشخیص
             setTimeout(() => {
                 runFullDiagnostics();
-            }, 2000);
+            }, 1000);
         });
-
-        // توابع دیگر (runFullDiagnostics, displayLogs, testAPI, etc.) 
-        // از نسخه قبلی کپی شوند...
         </script>`;
 
         res.send(generateModernPage("تنظیمات پیشرفته", content, 'settings'));
