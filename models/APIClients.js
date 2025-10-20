@@ -439,39 +439,61 @@ class AdvancedCoinStatsAPIClient {
                 method: 'GET',
                 headers: {
                     'X-API-KEY': '40QRC4gdyzWIGwsvGkqWtcDOf0bk+FV217KmLxQ/Wmw='
-                // حذف 'accept' header چون در مستندات نیست
                 }
             };
-
+ 
             console.log('🔗 REAL: Fetching from:', url);
             const response = await fetch(url, options);
             console.log('📡 REAL: Response status:', response.status);
 
-            // استفاده از response.json() به جای text() + JSON.parse()
             const data = await response.json();
-            console.log('📊 REAL: Parsed JSON data:', JSON.stringify(data, null, 2));
+            console.log('📊 REAL: Full API response:', JSON.stringify(data, null, 2));
 
-            // بررسی ساختار واقعی پاسخ
-            console.log('🔍 REAL: Checking all data fields:');
-            Object.keys(data).forEach(key => {
-                console.log(`   ${key}:`, data[key]);
-            });
-  
-            // بررسی وجود داده‌های مورد نیاز (بر اساس ساختار واقعی API)
-            if (data && typeof data === 'object') {
-            // اینجا باید بر اساس ساختار واقعی پاسخ API چک کنید
-            // مثلاً اگر پاسخ شامل value یا score هست:
-                if (data.value !== undefined || data.score !== undefined || data.index !== undefined) {
-                    return {
-                        success: true,
-                        data: data
-                    };
-                }
+              // 🔥 بررسی همه فیلدهای ممکن برای پیدا کردن مقدار
+            let fearGreedValue = null;
+            let classification = null;
+
+        // بررسی فیلدهای مختلف
+            if (data.value !== undefined) {
+                fearGreedValue = data.value;
+            } else if (data.score !== undefined) {
+                fearGreedValue = data.score;
+            } else if (data.fear_greed_index !== undefined) {
+                fearGreedValue = data.fear_greed_index;
+            } else if (data.index !== undefined) {
+                fearGreedValue = data.index;
             }
 
+        // بررسی classification
+            if (data.classification !== undefined) {
+                classification = data.classification;
+            } else if (data.sentiment !== undefined) {
+                classification = data.sentiment;
+            } else if (data.value_classification !== undefined) {
+                classification = data.value_classification;
+            }
+
+            console.log('🔍 Extracted values:', { fearGreedValue, classification });
+
+        // اگر مقدار پیدا شد
+            if (fearGreedValue !== null) {
+                const result = {
+                    value: fearGreedValue,
+                    classification: classification || this.getFearGreedClassification(fearGreedValue),
+                    interpretation: this.getFearGreedInterpretation(fearGreedValue),
+                    timestamp: new Date().toISOString()
+                };
+
+                return {
+                    success: true,
+                    data: result
+                };
+            }
+
+        // اگر مقداری پیدا نشد
             return {
                 success: false,
-                error: 'CoinStats API returned data but no fear greed value found',
+                error: 'No fear greed value found in API response',
                 rawData: data
             };
 
@@ -482,6 +504,23 @@ class AdvancedCoinStatsAPIClient {
                 error: error.message
             };
         }
+    }
+
+    // تابع کمکی برای classification
+    getFearGreedClassification(value) {
+        if (value >= 80) return 'Extreme Fear';
+        if (value >= 60) return 'Fear'; 
+        if (value >= 40) return 'Neutral';
+        if (value >= 20) return 'Greed';
+        return 'Extreme Greed';
+    }
+
+    // تابع کمکی برای تفسیر
+    getFearGreedInterpretation(value) {
+        if (value >= 80) return 'بازار در وضعیت ترس شدید قرار دارد - ممکن است فرصت خرید خوبی باشد';
+        if (value >= 60) return 'بازار در وضعیت ترس قرار دارد';
+        if (value >= 40) return 'بازار در وضعیت خنثی قرار دارد';
+        if (value >= 20) return 'بازار در وضعیت طمع قرار دارد';       return 'بازار در وضعیت طمع شدید قرار دارد - احتیاط کنید';
     }
 
     async getFearGreedChart(raw = false) {
