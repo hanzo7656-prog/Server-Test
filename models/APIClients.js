@@ -433,41 +433,41 @@ class AdvancedCoinStatsAPIClient {
     async getFearGreedIndex(raw = false) {
         try {
             console.log('🎯 REAL: Making request to CoinStats Fear Greed API...');
-        
+    
             const url = 'https://openapiv1.coinstats.app/insights/fear-and-greed';
             const options = {
                 method: 'GET',
                 headers: {
-                    'X-API-KEY': '40QRC4gdyzWIGwsvGkqWtcDOf0bk+FV217KmLxQ/Wmw=',
-                    'accept': 'application/json'
+                    'X-API-KEY': '40QRC4gdyzWIGwsvGkqWtcDOf0bk+FV217KmLxQ/Wmw='
+                // حذف 'accept' header چون در مستندات نیست
                 }
             };
 
             console.log('🔗 REAL: Fetching from:', url);
             const response = await fetch(url, options);
             console.log('📡 REAL: Response status:', response.status);
-            console.log('📡 REAL: Response headers:', Object.fromEntries(response.headers.entries()));
-        
-            const rawResponse = await response.text();
-            console.log('📄 REAL: Raw response text:', rawResponse);
 
-            // اگر response خالیه یا error میده
-            if (!rawResponse || rawResponse.trim() === '') {
-                console.log('❌ REAL: Empty response from CoinStats');
-                return {
-                    success: false,
-                    error: 'Empty response from CoinStats API'
-                };
-            }
-
-            const data = JSON.parse(rawResponse);
+            // استفاده از response.json() به جای text() + JSON.parse()
+            const data = await response.json();
             console.log('📊 REAL: Parsed JSON data:', JSON.stringify(data, null, 2));
 
-        // بررسی همه فیلدهای ممکن
+            // بررسی ساختار واقعی پاسخ
             console.log('🔍 REAL: Checking all data fields:');
             Object.keys(data).forEach(key => {
                 console.log(`   ${key}:`, data[key]);
             });
+  
+            // بررسی وجود داده‌های مورد نیاز (بر اساس ساختار واقعی API)
+            if (data && typeof data === 'object') {
+            // اینجا باید بر اساس ساختار واقعی پاسخ API چک کنید
+            // مثلاً اگر پاسخ شامل value یا score هست:
+                if (data.value !== undefined || data.score !== undefined || data.index !== undefined) {
+                    return {
+                        success: true,
+                        data: data
+                    };
+                }
+            }
 
             return {
                 success: false,
