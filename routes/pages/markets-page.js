@@ -111,20 +111,38 @@ module.exports = (dependencies) => {
             setLoading('marketResult', true);
             
             try {
-                let endpoint = '/api/coins';
-                const params = new URLSearchParams({
-                    limit: document.getElementById('resultsLimit').value || '50'
-                });
+                let endpoint, params;
 
-                if (view === 'gainers') {
-                    params.append('sort', 'priceChange1d');
-                    params.append('order', 'desc');
-                } else if (view === 'losers') {
-                    params.append('sort', 'priceChange1d');
-                    params.append('order', 'asc');
-                } else if (view === 'volume') {
-                    params.append('sort', 'volume');
-                    params.append('order', 'desc');
+                switch(view) {
+                    case 'gainers':
+                        endpoint = '/api/scan';
+                        params = new URLSearchParams({ 
+                            filter: 'momentum', 
+                            limit: document.getElementById('resultsLimit').value || '50',
+                            timeframe: '24h'
+                        });
+                        break;
+                    case 'losers':
+                        endpoint = '/api/scan';
+                        params = new URLSearchParams({ 
+                            filter: 'change', 
+                            limit: document.getElementById('resultsLimit').value || '50',
+                            timeframe: '24h'
+                        });
+                        break;
+                    case 'volume':
+                        endpoint = '/api/scan';
+                        params = new URLSearchParams({ 
+                            filter: 'volume', 
+                            limit: document.getElementById('resultsLimit').value || '50',
+                            timeframe: '24h'
+                        });
+                        break;
+                    default: // all
+                        endpoint = '/api/coins';
+                        params = new URLSearchParams({ 
+                            limit: document.getElementById('resultsLimit').value || '50'
+                        });
                 }
 
                 const response = await fetch(\`\${endpoint}?\${params}\`);
@@ -132,21 +150,48 @@ module.exports = (dependencies) => {
 
                 const data = await response.json();
                 
+                console.log('API Response for', view, ':', data);
+                
                 if (data.success && data.data) {
-                    currentMarketData = data.data;
-                    applyFilters();
+                    // استخراج آرایه coins از ساختارهای مختلف API
+                    let coinsArray = [];
+                    
+                    if (endpoint.includes('/scan')) {
+                        // برای endpointهای اسکن
+                        coinsArray = data.data.coins || data.data || [];
+                    } else {
+                        // برای endpointهای معمولی
+                        coinsArray = Array.isArray(data.data) ? data.data : 
+                                   data.data.coins || data.data.result || [data.data];
+                    }
+                    
+                    console.log('Extracted coins:', coinsArray);
+                    
+                    if (coinsArray.length > 0) {
+                        currentMarketData = coinsArray;
+                        applyFilters();
+                    } else {
+                        document.getElementById('marketResult').innerHTML = 
+                            '<div class="status-indicator warning">هیچ داده‌ای یافت نشد</div>';
+                    }
                 } else {
                     throw new Error(data.error || 'خطا در دریافت داده‌های بازار');
                 }
             } catch (error) {
-                handleApiError(error, 'marketResult');
+                console.error('Error loading market data:', error);
+                document.getElementById('marketResult').innerHTML = 
+                    '<div class="status-indicator error">خطا در بارگذاری داده‌ها: ' + error.message + '</div>';
             } finally {
                 setLoading('marketResult', false);
             }
         }
 
         function applyFilters() {
-            if (currentMarketData.length === 0) return;
+            if (!currentMarketData || !Array.isArray(currentMarketData) || currentMarketData.length === 0) {
+                document.getElementById('marketResult').innerHTML = 
+                    '<div class="status-indicator warning">هیچ داده‌ای برای نمایش موجود نیست</div>';
+                return;
+            }
 
             let filteredData = [...currentMarketData];
             const searchTerm = document.getElementById('searchCoin').value.toLowerCase();
@@ -155,36 +200,37 @@ module.exports = (dependencies) => {
 
             // فیلتر جستجو
             if (searchTerm) {
-                filteredData = filteredData.filter(coin => 
-                    coin.name.toLowerCase().includes(searchTerm) || 
-                    coin.symbol.toLowerCase().includes(searchTerm)
-                );
+                filteredData = filteredData.filter(coin => {
+                    const name = (coin.name || '').toLowerCase();
+                    const symbol = (coin.symbol || '').toLowerCase();
+                    return name.includes(searchTerm) || symbol.includes(searchTerm);
+                });
             }
 
             // مرتب‌سازی
             filteredData.sort((a, b) => {
-                let aValue, bValue;
+                let aValue = 0, bValue = 0;
 
                 switch (sortBy) {
                     case 'price':
-                        aValue = a.price || a.current_price || 0;
-                        bValue = b.price || b.current_price || 0;
+                        aValue = parseFloat(a.price || a.current_price || 0);
+                        bValue = parseFloat(b.price || b.current_price || 0);
                         break;
                     case 'change':
-                        aValue = a.priceChange1d || a.priceChange24h || 0;
-                        bValue = b.priceChange1d || b.priceChange24h || 0;
+                        aValue = parseFloat(a.priceChange1d || a.priceChange24h || a.price_change_percentage_24h || 0);
+                        bValue = parseFloat(b.priceChange1d || b.priceChange24h || b.price_change_percentage_24h || 0);
                         break;
                     case 'volume':
-                        aValue = a.volume || a.total_volume || 0;
-                        bValue = b.volume || b.total_volume || 0;
+                        aValue = parseFloat(a.volume || a.total_volume || 0);
+                        bValue = parseFloat(b.volume || b.total_volume || 0);
                         break;
                     case 'market_cap':
-                        aValue = a.marketCap || a.market_cap || 0;
-                        bValue = b.marketCap || b.market_cap || 0;
+                        aValue = parseFloat(a.marketCap || a.market_cap || 0);
+                        bValue = parseFloat(b.marketCap || b.market_cap || 0);
                         break;
                     default: // rank
-                        aValue = a.rank || 9999;
-                        bValue = b.rank || 9999;
+                        aValue = parseInt(a.rank || 9999);
+                        bValue = parseInt(b.rank || 9999);
                 }
 
                 if (sortOrder === 'desc') {
@@ -219,23 +265,28 @@ module.exports = (dependencies) => {
             \`;
 
             coins.forEach((coin, index) => {
-                const change = coin.priceChange1d || coin.priceChange24h || 0;
+                const change = parseFloat(coin.priceChange1d || coin.priceChange24h || coin.price_change_percentage_24h || 0);
                 const changeClass = change >= 0 ? 'positive' : 'negative';
-                const price = coin.price || coin.current_price || 0;
-                const volume = coin.volume || coin.total_volume || 0;
-                const marketCap = coin.marketCap || coin.market_cap || 0;
+                const price = parseFloat(coin.price || coin.current_price || 0);
+                const volume = parseFloat(coin.volume || coin.total_volume || 0);
+                const marketCap = parseFloat(coin.marketCap || coin.market_cap || 0);
+                const rank = coin.rank || index + 1;
 
                 html += \`
                     <div class="market-item" onclick="showCoinDetails('\${coin.id || coin.symbol}')" style="cursor: pointer;">
                         <div style="display: flex; align-items: center; gap: 10px;">
-                            <span style="font-size: 0.8rem; opacity: 0.6; min-width: 25px;">#\${coin.rank || index + 1}</span>
+                            <span style="font-size: 0.8rem; opacity: 0.6; min-width: 25px;">#\${rank}</span>
                             \${coin.icon ? \`
                                 <img src="\${coin.icon}" alt="\${coin.name}" 
                                      style="width: 32px; height: 32px; border-radius: 50%;">
-                            \` : ''}
+                            \` : \`
+                                <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 0.7rem;">
+                                    \${coin.symbol ? coin.symbol.toUpperCase().substring(0, 3) : 'N/A'}
+                                </div>
+                            \`}
                             <div class="coin-info">
                                 <strong>\${coin.name || 'نامشخص'}</strong>
-                                <span class="coin-symbol">\${coin.symbol ? coin.symbol.toUpperCase() : ''}</span>
+                                <span class="coin-symbol">\${coin.symbol ? coin.symbol.toUpperCase() : 'N/A'}</span>
                             </div>
                         </div>
                         <div style="display: flex; align-items: center; gap: 15px;">
@@ -246,7 +297,7 @@ module.exports = (dependencies) => {
                                 </div>
                             </div>
                             <div class="coin-change \${changeClass}">
-                                \${change >= 0 ? '↗' : '↘'}\${Math.abs(change).toFixed(2)}%
+                                \${change >= 0 ? '↗' : '↘'} \${Math.abs(change).toFixed(2)}%
                             </div>
                         </div>
                     </div>
@@ -272,36 +323,47 @@ module.exports = (dependencies) => {
 
                 const data = await response.json();
                 
+                console.log('Global data response:', data);
+                
                 if (data.success && data.data) {
                     displayGlobalData(data.data);
                 } else {
                     throw new Error(data.error || 'خطا در دریافت داده‌های جهانی');
                 }
             } catch (error) {
-                handleApiError(error, 'marketResult');
+                console.error('Error loading global data:', error);
+                document.getElementById('marketResult').innerHTML = 
+                    '<div class="status-indicator error">خطا در بارگذاری داده‌های جهانی: ' + error.message + '</div>';
             } finally {
                 setLoading('marketResult', false);
             }
         }
 
         function displayGlobalData(globalData) {
+            console.log('Displaying global data:', globalData);
+            
+            const totalMarketCap = globalData.totalMarketCap || globalData.total_market_cap || globalData.market_cap || 0;
+            const totalVolume = globalData.totalVolume || globalData.total_volume || globalData.volume_24h || 0;
+            const btcDominance = globalData.btcDominance || globalData.btc_dominance || 0;
+            const activeCryptos = globalData.active_cryptocurrencies || globalData.totalCoins || 0;
+
             const html = \`
                 <div class="status-indicator">📊 مارکت کپ جهانی</div>
                 <div class="metric-grid" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin: 20px 0;">
                     <div class="metric-card">
-                        <div class="metric-value">\${formatNumber(globalData.total_market_cap)}</div>
+                        <div class="metric-value">\${formatNumber(totalMarketCap)}</div>
                         <div class="metric-label">مارکت کپ کل</div>
                     </div>
                     <div class="metric-card">
-                        <div class="metric-value">\${formatNumber(globalData.total_volume)}</div>
+                        <div class="metric-value">\${formatNumber(totalVolume)}</div>
                         <div class="metric-label">حجم معاملات</div>
                     </div>
                     <div class="metric-card">
-                        <div class="metric-value">\${globalData.btc_dominance || 0}%</div>
+                        <div class="metric-value">\${btcDominance ? btcDominance.toFixed(1) + '%' : 'N/A'}</div>
                         <div class="metric-label">تسلط بیت‌کوین</div>
                     </div>
                     <div class="metric-card">
-                        <div class="metric-value">\${globalData.active_cryptocurrencies || 0}</div>
+                        <div class="metric-value">\${activeCryptos}</div>
                         <div class="metric-label">ارزهای فعال</div>
                     </div>
                 </div>
@@ -324,36 +386,50 @@ module.exports = (dependencies) => {
 
                 const data = await response.json();
                 
+                console.log('Exchanges data:', data);
+                
                 if (data.success && data.data) {
                     displayExchanges(data.data);
                 } else {
                     throw new Error(data.error || 'خطا در دریافت داده‌های صرافی‌ها');
                 }
             } catch (error) {
-                handleApiError(error, 'marketResult');
+                console.error('Error loading exchanges:', error);
+                document.getElementById('marketResult').innerHTML = 
+                    '<div class="status-indicator error">خطا در بارگذاری صرافی‌ها: ' + error.message + '</div>';
             } finally {
                 setLoading('marketResult', false);
             }
         }
 
         function displayExchanges(exchanges) {
+            if (!exchanges || !Array.isArray(exchanges)) {
+                document.getElementById('marketResult').innerHTML = 
+                    '<div class="status-indicator warning">داده‌ای برای صرافی‌ها یافت نشد</div>';
+                return;
+            }
+
             let html = \`
                 <div class="status-indicator">🏦 صرافی‌های برتر</div>
                 <div class="market-list">
             \`;
 
             exchanges.slice(0, 20).forEach((exchange, index) => {
+                const volume = exchange.trade_volume_24h_btc || exchange.volume_24h_btc || exchange.volume || 0;
+                const country = exchange.country || 'بین‌المللی';
+                const name = exchange.name || 'نامشخص';
+
                 html += \`
                     <div class="market-item">
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <span style="font-size: 0.8rem; opacity: 0.6; min-width: 25px;">#\${index + 1}</span>
                             <div class="coin-info">
-                                <strong>\${exchange.name || 'نامشخص'}</strong>
-                                <span class="coin-symbol">\${exchange.country || 'بین‌المللی'}</span>
+                                <strong>\${name}</strong>
+                                <span class="coin-symbol">\${country}</span>
                             </div>
                         </div>
                         <div style="text-align: left;">
-                            <div style="font-weight: bold;">\${formatNumber(exchange.trade_volume_24h_btc || 0)} BTC</div>
+                            <div style="font-weight: bold;">\${volume > 0 ? formatNumber(volume) + ' BTC' : 'N/A'}</div>
                             <div style="font-size: 0.7rem; opacity: 0.6;">
                                 حجم 24h
                             </div>
@@ -380,17 +456,20 @@ module.exports = (dependencies) => {
 
                 let realtimeHTML = '';
 
-                if (marketData.success) {
+                if (marketData.success && marketData.data) {
                     const market = marketData.data;
+                    const totalMarketCap = market.totalMarketCap || market.total_market_cap || market.market_cap || 0;
+                    const btcDominance = market.btcDominance || market.btc_dominance || 0;
+
                     realtimeHTML += \`
                         <div style="margin-bottom: 15px;">
                             <div class="metric-grid">
                                 <div class="metric-card">
-                                    <div class="metric-value">\${formatNumber(market.total_market_cap)}</div>
+                                    <div class="metric-value">\${formatNumber(totalMarketCap)}</div>
                                     <div class="metric-label">مارکت کپ</div>
                                 </div>
                                 <div class="metric-card">
-                                    <div class="metric-value">\${market.btc_dominance || 0}%</div>
+                                    <div class="metric-value">\${btcDominance ? btcDominance.toFixed(1) + '%' : 'N/A'}</div>
                                     <div class="metric-label">تسلط BTC</div>
                                 </div>
                             </div>
@@ -398,12 +477,13 @@ module.exports = (dependencies) => {
                     \`;
                 }
 
-                if (fearGreedData.success) {
+                if (fearGreedData.success && fearGreedData.data) {
                     const fg = fearGreedData.data;
-                    const status = getFearGreedStatus(fg.value || fg.score);
+                    const score = fg.value || fg.score || 0;
+                    const status = getFearGreedStatus(score);
                     realtimeHTML += \`
                         <div class="status-indicator" style="border-color: \${status.color}; color: \${status.color};">
-                            \${status.emoji} شاخص ترس و طمع: \${status.status} (\${fg.value || fg.score})
+                            \${status.emoji} شاخص ترس و طمع: \${status.status} (\${score})
                         </div>
                     \`;
                 }
@@ -412,7 +492,9 @@ module.exports = (dependencies) => {
                     '<div class="status-indicator warning">داده‌ای در دسترس نیست</div>';
 
             } catch (error) {
-                handleApiError(error, 'realtimeData');
+                console.error('Error loading realtime data:', error);
+                document.getElementById('realtimeData').innerHTML = 
+                    '<div class="status-indicator error">خطا در دریافت داده‌های لحظه‌ای</div>';
             } finally {
                 setLoading('realtimeData', false);
             }
@@ -435,23 +517,36 @@ module.exports = (dependencies) => {
                         </div>
                         <div style="margin-top: 10px; font-size: 0.8rem;">
                             <div>ارزهای فعال: \${ws.active_coins || 0}</div>
-                            <div>اتصالات: \${ws.connections || 0}</div>
-                            \${ws.last_update ? \`
-                                <div>آخرین بروزرسانی: \${formatRelativeTime(ws.last_update)}</div>
+                            <div>اتصالات: \${ws.total_subscribed || 0}</div>
+                            \${ws.timestamp ? \`
+                                <div>آخرین بروزرسانی: \${formatRelativeTime(ws.timestamp)}</div>
                             \` : ''}
                         </div>
                     \`;
                     document.getElementById('websocketStatus').innerHTML = statusHTML;
                 }
             } catch (error) {
-                handleApiError(error, 'websocketStatus');
+                console.error('Error checking WebSocket status:', error);
+                document.getElementById('websocketStatus').innerHTML = 
+                    '<div class="status-indicator error">خطا در بررسی وضعیت WebSocket</div>';
             } finally {
                 setLoading('websocketStatus', false);
             }
         }
 
         function showCoinDetails(coinId) {
-            window.open(\`/analysis-page?symbol=\${coinId}\`, '_blank');
+            if (coinId && coinId !== 'N/A') {
+                window.open(\`/analysis-page?symbol=\${coinId}\`, '_blank');
+            }
+        }
+
+        // تابع کمکی برای وضعیت شاخص ترس و طمع
+        function getFearGreedStatus(score) {
+            if (score >= 80) return { emoji: '😱', status: 'ترس شدید', color: '#ff4444' };
+            if (score >= 60) return { emoji: '😨', status: 'ترس', color: '#ff8844' };
+            if (score >= 40) return { emoji: '😐', status: 'خنثی', color: '#ffcc44' };
+            if (score >= 20) return { emoji: '😊', status: 'طمع', color: '#88cc44' };
+            return { emoji: '🤩', status: 'طمع شدید', color: '#44cc44' };
         }
 
         // بارگذاری اولیه
