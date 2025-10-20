@@ -344,24 +344,39 @@ module.exports = ({ gistManager, wsManager }) => {
         try {
             console.log('🔍 Fetching fear greed index from CoinStats...');
             const result = await req.dependencies.apiClient.getFearGreedIndex(false);
-    
+      
             console.log('📊 Fear greed API result:', result);
 
             if (result.success) {
-                res.json(createResponse(true, result.data, null, {
-                    endpoint: '/insights/fear-greed'
-                }));
+                res.json({
+                    success: true,
+                    data: result.data,
+                    metadata: {
+                        timestamp: new Date().toISOString(),
+                        endpoint: '/api/insights/fear-greed'
+                    }
+                });
             } else {
-                res.status(500).json(createResponse(false, null, result.error, {
-                    endpoint: '/insights/fear-greed'
-                }));
+                res.status(500).json({
+                    success: false,
+                    error: result.error,
+                    metadata: {
+                        timestamp: new Date().toISOString(),
+                        endpoint: '/api/insights/fear-greed'
+                    }
+                });
             }
 
         } catch (error) {
             console.error('❌ Fear greed endpoint error:', error);
-            res.status(500).json(createResponse(false, null, error.message, {
-                endpoint: '/insights/fear-greed'
-            }));
+            res.status(500).json({
+                success: false,
+                error: error.message,
+                metadata: {
+                    timestamp: new Date().toISOString(),
+                    endpoint: '/api/insights/fear-greed'
+                }
+            });
         }
     });
     router.get("/insights/btc-dominance", async (req, res) => {
