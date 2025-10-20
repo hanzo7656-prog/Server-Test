@@ -361,8 +361,8 @@ module.exports = ({ gistManager, wsManager }) => {
 
         } catch (error) {
             console.error('❌ Fear greed error:', error);
-            // داده نمونه برگردون
-    ‌      const sampleData = {
+            // داده نمونه برگردو
+            const sampleData = {
                 value: 65,
                 classification: 'ترس',
                 interpretation: 'بازار در وضعیت ترس قرار دارد',
