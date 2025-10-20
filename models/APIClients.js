@@ -432,51 +432,58 @@ class AdvancedCoinStatsAPIClient {
     // ========================= INSIGHTS =========================
     async getFearGreedIndex(raw = false) {
         try {
-            const result = await this._makeRequest('/insights/fear-and-greed', {}, raw);
-            console.log('📊 Raw Fear Greed API response:', result);
+            console.log('🎯 REAL: Making request to CoinStats Fear Greed API...');
           
-            if (result.success && result.data) {
-            // پردازش داده‌های دریافتی از CoinStats
+           // استفاده مستقیم از fetch برای دیدن پاسخ واقعی
+            const url = 'https://openapiv1.coinstats.app/insights/fear-and-greed';
+            const options = {
+                method: 'GET',
+                headers: {
+                    'X-API-KEY': '40QRC4gdyzWIGwsvGkqWtcDOf0bk+FV217KmLxQ/Wmw=',
+                    'accept': 'application/json'
+                }
+            };
+
+            console.log('🔗 REAL: Fetching from:', url);
+            const response = await fetch(url, options);
+            console.log('📡 REAL: Response status:', response.status);
+        
+            const rawResponse = await response.text();
+            console.log('📄 REAL: Raw response:', rawResponse);
+         
+            const data = JSON.parse(rawResponse);
+            console.log('📊 REAL: Parsed data:', data);
+
+        // اگر داده معتبر داریم
+            if (data && (data.value !== undefined || data.score !== undefined)) {
+                const value = data.value || data.score;
+                console.log('✅ REAL: Valid fear greed value found:', value);
+            
                 return {
                     success: true,
                     data: {
-                        value: result.data.value || result.data.score || 0,
-                        classification: this._getFearGreedClassification(result.data.value || result.data.score || 0),
-                        interpretation: this._getFearGreedInterpretation(result.data.value || result.data.score || 0),
-                        timestamp: result.data.timestamp || new Date().toISOString()
+                        value: value,
+                        classification: this._getFearGreedClassification(value),
+                        interpretation: this._getFearGreedInterpretation(value),
+                        timestamp: new Date().toISOString()
                     }
                 };
             } else {
+                console.log('❌ REAL: No valid fear greed data in response');
                 return {
                     success: false,
-                    error: result.error || 'No data received from Fear Greed API'
+                    error: 'No fear greed data in API response',
+                    rawResponse: data
                 };
             }
+
         } catch (error) {
-            console.error('❌ Fear Greed API error:', error);
+            console.error('💥 REAL: Fear Greed API error:', error);
             return {
                 success: false,
                 error: error.message
             };
         }
-    }
-
-    // تابع کمکی برای تعیین وضعیت
-    _getFearGreedClassification(value) {
-        if (value >= 80) return 'طمع شدید';
-        if (value >= 60) return 'طمع';
-        if (value >= 40) return 'خنثی';
-        if (value >= 20) return 'ترس';
-        return 'ترس شدید';
-    }
-
-    // تابع کمکی برای تفسیر
-    _getFearGreedInterpretation(value) {
-        if (value >= 80) return 'بازار در وضعیت طمع شدید قرار دارد. احتمال اصلاح قیمت بالا است.';
-        if (value >= 60) return 'بازار در وضعیت طمع قرار دارد. مراقب باشید.';
-        if (value >= 40) return 'بازار در وضعیت متعادل قرار دارد.';
-        if (value >= 20) return 'بازار در وضعیت ترس قرار دارد. فرصت خرید ممکن است وجود داشته باشد.';
-        return 'بازار در وضعیت ترس شدید قرار دارد. فرصت خرید عالی ممکن است وجود داشته باشد.';
     }
 
     async getFearGreedChart(raw = false) {
